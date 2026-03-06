@@ -398,6 +398,8 @@ Return ONLY valid JSON, no markdown:
     const data = await resp.json();
     if (data.error) throw new Error(data.error);
     const raw = data.text;
+    console.log("RAW RESPONSE:", raw);
+    console.log('RAW RESPONSE:', raw);
     if (!raw || raw.trim() === '') throw new Error("Empty response. Please try again.");
     let clean = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
     // Extract JSON object
