@@ -8,11 +8,11 @@ export async function onRequestPost(context) {
 
   try {
     const body = await context.request.json();
-    const apiKey = context.env.GEMINI_API_KEY;
+    const apiKey = context.env.GROQ_API_KEY;
 
     if (!apiKey) {
       return new Response(
-        JSON.stringify({ error: "GEMINI_API_KEY tidak ditemukan di environment variables" }),
+        JSON.stringify({ error: "GROQ_API_KEY tidak ditemukan di environment variables" }),
         { status: 500, headers: corsHeaders }
       );
     }
@@ -20,16 +20,23 @@ export async function onRequestPost(context) {
     let data, response;
     for (let attempt = 1; attempt <= 3; attempt++) {
       response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`,
+        "https://api.groq.com/openai/v1/chat/completions",
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
+          },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: body.prompt }] }],
-            generationConfig: {
-              temperature: 0.1,
-              maxOutputTokens: 4096
-            }
+            model: "llama-3.3-70b-versatile",
+            temperature: 0.1,
+            max_tokens: 4096,
+            messages: [
+              {
+                role: "user",
+                content: body.prompt
+              }
+            ]
           })
         }
       );
@@ -37,7 +44,7 @@ export async function onRequestPost(context) {
       data = await response.json();
 
       // Retry on 429
-      if (response.status === 429 || (data.error && data.error.code === 429)) {
+      if (response.status === 429) {
         if (attempt < 3) {
           await new Promise(r => setTimeout(r, attempt * 3000));
           continue;
@@ -53,20 +60,19 @@ export async function onRequestPost(context) {
 
     if (data.error) {
       return new Response(
-        JSON.stringify({ error: `Gemini: ${data.error.code} - ${data.error.message}` }),
+        JSON.stringify({ error: `Groq: ${data.error.code} - ${data.error.message}` }),
         { status: 500, headers: corsHeaders }
       );
     }
 
-    if (!data.candidates || data.candidates.length === 0) {
-      const reason = data.promptFeedback?.blockReason || JSON.stringify(data);
+    if (!data.choices || data.choices.length === 0) {
       return new Response(
-        JSON.stringify({ error: `Tidak ada respons dari Gemini. Info: ${reason}` }),
+        JSON.stringify({ error: "Tidak ada respons dari Groq. Coba lagi." }),
         { status: 500, headers: corsHeaders }
       );
     }
 
-    let text = data.candidates[0].content.parts[0].text || "";
+    let text = data.choices[0].message.content || "";
     text = text.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
 
     return new Response(
