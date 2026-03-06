@@ -362,13 +362,17 @@ ${langInstruction}
 CLINICAL NOTE: ${input}
 
 DIAGNOSIS EXTRACTION - CRITICAL:
-- Extract ALL diagnoses: 1 DU + ALL DS (secondary). NEVER omit any condition mentioned.
+- ONLY code diagnoses that are EXPLICITLY stated in the clinical note.
+- If the note contains explicit diagnosis/diagnoses → extract 1 DU + ALL DS separately. NEVER omit any stated condition.
+- If the note contains ONLY procedures/tindakan with NO explicit diagnosis → return "diagnoses": [] UNLESS objective findings (lab results, EKG, imaging, pathology) strongly and unambiguously confirm a specific diagnosis. Example: "EKG: ST elevasi lead II, III, aVF + Troponin I (+)" → may code STEMI. But vague symptoms alone → do NOT assume diagnosis.
 - DU = ONE condition chiefly responsible for admission (WHO Vol.2).
-- DS = EVERY other condition separately: all complications, comorbidities, history, findings.
+- DS = EVERY other explicitly stated condition separately: all complications, comorbidities, history, findings.
 - Example "partus prematurus + gemelli + TTTS + IUFD + bekas SC + kista ovarium bilateral" MUST produce ALL these separately: preterm labour (DU), twin pregnancy (DS), TTTS (DS), IUFD (DS), previous caesarean scar (DS), bilateral ovarian cyst (DS). Do NOT omit any.
 
 PROCEDURE EXTRACTION - CRITICAL:
-- Code ALL procedures separately. NEVER omit any.
+- ONLY code procedures EXPLICITLY mentioned in the clinical note. NEVER infer or assume procedures not written.
+- If NO procedure/tindakan mentioned → return "procedures": [] empty array.
+- If procedures ARE mentioned → code ALL of them separately. NEVER omit any.
 - Example "SCTP + kistektomi bilateral": MUST code BOTH caesarean section (74.1) AND bilateral cystectomy (65.29 or 65.61).
 
 FIELD RULES:
