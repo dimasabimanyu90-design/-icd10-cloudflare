@@ -30,7 +30,7 @@ export async function onRequestPost(context) {
           body: JSON.stringify({
             model: "llama-3.3-70b-versatile",
             temperature: 0.1,
-            max_tokens: 4096,
+            max_tokens: 8192,
             messages: [
               {
                 role: "user",
