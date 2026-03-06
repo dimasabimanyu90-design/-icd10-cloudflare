@@ -398,23 +398,34 @@ Return ONLY valid JSON, no markdown:
     const data = await resp.json();
     if (data.error) throw new Error(data.error);
     const raw = data.text;
-    console.log("RAW RESPONSE:", raw);
-    console.log('RAW RESPONSE:', raw);
     if (!raw || raw.trim() === '') throw new Error("Empty response. Please try again.");
+    // Fix literal newlines inside JSON strings (common Groq issue)
+    function fixLiteralNewlines(str) {
+      let result = '';
+      let inString = false;
+      let escaped = false;
+      for (let i = 0; i < str.length; i++) {
+        const ch = str[i];
+        if (escaped) { result += ch; escaped = false; continue; }
+        if (ch === '\\') { escaped = true; result += ch; continue; }
+        if (ch === '"') { inString = !inString; result += ch; continue; }
+        if (inString && ch === '\n') { result += '\\n'; continue; }
+        if (inString && ch === '\r') { result += '\\r'; continue; }
+        if (inString && ch === '\t') { result += '\\t'; continue; }
+        result += ch;
+      }
+      return result;
+    }
     let clean = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
-    // Extract JSON object
+    clean = fixLiteralNewlines(clean);
     const match = clean.match(/\{[\s\S]*\}/);
     if (!match) throw new Error("Invalid response format. Please try again.");
     clean = match[0];
     let result;
     function repairJSON(str) {
-      // Remove trailing incomplete entries
       str = str.replace(/,\s*"[^"]*":\s*$/, '');
       str = str.replace(/,\s*\{[^{}]*$/, '');
       str = str.replace(/,\s*$/, '');
-      // Remove trailing incomplete string values
-      str = str.replace(/"[^"]*$/, '"..."');
-      // Balance arrays and objects
       const opens = (str.match(/\[/g)||[]).length - (str.match(/\]/g)||[]).length;
       const braces = (str.match(/\{/g)||[]).length - (str.match(/\}/g)||[]).length;
       for(let i=0;i<opens;i++) str += ']';
@@ -424,19 +435,7 @@ Return ONLY valid JSON, no markdown:
     try { result = JSON.parse(clean); }
     catch(e) {
       try { result = JSON.parse(repairJSON(clean)); }
-      catch(e2) {
-        // Last resort: try to extract partial diagnoses
-        try {
-          const partial = clean.match(/"diagnoses":\s*(\[[\s\S]*)/);
-          if (partial) {
-            let diagStr = repairJSON(partial[1]);
-            const diagArr = JSON.parse(diagStr);
-            result = { summary: "Partial result (response truncated)", diagnoses: diagArr, procedures: [] };
-          } else {
-            throw new Error("parse failed");
-          }
-        } catch(e3) { throw new Error("Failed to parse AI response. Try a shorter clinical note or try again."); }
-      }
+      catch(e2) { throw new Error("Failed to parse AI response. Please try again."); }
     }
     renderResults(result);
   } catch(err) {
