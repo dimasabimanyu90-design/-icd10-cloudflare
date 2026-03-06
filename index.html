@@ -352,8 +352,8 @@ async function analyze() {
   setLoading(true);
 
   const langInstruction = currentLang === 'id'
-    ? 'Respond in BAHASA INDONESIA for all description, summary, du_reasoning, reasoning, and validation message fields. Keep ICD codes and medical terms in their original form.'
-    : 'Respond in ENGLISH for all description, summary, du_reasoning, reasoning, and validation message fields.';
+    ? 'LANGUAGE RULES: (1) description and description_en fields MUST ALWAYS be in ENGLISH as per official ICD-10/ICD-9-CM nomenclature, never translate them. (2) summary, du_reasoning, reasoning, and validation message fields must be in BAHASA INDONESIA.'
+    : 'LANGUAGE RULES: (1) description and description_en fields MUST ALWAYS be in ENGLISH as per official ICD-10/ICD-9-CM nomenclature, never translate them. (2) summary, du_reasoning, reasoning, and validation message fields must be in ENGLISH.';
 
   const PROMPT = `You are an expert ICD-10 2nd Edition 2005 (WHO) and ICD-9-CM Vol.3 medical coder. Analyze the clinical note and return JSON only.
 
@@ -361,24 +361,32 @@ ${langInstruction}
 
 CLINICAL NOTE: ${input}
 
-RULES:
-- DU (Diagnosis Utama/Principal Diagnosis) = condition established AFTER STUDY chiefly responsible for admission (WHO Vol.2).
-- Dagger† = etiology = DU if primary. Asterisk* = manifestation = always DS, never DU. Assign both together.
-- Bekas SC = DS or Z code, not DU unless sole reason for admission.
-- Vol.3 lead_term_path: MUST be complete hierarchical index path showing EVERY level from section header down to the final code. Format EXACTLY like this example:
-  Section
-  - cesarean (see also Delivery, cesarean) O82.9
-  - cesarean (for) O82.9
-  - - previous
-  - - - cesarean section O34.2
-  O34.2 Maternal care due to uterine scar from previous surgery
-  Show ALL intermediate subterms, do NOT skip levels. Use "- " for first level, "- - " for second level, "- - - " for third level etc.
-- Vol.1: report includes/excludes/notes per code.
-- Validate: asterisk as DU=ERROR, missing pair=ERROR, excludes violated=ERROR, wrong DU=WARNING.
-- Abbreviations: SC/SCTP=sectio caesarea, TTTS=twin-twin transfusion syndrome, IUFD=intrauterine fetal death, gemelli=twins, partus prematurus=preterm labour, kista ovarium=ovarian cyst, kistektomi=cystectomy, bekas SC=previous caesarean scar, HT=hypertension, DM=diabetes mellitus, ORIF=open reduction internal fixation, ai=atas indikasi.
+DIAGNOSIS EXTRACTION - CRITICAL:
+- Extract ALL diagnoses: 1 DU + ALL DS (secondary). NEVER omit any condition mentioned.
+- DU = ONE condition chiefly responsible for admission (WHO Vol.2).
+- DS = EVERY other condition separately: all complications, comorbidities, history, findings.
+- Example "partus prematurus + gemelli + TTTS + IUFD + bekas SC + kista ovarium bilateral" MUST produce ALL these separately: preterm labour (DU), twin pregnancy (DS), TTTS (DS), IUFD (DS), previous caesarean scar (DS), bilateral ovarian cyst (DS). Do NOT omit any.
 
-Return ONLY this JSON, no markdown:
-{"summary":"...","du_reasoning":"...","validations":[{"type":"ERROR|WARNING|INFO","message":"..."}],"diagnoses":[{"role":"DU","code":"O34.2","dagger_asterisk":"none|dagger|asterisk","description":"...","description_en":"...","category":"...","confidence":92,"lead_term_path":"Section\\n- cesarean (for) O82.9\\n- - previous\\n- - - cesarean section O34.2\\nO34.2 Maternal care due to uterine scar from previous surgery","volume1_notes":[{"type":"includes|excludes|note|use_additional|code_first","text":"..."}],"paired_with":"","reasoning":"..."}],"procedures":[{"code":"74.1","description":"...","description_en":"...","category":"ICD-9-CM Vol.3","confidence":95,"lead_term_path":"...complete path...","volume1_notes":[],"reasoning":"..."}]}`;
+PROCEDURE EXTRACTION - CRITICAL:
+- Code ALL procedures separately. NEVER omit any.
+- Example "SCTP + kistektomi bilateral": MUST code BOTH caesarean section (74.1) AND bilateral cystectomy (65.29 or 65.61).
+
+FIELD RULES:
+- "description": ALWAYS official English ICD name. NEVER translate.
+- "description_id": Indonesian translation/equivalent name.
+- lead_term_path: Complete Vol.3 hierarchy ALL levels, no skipping:
+  Section
+  - term (modifier) CODE
+  - - subterm
+  - - - deeper subterm CODE
+  CODE Full official English description
+- Dagger†=etiology code, Asterisk*=manifestation code (always DS, never DU), always pair together.
+- Vol.1: report includes/excludes/notes per code.
+- Validate: asterisk as DU=ERROR, missing pair=ERROR, excludes violated=ERROR, wrong DU=WARNING, missing DS=WARNING.
+- Abbreviations: SC/SCTP=sectio caesarea transperitonealis, TTTS=twin-to-twin transfusion syndrome, IUFD=intrauterine fetal death, gemelli=twins, partus prematurus=preterm labour, kista ovarium=ovarian cyst, kistektomi=cystectomy, bekas SC=previous caesarean scar, HT=hypertension, DM=diabetes mellitus, ORIF=open reduction internal fixation, ai=atas indikasi.
+
+Return ONLY valid JSON, no markdown:
+{"summary":"...","du_reasoning":"...","validations":[{"type":"ERROR|WARNING|INFO","message":"..."}],"diagnoses":[{"role":"DU","code":"O60.1","dagger_asterisk":"none|dagger|asterisk","description":"ENGLISH official ICD name","description_id":"Nama resmi Bahasa Indonesia","category":"Chapter XV - Pregnancy childbirth...","confidence":92,"lead_term_path":"Section\n- term CODE\n- - subterm\n- - - subterm CODE\nCODE Full official description","volume1_notes":[{"type":"includes|excludes|note|use_additional|code_first","text":"..."}],"paired_with":"","reasoning":"..."}],"procedures":[{"code":"74.1","description":"ENGLISH official ICD-9-CM name","description_id":"Nama resmi Bahasa Indonesia","category":"ICD-9-CM Vol.3 - ...","confidence":95,"lead_term_path":"...complete path...","volume1_notes":[],"reasoning":"..."}]}`;
 
   try {
     const resp = await fetch("/api/claude", {
@@ -493,8 +501,10 @@ function renderResults(result) {
     const dagMark = isDagger ? `<span class="dagger-mark" title="Etiology code">†</span>` : '';
     const astMark = isAsterisk ? `<span class="asterisk-mark" title="Manifestation code">*</span>` : '';
     const pairNote = d.paired_with ? `<span style="font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;"> → ${t.labelPasangan}: ${d.paired_with}</span>` : '';
-    const descMain = currentLang === 'id' ? d.description : (d.description_en || d.description);
-    const descAlt = currentLang === 'id' ? (d.description_en ? `<div class="diag-desc-alt">EN: ${d.description_en}</div>` : '') : `<div class="diag-desc-alt">ID: ${d.description}</div>`;
+    const descMain = d.description;
+    const descAlt = currentLang === 'id'
+      ? (d.description_id ? `<div class="diag-desc-alt">🇮🇩 ${d.description_id}</div>` : '')
+      : '';
     const pathLabel = t.labelVol3;
     return `<div class="diag-item" style="animation-delay:${i*0.06}s">
       <div class="diag-main">
@@ -523,8 +533,10 @@ function renderResults(result) {
   const procedures = result.procedures || [];
   document.getElementById('procCount').textContent = `${procedures.length} ${currentLang === 'id' ? 'kode' : 'codes'}`;
   document.getElementById('procList').innerHTML = procedures.map((p, i) => {
-    const descMain = currentLang === 'id' ? p.description : (p.description_en || p.description);
-    const descAlt = currentLang === 'id' ? (p.description_en ? `<div class="diag-desc-alt">EN: ${p.description_en}</div>` : '') : `<div class="diag-desc-alt">ID: ${p.description}</div>`;
+    const descMain = p.description;
+    const descAlt = currentLang === 'id'
+      ? (p.description_id ? `<div class="diag-desc-alt">🇮🇩 ${p.description_id}</div>` : '')
+      : '';
     return `<div class="diag-item" style="animation-delay:${(diagnoses.length+i)*0.06}s">
       <div class="diag-main">
         <div><span class="du-badge proc">PROC</span></div>
