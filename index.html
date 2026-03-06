@@ -372,8 +372,8 @@ PROCEDURE EXTRACTION - CRITICAL:
 - Example "SCTP + kistektomi bilateral": MUST code BOTH caesarean section (74.1) AND bilateral cystectomy (65.29 or 65.61).
 
 FIELD RULES:
-- "description": ALWAYS official English ICD name. NEVER translate.
-- "description_id": Indonesian translation/equivalent name.
+- "description": MUST be the EXACT official title from ICD-10 Vol.1 tabular list or ICD-9-CM. Copy verbatim, do NOT paraphrase or create your own wording. Example: N83.2 = "Other and unspecified ovarian cysts" NOT "Bilateral ovarian cyst". O60.1 = "Preterm labour with preterm delivery" NOT "Preterm labour".
+- "description_id": Indonesian translation of the exact official title above.
 - lead_term_path: Complete Vol.3 hierarchy ALL levels, no skipping:
   Section
   - term (modifier) CODE
