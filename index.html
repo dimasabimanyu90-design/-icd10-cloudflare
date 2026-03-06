@@ -117,7 +117,7 @@ textarea::placeholder { color: #b8b0a6; font-style: italic; }
 .footer-sep { color: var(--rule); font-size: 16px; }
 .footer-powered { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px; }
 .footer-groq { background: #f55036; color: #fff; font-size: 10px; font-family: 'IBM Plex Mono', monospace; font-weight: 500; padding: 2px 8px; border-radius: 3px; letter-spacing: 0.5px; }
-.disclaimer { text-align: center; font-size: 11px; color: var(--muted); margin-top: 40px; line-height: 1.8; font-family: 'IBM Plex Mono', monospace; letter-spacing: 0.3px; width: 100%; padding: 0 20px; }
+.disclaimer { text-align: center; font-size: 11.5px; margin-top: 40px; line-height: 1.9; font-family: 'IBM Plex Mono', monospace; letter-spacing: 0.3px; width: 100%; padding: 14px 24px; background: linear-gradient(135deg, #fff7ed, #fef3c7); border-top: 2px solid #f97316; border-bottom: 2px solid #f97316; color: #92400e; }
 @media(max-width:600px){ header{padding:0 16px;} .header-right{gap:6px;} .htag{display:none;} main{padding:24px 12px 60px;} .diag-main{grid-template-columns:auto 1fr; gap:10px;} .conf-wrap{display:none;} }
 </style>
 </head>
@@ -247,7 +247,7 @@ const T = {
     labelVol1: '▸ Volume 1 Tabular Notes',
     labelReasoning: '💬 Alasan: ',
     labelPasangan: 'pasangan',
-    disclaimerText: '⚠ Tools ini hanya untuk keperluan akademik / belajar coding.<br>Selalu verifikasi dengan buku ICD-10 Vol.1, Vol.3 dan ICD-9-CM yang berlaku.<br>Bukan pengganti penilaian coder profesional bersertifikat.',
+    disclaimerText: '⚠️ <strong>PERHATIAN</strong> — Tools ini hanya untuk keperluan <strong>akademik / belajar coding</strong>.<br>📚 Selalu verifikasi dengan buku <strong>ICD-10 Vol.1, Vol.3</strong> dan <strong>ICD-9-CM</strong> yang berlaku.<br>👨‍⚕️ Bukan pengganti penilaian <strong>coder profesional bersertifikat</strong>.',
     placeholder: 'Paste catatan klinis di sini...\n\nContoh: Ny. X, G2P1A0 hamil 7 bulan, partus prematurus 32-33 minggu dengan SC ai gemelli anak ke 2 + TTTS + IUFD + bekas SC + kista ovarium bilateral. Tindakan: SCTP + kistektomi bilateral.',
     errorPrefix: 'Terjadi error: ',
   },
@@ -273,7 +273,7 @@ const T = {
     labelVol1: '▸ Volume 1 Tabular Notes',
     labelReasoning: '💬 Reasoning: ',
     labelPasangan: 'paired with',
-    disclaimerText: '⚠ This tool is for academic/learning purposes only.<br>Always verify with ICD-10 Vol.1, Vol.3 and ICD-9-CM books.<br>Not a substitute for certified professional coder judgment.',
+    disclaimerText: '⚠️ <strong>DISCLAIMER</strong> — This tool is for <strong>academic / learning purposes only</strong>.<br>📚 Always verify with <strong>ICD-10 Vol.1, Vol.3</strong> and <strong>ICD-9-CM</strong> official books.<br>👨‍⚕️ Not a substitute for <strong>certified professional coder</strong> judgment.',
     placeholder: 'Paste clinical notes here...\n\nExample: Female, 37yo. Preterm labor 32-33 weeks via cesarean section due to twins + TTTS + IUFD + previous CS + bilateral ovarian cyst. Procedure: LSCS + bilateral cystectomy.',
     errorPrefix: 'Error occurred: ',
   }
@@ -372,7 +372,9 @@ PROCEDURE EXTRACTION - CRITICAL:
 - Example "SCTP + kistektomi bilateral": MUST code BOTH caesarean section (74.1) AND bilateral cystectomy (65.29 or 65.61).
 
 FIELD RULES:
-- "description": MUST be the EXACT official title from ICD-10 Vol.1 tabular list or ICD-9-CM. Copy verbatim, do NOT paraphrase or create your own wording. Example: N83.2 = "Other and unspecified ovarian cysts" NOT "Bilateral ovarian cyst". O60.1 = "Preterm labour with preterm delivery" NOT "Preterm labour".
+- "description": MUST be the EXACT official title from ICD-10 Vol.1 tabular list or ICD-9-CM tabular list. Copy verbatim, do NOT paraphrase or create your own wording.
+  ICD-10 examples: N83.2 = "Other and unspecified ovarian cysts" NOT "Bilateral ovarian cyst". O60.1 = "Preterm labour with preterm delivery" NOT "Preterm labour". O34.2 = "Maternal care due to uterine scar from previous surgery" NOT "Previous caesarean scar".
+  ICD-9-CM examples: 74.1 = "Low cervical caesarean section" NOT "Caesarean section". 65.29 = "Other local excision or destruction of ovary" NOT "Bilateral cystectomy". 65.61 = "Other removal of both ovaries and tubes at same operative episode" NOT "Bilateral oophorectomy".
 - "description_id": Indonesian translation of the exact official title above.
 - lead_term_path: Complete Vol.3 hierarchy ALL levels, no skipping:
   Section
