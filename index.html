@@ -4,58 +4,32 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Auto Coding ICD-10 & ICD-9-CM</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;1,400&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;1,400&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --ink: #1c1917;
-  --paper: #faf7f2;
-  --cream: #f2ede4;
-  --rule: #ddd6ca;
-  --muted: #78716c;
-  --red: #b91c1c;
-  --red-light: #fee2e2;
-  --blue: #1d4ed8;
-  --blue-light: #dbeafe;
-  --green: #15803d;
-  --green-light: #dcfce7;
-  --gold: #92400e;
-  --gold-light: #fef3c7;
+  --ink: #1c1917; --paper: #faf7f2; --cream: #f2ede4; --rule: #ddd6ca; --muted: #78716c;
+  --red: #b91c1c; --red-light: #fee2e2; --blue: #1d4ed8; --blue-light: #dbeafe;
+  --green: #15803d; --green-light: #dcfce7; --gold: #92400e; --gold-light: #fef3c7;
   --shadow-sm: 0 1px 3px rgba(28,25,23,.08);
-  --shadow: 0 4px 20px rgba(28,25,23,.10);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  background: var(--paper);
-  font-family: 'IBM Plex Sans', sans-serif;
-  color: var(--ink);
-  min-height: 100vh;
-}
-body::before {
-  content: '';
-  position: fixed; inset: 0;
-  background-image: radial-gradient(circle, #c8bfb0 1px, transparent 1px);
-  background-size: 28px 28px;
-  opacity: 0.25;
-  pointer-events: none;
-  z-index: 0;
-}
-header {
-  position: relative; z-index: 10;
-  background: var(--ink);
-  color: var(--paper);
-  padding: 0 40px;
-  display: flex; align-items: center; justify-content: space-between;
-  height: 60px;
-  border-bottom: 3px solid var(--red);
-}
+body { background: var(--paper); font-family: 'IBM Plex Sans', sans-serif; color: var(--ink); min-height: 100vh; }
+body::before { content: ''; position: fixed; inset: 0; background-image: radial-gradient(circle, #c8bfb0 1px, transparent 1px); background-size: 28px 28px; opacity: 0.25; pointer-events: none; z-index: 0; }
+header { position: relative; z-index: 10; background: var(--ink); color: var(--paper); padding: 0 40px; display: flex; align-items: center; justify-content: space-between; height: 60px; border-bottom: 3px solid var(--red); }
 .logo-wrap { display: flex; align-items: baseline; gap: 14px; }
-.logo-main { font-family: 'Playfair Display', serif; font-size: 18px; letter-spacing: 0.3px; color: #fff; }
+.logo-main { font-family: 'Playfair Display', serif; font-size: 18px; color: #fff; }
 .logo-sep { width: 1px; height: 18px; background: #444; }
 .logo-sub { font-size: 11px; font-family: 'IBM Plex Mono', monospace; color: #a8a29e; letter-spacing: 0.5px; text-transform: uppercase; }
-.header-tags { display: flex; gap: 8px; }
+.logo-sep2 { width: 1px; height: 14px; background: #333; }
+.logo-designer { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 13px; color: #6b6460; letter-spacing: 0.3px; }
+.header-right { display: flex; align-items: center; gap: 10px; }
 .htag { font-size: 10px; font-family: 'IBM Plex Mono', monospace; font-weight: 500; letter-spacing: 0.5px; padding: 3px 8px; border-radius: 3px; text-transform: uppercase; }
 .htag-red { background: var(--red); color: #fff; }
 .htag-outline { border: 1px solid #444; color: #a8a29e; }
+/* Language switch */
+.lang-switch { display: flex; background: #2d2a27; border-radius: 4px; overflow: hidden; border: 1px solid #444; }
+.lang-btn { font-size: 11px; font-family: 'IBM Plex Mono', monospace; font-weight: 500; padding: 4px 10px; cursor: pointer; border: none; background: transparent; color: #a8a29e; transition: all .15s; letter-spacing: 0.5px; }
+.lang-btn.active { background: var(--red); color: #fff; }
 main { position: relative; z-index: 1; max-width: 960px; margin: 0 auto; padding: 40px 24px 80px; }
 .section-rule { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
 .section-rule-line { flex: 1; height: 1px; background: var(--rule); }
@@ -73,7 +47,7 @@ textarea::placeholder { color: #b8b0a6; font-style: italic; }
 .ex-btn { font-size: 11px; font-family: 'IBM Plex Mono', monospace; color: var(--muted); background: var(--cream); border: 1px solid var(--rule); border-radius: 2px; padding: 5px 10px; cursor: pointer; transition: all .15s; }
 .ex-btn:hover { border-color: var(--ink); color: var(--ink); background: #fff; }
 .action-row { display: flex; gap: 10px; align-items: center; margin-top: 16px; }
-.btn-analyze { background: var(--ink); color: #fff; border: none; border-radius: 3px; padding: 12px 24px; font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all .2s; letter-spacing: -0.2px; }
+.btn-analyze { background: var(--ink); color: #fff; border: none; border-radius: 3px; padding: 12px 24px; font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all .2s; }
 .btn-analyze:hover:not(:disabled) { background: var(--red); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(185,28,28,.25); }
 .btn-analyze:disabled { opacity: .55; cursor: not-allowed; transform: none; }
 .btn-clear { background: transparent; color: var(--muted); border: 1px solid var(--rule); border-radius: 3px; padding: 11px 16px; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; cursor: pointer; transition: all .15s; }
@@ -95,12 +69,12 @@ textarea::placeholder { color: #b8b0a6; font-style: italic; }
 .du-badge.du { background: var(--red); color: #fff; }
 .du-badge.ds { background: var(--blue-light); color: var(--blue); border: 1px solid #93c5fd; }
 .du-badge.proc { background: var(--green-light); color: var(--green); border: 1px solid #86efac; }
-.diag-center { flex: 1; }
 .diag-code-row { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
 .diag-code { font-family: 'IBM Plex Mono', monospace; font-size: 17px; font-weight: 500; color: var(--ink); letter-spacing: 1px; }
 .dagger-mark { font-size: 13px; color: var(--red); font-family: 'IBM Plex Mono', monospace; font-weight: 500; }
 .asterisk-mark { font-size: 13px; color: var(--blue); font-family: 'IBM Plex Mono', monospace; font-weight: 500; }
 .diag-desc { font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.4; margin-bottom: 3px; }
+.diag-desc-alt { font-size: 12px; color: var(--muted); line-height: 1.4; margin-bottom: 3px; font-style: italic; }
 .diag-category { font-size: 11px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; }
 .conf-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; min-width: 70px; }
 .conf-val { font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 500; color: var(--ink); }
@@ -108,11 +82,14 @@ textarea::placeholder { color: #b8b0a6; font-style: italic; }
 .conf-fill { height: 100%; border-radius: 10px; background: var(--ink); transition: width .5s ease; }
 .lead-term-box { background: var(--cream); border-top: 1px dashed var(--rule); padding: 10px 20px 10px 52px; }
 .lead-label { font-size: 10px; font-family: 'IBM Plex Mono', monospace; font-weight: 500; letter-spacing: 0.8px; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; display: flex; align-items: center; justify-content: space-between; padding-right: 4px; }
-.copy-btn { font-size: 10px; font-family: 'IBM Plex Mono', monospace; font-weight: 500; color: var(--muted); background: #fff; border: 1px solid var(--rule); border-radius: 3px; padding: 2px 8px; cursor: pointer; transition: all .15s; letter-spacing: 0.3px; display: flex; align-items: center; gap: 4px; }
+.copy-btn { font-size: 10px; font-family: 'IBM Plex Mono', monospace; font-weight: 500; color: var(--muted); background: #fff; border: 1px solid var(--rule); border-radius: 3px; padding: 2px 8px; cursor: pointer; transition: all .15s; display: flex; align-items: center; gap: 4px; }
 .copy-btn:hover { border-color: var(--ink); color: var(--ink); }
 .copy-btn.copied { background: var(--green-light); color: var(--green); border-color: #86efac; }
-.lead-path { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--ink); line-height: 1.8; white-space: pre-wrap; }
-.lead-path .lp-code { color: var(--red); font-weight: 500; }
+.lead-path { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--ink); line-height: 2; white-space: pre-wrap; }
+.lp-section { color: #6b5e4e; font-weight: 600; font-size: 11px; letter-spacing: 0.5px; }
+.lp-indent { color: var(--muted); }
+.lp-code { color: var(--red); font-weight: 600; }
+.lp-final { display: block; margin-top: 4px; background: #fff; border: 1px solid var(--rule); border-left: 3px solid var(--red); padding: 6px 10px; border-radius: 2px; font-size: 12px; color: var(--ink); line-height: 1.5; }
 .reasoning-box { background: #f9f9f7; border-top: 1px solid var(--rule); padding: 10px 20px 10px 52px; font-size: 12.5px; color: var(--muted); line-height: 1.65; font-style: italic; }
 .legend { display: flex; gap: 16px; flex-wrap: wrap; padding: 10px 20px; background: var(--cream); border-top: 1px solid var(--rule); font-size: 11px; font-family: 'IBM Plex Mono', monospace; color: var(--muted); }
 .legend-item { display: flex; align-items: center; gap: 5px; }
@@ -132,7 +109,6 @@ textarea::placeholder { color: #b8b0a6; font-style: italic; }
 .validation-banner { background: #fff7ed; border: 1px solid #fed7aa; border-left: 4px solid #f97316; border-radius: 3px; padding: 12px 16px; margin-bottom: 16px; font-size: 12.5px; color: #9a3412; line-height: 1.65; }
 .validation-banner strong { display: block; font-size: 10px; letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 5px; font-weight: 700; }
 .val-item { display: flex; gap: 8px; align-items: flex-start; margin-top: 4px; }
-.val-icon { flex-shrink: 0; margin-top: 1px; }
 .error-box { background: var(--red-light); border: 1px solid #fca5a5; border-left: 4px solid var(--red); border-radius: 3px; padding: 14px 18px; color: var(--red); font-size: 13px; line-height: 1.6; }
 .empty-state { text-align: center; padding: 56px 24px; color: var(--muted); }
 .empty-mono { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; margin-top: 12px; opacity: 0.6; }
@@ -140,9 +116,9 @@ textarea::placeholder { color: #b8b0a6; font-style: italic; }
 .footer-name { font-family: 'Playfair Display', serif; font-size: 14px; color: var(--ink); font-style: italic; }
 .footer-sep { color: var(--rule); font-size: 16px; }
 .footer-powered { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px; }
-.footer-gemini { background: #1a73e8; color: #fff; font-size: 10px; font-family: 'IBM Plex Mono', monospace; font-weight: 500; padding: 2px 8px; border-radius: 3px; letter-spacing: 0.5px; }
-.disclaimer { text-align: center; font-size: 11px; color: var(--muted); margin-top: 40px; line-height: 1.8; font-family: 'IBM Plex Mono', monospace; letter-spacing: 0.3px; width: 100%; }
-@media(max-width:600px){ header{padding:0 16px;} .header-tags{display:none;} main{padding:24px 12px 60px;} .diag-main{grid-template-columns:auto 1fr; gap:10px;} .conf-wrap{display:none;} }
+.footer-groq { background: #f55036; color: #fff; font-size: 10px; font-family: 'IBM Plex Mono', monospace; font-weight: 500; padding: 2px 8px; border-radius: 3px; letter-spacing: 0.5px; }
+.disclaimer { text-align: center; font-size: 11px; color: var(--muted); margin-top: 40px; line-height: 1.8; font-family: 'IBM Plex Mono', monospace; letter-spacing: 0.3px; width: 100%; padding: 0 20px; }
+@media(max-width:600px){ header{padding:0 16px;} .header-right{gap:6px;} .htag{display:none;} main{padding:24px 12px 60px;} .diag-main{grid-template-columns:auto 1fr; gap:10px;} .conf-wrap{display:none;} }
 </style>
 </head>
 <body>
@@ -152,27 +128,30 @@ textarea::placeholder { color: #b8b0a6; font-style: italic; }
     <div class="logo-main">Auto Coding</div>
     <div class="logo-sep"></div>
     <div class="logo-sub">Clinical Coding Assistant</div>
+    <div class="logo-sep2"></div>
+    <div class="logo-designer">Design by Dimas Abimanyu</div>
   </div>
-  <div class="header-tags">
+  <div class="header-right">
     <span class="htag htag-red">ICD-10 2nd Ed. 2005</span>
     <span class="htag htag-outline">ICD-9-CM Vol.3</span>
+    <div class="lang-switch">
+      <button class="lang-btn active" id="btnID" onclick="setLang('id')">ID</button>
+      <button class="lang-btn" id="btnEN" onclick="setLang('en')">EN</button>
+    </div>
   </div>
 </header>
 
 <main>
   <div class="section-rule">
     <div class="section-rule-line"></div>
-    <div class="section-rule-label">Input Klinis</div>
+    <div class="section-rule-label" id="labelInput">Input Klinis</div>
     <div class="section-rule-line"></div>
   </div>
 
   <div class="input-card">
     <div class="input-card-header">
-      <div class="input-card-title">Catatan SOAP / Anamnesa / Resume Medis</div>
-      <div class="lang-tags">
-        <span class="lang-tag">ID</span>
-        <span class="lang-tag">EN</span>
-      </div>
+      <div class="input-card-title" id="labelCardTitle">Catatan SOAP / Anamnesa / Resume Medis</div>
+      <div class="lang-tags"><span class="lang-tag">ID</span><span class="lang-tag">EN</span></div>
     </div>
     <div class="input-card-body">
       <textarea id="clinicalInput" placeholder="Paste catatan klinis di sini...&#10;&#10;Contoh: Ny. X, G2P1A0 hamil 7 bulan, partus prematurus 32-33 minggu dengan SC ai gemelli anak ke 2 + TTTS + IUFD + bekas SC + kista ovarium bilateral. Tindakan: SCTP + kistektomi bilateral."></textarea>
@@ -188,7 +167,7 @@ textarea::placeholder { color: #b8b0a6; font-style: italic; }
           <span id="btnSpinner" style="display:none"><span class="spinner"></span></span>
           <span id="btnLabel">Analyze &amp; Code</span>
         </button>
-        <button class="btn-clear" onclick="clearAll()">Clear</button>
+        <button class="btn-clear" onclick="clearAll()" id="btnClear">Clear</button>
       </div>
     </div>
   </div>
@@ -196,33 +175,33 @@ textarea::placeholder { color: #b8b0a6; font-style: italic; }
   <div id="emptyState">
     <div class="empty-state">
       <div style="font-size:40px; opacity:.2">⚕</div>
-      <div class="empty-mono">Masukkan catatan klinis untuk memulai coding</div>
+      <div class="empty-mono" id="emptyMsg">Masukkan catatan klinis untuk memulai coding</div>
     </div>
   </div>
 
   <div id="resultsSection">
     <div class="section-rule">
       <div class="section-rule-line"></div>
-      <div class="section-rule-label">Hasil Coding</div>
+      <div class="section-rule-label" id="labelHasil">Hasil Coding</div>
       <div class="section-rule-line"></div>
     </div>
     <div id="summaryBox"></div>
-    <div class="coding-table-wrap" id="diagTableWrap">
+    <div class="coding-table-wrap">
       <div class="coding-table-header">
-        <div class="coding-table-title">Diagnosis — ICD-10 2nd Edition 2005</div>
+        <div class="coding-table-title" id="labelDiagTable">Diagnosis — ICD-10 2nd Edition 2005</div>
         <div class="coding-count" id="diagCount">–</div>
       </div>
       <div id="diagList"></div>
       <div class="legend">
-        <div class="legend-item"><span style="color:var(--red);font-size:13px">†</span> Dagger = kode etiologi (DU jika berpasangan)</div>
-        <div class="legend-item"><span style="color:var(--blue);font-size:13px">*</span> Asterisk = kode manifestasi (DS)</div>
-        <div class="legend-item"><span style="background:var(--red);color:#fff;padding:1px 5px;border-radius:2px;font-size:9px">DU</span> Diagnosis Utama</div>
-        <div class="legend-item"><span style="background:var(--blue-light);color:var(--blue);padding:1px 5px;border-radius:2px;font-size:9px;border:1px solid #93c5fd">DS</span> Diagnosis Sekunder</div>
+        <div class="legend-item"><span style="color:var(--red);font-size:13px">†</span> <span id="lgDagger">Dagger = kode etiologi (DU jika berpasangan)</span></div>
+        <div class="legend-item"><span style="color:var(--blue);font-size:13px">*</span> <span id="lgAsterisk">Asterisk = kode manifestasi (DS)</span></div>
+        <div class="legend-item"><span style="background:var(--red);color:#fff;padding:1px 5px;border-radius:2px;font-size:9px">DU</span> <span id="lgDU">Diagnosis Utama</span></div>
+        <div class="legend-item"><span style="background:var(--blue-light);color:var(--blue);padding:1px 5px;border-radius:2px;font-size:9px;border:1px solid #93c5fd">DS</span> <span id="lgDS">Diagnosis Sekunder</span></div>
       </div>
     </div>
-    <div class="proc-table-wrap" id="procTableWrap">
+    <div class="proc-table-wrap">
       <div class="proc-header">
-        <div class="proc-header-title">Prosedur — ICD-9-CM Volume 3</div>
+        <div class="proc-header-title" id="labelProcTable">Prosedur — ICD-9-CM Volume 3</div>
         <div class="coding-count" id="procCount" style="color:#86efac">–</div>
       </div>
       <div id="procList"></div>
@@ -230,7 +209,7 @@ textarea::placeholder { color: #b8b0a6; font-style: italic; }
   </div>
 </main>
 
-<p class="disclaimer">
+<p class="disclaimer" id="disclaimerText">
   ⚠ Tools ini hanya untuk keperluan akademik / belajar coding.<br>
   Selalu verifikasi dengan buku ICD-10 Vol.1, Vol.3 dan ICD-9-CM yang berlaku.<br>
   Bukan pengganti penilaian coder profesional bersertifikat.
@@ -239,12 +218,88 @@ textarea::placeholder { color: #b8b0a6; font-style: italic; }
 <div class="footer-mark">
   <span class="footer-name">Created by Dimas Abimanyu</span>
   <span class="footer-sep">·</span>
-  <span class="footer-powered">
-    Powered by <span class="footer-gemini">Gemini AI</span>
-  </span>
+  <span class="footer-powered">Powered by <span class="footer-groq">Groq AI</span></span>
 </div>
 
 <script>
+// ── LANGUAGE ──
+let currentLang = 'id';
+const T = {
+  id: {
+    labelInput: 'Input Klinis',
+    labelCardTitle: 'Catatan SOAP / Anamnesa / Resume Medis',
+    labelHasil: 'Hasil Coding',
+    labelDiagTable: 'Diagnosis — ICD-10 2nd Edition 2005',
+    labelProcTable: 'Prosedur — ICD-9-CM Volume 3',
+    btnAnalyze: 'Analyze & Code',
+    btnAnalyzing: 'Menganalisis...',
+    btnClear: 'Clear',
+    emptyMsg: 'Masukkan catatan klinis untuk memulai coding',
+    lgDagger: 'Dagger = kode etiologi (DU jika berpasangan)',
+    lgAsterisk: 'Asterisk = kode manifestasi (DS)',
+    lgDU: 'Diagnosis Utama',
+    lgDS: 'Diagnosis Sekunder',
+    labelSummary: 'Ringkasan Klinis',
+    labelDUReason: '⚖ Dasar Pemilihan DU (WHO ICD-10 Vol.2)',
+    labelValidasi: '⚠ Validasi Kaidah Coding',
+    labelVol3: '▸ Volume 3 Index Path',
+    labelVol3proc: '▸ ICD-9-CM Vol.3 Index Path',
+    labelVol1: '▸ Volume 1 Tabular Notes',
+    labelReasoning: '💬 Alasan: ',
+    labelPasangan: 'pasangan',
+    disclaimerText: '⚠ Tools ini hanya untuk keperluan akademik / belajar coding.<br>Selalu verifikasi dengan buku ICD-10 Vol.1, Vol.3 dan ICD-9-CM yang berlaku.<br>Bukan pengganti penilaian coder profesional bersertifikat.',
+    placeholder: 'Paste catatan klinis di sini...\n\nContoh: Ny. X, G2P1A0 hamil 7 bulan, partus prematurus 32-33 minggu dengan SC ai gemelli anak ke 2 + TTTS + IUFD + bekas SC + kista ovarium bilateral. Tindakan: SCTP + kistektomi bilateral.',
+    errorPrefix: 'Terjadi error: ',
+  },
+  en: {
+    labelInput: 'Clinical Input',
+    labelCardTitle: 'SOAP Note / Anamnesis / Medical Resume',
+    labelHasil: 'Coding Results',
+    labelDiagTable: 'Diagnosis — ICD-10 2nd Edition 2005',
+    labelProcTable: 'Procedure — ICD-9-CM Volume 3',
+    btnAnalyze: 'Analyze & Code',
+    btnAnalyzing: 'Analyzing...',
+    btnClear: 'Clear',
+    emptyMsg: 'Enter clinical notes to start coding',
+    lgDagger: 'Dagger = etiology code (PDx if paired)',
+    lgAsterisk: 'Asterisk = manifestation code (SDx)',
+    lgDU: 'Principal Diagnosis',
+    lgDS: 'Secondary Diagnosis',
+    labelSummary: 'Clinical Summary',
+    labelDUReason: '⚖ Principal Diagnosis Rationale (WHO ICD-10 Vol.2)',
+    labelValidasi: '⚠ Coding Rules Validation',
+    labelVol3: '▸ Volume 3 Index Path',
+    labelVol3proc: '▸ ICD-9-CM Vol.3 Index Path',
+    labelVol1: '▸ Volume 1 Tabular Notes',
+    labelReasoning: '💬 Reasoning: ',
+    labelPasangan: 'paired with',
+    disclaimerText: '⚠ This tool is for academic/learning purposes only.<br>Always verify with ICD-10 Vol.1, Vol.3 and ICD-9-CM books.<br>Not a substitute for certified professional coder judgment.',
+    placeholder: 'Paste clinical notes here...\n\nExample: Female, 37yo. Preterm labor 32-33 weeks via cesarean section due to twins + TTTS + IUFD + previous CS + bilateral ovarian cyst. Procedure: LSCS + bilateral cystectomy.',
+    errorPrefix: 'Error occurred: ',
+  }
+};
+
+function setLang(lang) {
+  currentLang = lang;
+  document.getElementById('btnID').classList.toggle('active', lang === 'id');
+  document.getElementById('btnEN').classList.toggle('active', lang === 'en');
+  const t = T[lang];
+  document.getElementById('labelInput').textContent = t.labelInput;
+  document.getElementById('labelCardTitle').textContent = t.labelCardTitle;
+  document.getElementById('labelHasil').textContent = t.labelHasil;
+  document.getElementById('labelDiagTable').textContent = t.labelDiagTable;
+  document.getElementById('labelProcTable').textContent = t.labelProcTable;
+  document.getElementById('btnLabel').textContent = t.btnAnalyze;
+  document.getElementById('btnClear').textContent = t.btnClear;
+  document.getElementById('emptyMsg').textContent = t.emptyMsg;
+  document.getElementById('lgDagger').textContent = t.lgDagger;
+  document.getElementById('lgAsterisk').textContent = t.lgAsterisk;
+  document.getElementById('lgDU').textContent = t.lgDU;
+  document.getElementById('lgDS').textContent = t.lgDS;
+  document.getElementById('disclaimerText').innerHTML = t.disclaimerText;
+  document.getElementById('clinicalInput').placeholder = t.placeholder;
+}
+
 const EXAMPLES = {
   1: `Nama : Ny. X umur 37 tahun dirawat di RS XYZ masuk ruang perawatan tanggal 20 Mei 2018 diizinkan pulang tanggal 25 Mei 2018, dirawat di kelas II dengan rincian perawatan :
 Diagnosis utama dan riwayat : G2P1A0 hamil 7 bulan , diketahui fetus ke 2 dengan kista rahim
@@ -270,20 +325,17 @@ Tindakan: ORIF femur sinistra dengan nail intramedular.`
 };
 
 function loadEx(n) { document.getElementById('clinicalInput').value = EXAMPLES[n]; }
-
 function clearAll() {
   document.getElementById('clinicalInput').value = '';
   document.getElementById('resultsSection').style.display = 'none';
   document.getElementById('emptyState').style.display = 'block';
 }
-
 function setLoading(on) {
   const btn = document.getElementById('analyzeBtn');
   btn.disabled = on;
   document.getElementById('btnSpinner').style.display = on ? 'inline' : 'none';
-  document.getElementById('btnLabel').textContent = on ? 'Menganalisis...' : 'Analyze & Code';
+  document.getElementById('btnLabel').textContent = on ? T[currentLang].btnAnalyzing : T[currentLang].btnAnalyze;
 }
-
 function showError(msg) {
   document.getElementById('resultsSection').style.display = 'block';
   document.getElementById('emptyState').style.display = 'none';
@@ -299,57 +351,64 @@ async function analyze() {
   if (!input) return;
   setLoading(true);
 
+  const langInstruction = currentLang === 'id'
+    ? 'Respond in BAHASA INDONESIA for all description, summary, du_reasoning, reasoning, and validation message fields. Keep ICD codes and medical terms in their original form.'
+    : 'Respond in ENGLISH for all description, summary, du_reasoning, reasoning, and validation message fields.';
+
   const PROMPT = `You are an expert ICD-10 2nd Edition 2005 (WHO) and ICD-9-CM Vol.3 medical coder. Analyze the clinical note and return JSON only.
+
+${langInstruction}
 
 CLINICAL NOTE: ${input}
 
 RULES:
-- DU (Diagnosis Utama) = condition established AFTER STUDY chiefly responsible for admission (WHO Vol.2). Use final diagnosis, not admitting complaint.
+- DU (Diagnosis Utama/Principal Diagnosis) = condition established AFTER STUDY chiefly responsible for admission (WHO Vol.2).
 - Dagger† = etiology = DU if primary. Asterisk* = manifestation = always DS, never DU. Assign both together.
 - Bekas SC = DS or Z code, not DU unless sole reason for admission.
-- Vol.3: show lead term index path. Vol.1: report includes/excludes/notes per code.
-- Validate: asterisk as DU=ERROR, missing pair=ERROR, excludes violated=ERROR, wrong DU=WARNING, [BPJS] flag if INA-CBGs issue.
+- Vol.3 lead_term_path: MUST be complete hierarchical index path showing EVERY level from section header down to the final code. Format EXACTLY like this example:
+  Section
+  - cesarean (see also Delivery, cesarean) O82.9
+  - cesarean (for) O82.9
+  - - previous
+  - - - cesarean section O34.2
+  O34.2 Maternal care due to uterine scar from previous surgery
+  Show ALL intermediate subterms, do NOT skip levels. Use "- " for first level, "- - " for second level, "- - - " for third level etc.
+- Vol.1: report includes/excludes/notes per code.
+- Validate: asterisk as DU=ERROR, missing pair=ERROR, excludes violated=ERROR, wrong DU=WARNING.
 - Abbreviations: SC/SCTP=sectio caesarea, TTTS=twin-twin transfusion syndrome, IUFD=intrauterine fetal death, gemelli=twins, partus prematurus=preterm labour, kista ovarium=ovarian cyst, kistektomi=cystectomy, bekas SC=previous caesarean scar, HT=hypertension, DM=diabetes mellitus, ORIF=open reduction internal fixation, ai=atas indikasi.
 
 Return ONLY this JSON, no markdown:
-{"summary":"2-3 sentence clinical summary","du_reasoning":"Why this DU per WHO Vol.2","validations":[{"type":"ERROR|WARNING|INFO","message":"..."}],"diagnoses":[{"role":"DU","code":"O34.2","dagger_asterisk":"none|dagger|asterisk","description":"...","category":"Chapter...","confidence":92,"lead_term_path":"Section\\n- term O34.2","volume1_notes":[{"type":"includes|excludes|note|use_additional|code_first","text":"..."}],"paired_with":"","reasoning":"..."}],"procedures":[{"code":"74.1","description":"...","category":"ICD-9-CM Vol.3","confidence":95,"lead_term_path":"Term\\n- subterm 74.1","volume1_notes":[],"reasoning":"..."}]}`;
+{"summary":"...","du_reasoning":"...","validations":[{"type":"ERROR|WARNING|INFO","message":"..."}],"diagnoses":[{"role":"DU","code":"O34.2","dagger_asterisk":"none|dagger|asterisk","description":"...","description_en":"...","category":"...","confidence":92,"lead_term_path":"Section\\n- cesarean (for) O82.9\\n- - previous\\n- - - cesarean section O34.2\\nO34.2 Maternal care due to uterine scar from previous surgery","volume1_notes":[{"type":"includes|excludes|note|use_additional|code_first","text":"..."}],"paired_with":"","reasoning":"..."}],"procedures":[{"code":"74.1","description":"...","description_en":"...","category":"ICD-9-CM Vol.3","confidence":95,"lead_term_path":"...complete path...","volume1_notes":[],"reasoning":"..."}]}`;
 
   try {
-    // ✅ Cloudflare Pages Function endpoint
     const resp = await fetch("/api/claude", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prompt: PROMPT })
     });
-
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const data = await resp.json();
     if (data.error) throw new Error(data.error);
-
     const raw = data.text;
-    if (!raw || raw.trim() === '') throw new Error("Respons kosong dari AI. Coba lagi.");
-
+    if (!raw || raw.trim() === '') throw new Error("Empty response. Please try again.");
     let clean = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
     const match = clean.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error("Format respons tidak valid. Coba lagi dengan catatan yang lebih lengkap.");
+    if (!match) throw new Error("Invalid response format. Please try again.");
     clean = match[0];
-
     let result;
-    try {
-      result = JSON.parse(clean);
-    } catch(e) {
+    try { result = JSON.parse(clean); }
+    catch(e) {
       let fixed = clean.replace(/,\s*$/, '').replace(/,\s*\{[^{}]*$/, '');
       const opens = (fixed.match(/\[/g)||[]).length - (fixed.match(/\]/g)||[]).length;
       const braces = (fixed.match(/\{/g)||[]).length - (fixed.match(/\}/g)||[]).length;
       for(let i=0;i<opens;i++) fixed += ']';
       for(let i=0;i<braces;i++) fixed += '}';
       try { result = JSON.parse(fixed); }
-      catch(e2) { throw new Error("Gagal memproses respons AI. Pastikan catatan klinis lengkap dan coba lagi."); }
+      catch(e2) { throw new Error("Failed to parse AI response. Please try again."); }
     }
-
     renderResults(result);
   } catch(err) {
-    showError(`Terjadi error: ${err.message}`);
+    showError(T[currentLang].errorPrefix + err.message);
   } finally {
     setLoading(false);
   }
@@ -365,10 +424,28 @@ function copyPath(btn, text) {
 
 function renderLeadPath(pathStr) {
   if (!pathStr) return '';
-  return pathStr.split('\n').map(line =>
-    line.replace(/([A-Z]\d{2}[\.\d]*)\s*$/, '<span class="lp-code">$1</span>')
-        .replace(/(\d{2}[\.\d]+)\s*$/, '<span class="lp-code">$1</span>')
-  ).join('\n');
+  const lines = pathStr.split('\n');
+  return lines.map(line => {
+    // Final code line: starts with capital letter + digits (e.g. "O34.2 Description...")
+    if (/^[A-Z]\d{2}[\.\d]*\s/.test(line) || /^\d{2}[\.\d]+\s/.test(line)) {
+      return `<span class="lp-final">${line}</span>`;
+    }
+    // Section header (no leading dash)
+    if (!line.startsWith('-')) {
+      return `<span class="lp-section">${line}</span>`;
+    }
+    // Indented terms
+    const dashMatch = line.match(/^(-+\s)/);
+    if (dashMatch) {
+      const dashes = dashMatch[1];
+      const rest = line.slice(dashes.length);
+      // Highlight code at end of line
+      const highlighted = rest.replace(/([A-Z]\d{2}[\.\d]*)(\s*)$/, '<span class="lp-code">$1</span>$2')
+                              .replace(/(\d{2}[\.\d]+)(\s*)$/, '<span class="lp-code">$1</span>$2');
+      return `<span class="lp-indent">${dashes}</span>${highlighted}`;
+    }
+    return line;
+  }).join('\n');
 }
 
 function renderVol1Notes(notes) {
@@ -384,46 +461,48 @@ function renderVol1Notes(notes) {
     const t = typeMap[n.type] || { cls: 'vnt-note', label: n.type };
     return `<div class="vol1-note"><span class="vol1-note-type ${t.cls}">${t.label}</span><span>${n.text}</span></div>`;
   }).join('');
-  return `<div class="vol1-box"><div class="vol1-label">▸ Volume 1 Tabular Notes</div><div class="vol1-notes">${items}</div></div>`;
+  return `<div class="vol1-box"><div class="vol1-label">${T[currentLang].labelVol1}</div><div class="vol1-notes">${items}</div></div>`;
 }
 
 function renderValidations(validations) {
   if (!validations || validations.length === 0) return '';
   const iconMap = { ERROR: '🔴', WARNING: '🟡', INFO: '🔵' };
   const items = validations.map(v =>
-    `<div class="val-item"><span class="val-icon">${iconMap[v.type] || 'ℹ'}</span><span><strong>${v.type}:</strong> ${v.message}</span></div>`
+    `<div class="val-item"><span>${iconMap[v.type]||'ℹ'}</span><span><strong>${v.type}:</strong> ${v.message}</span></div>`
   ).join('');
-  return `<div class="validation-banner"><strong>⚠ Validasi Kaidah Coding</strong>${items}</div>`;
+  return `<div class="validation-banner"><strong>${T[currentLang].labelValidasi}</strong>${items}</div>`;
 }
 
 function renderResults(result) {
+  const t = T[currentLang];
   document.getElementById('emptyState').style.display = 'none';
   document.getElementById('resultsSection').style.display = 'block';
 
   document.getElementById('summaryBox').innerHTML = `
-    <div class="summary-strip">
-      <strong>Ringkasan Klinis</strong>${result.summary || ''}
-    </div>
+    <div class="summary-strip"><strong>${t.labelSummary}</strong>${result.summary || ''}</div>
     ${result.du_reasoning ? `<div class="summary-strip" style="background:#eff6ff;border-color:#bfdbfe;border-left-color:#2563eb;color:#1e3a5f;margin-top:8px">
-      <strong style="color:#1d4ed8">⚖ Dasar Pemilihan DU (WHO ICD-10 Vol.2)</strong>${result.du_reasoning}
-    </div>` : ''}
+      <strong style="color:#1d4ed8">${t.labelDUReason}</strong>${result.du_reasoning}</div>` : ''}
     ${renderValidations(result.validations)}`;
 
   const diagnoses = result.diagnoses || [];
-  document.getElementById('diagCount').textContent = `${diagnoses.length} kode`;
+  document.getElementById('diagCount').textContent = `${diagnoses.length} ${currentLang === 'id' ? 'kode' : 'codes'}`;
   document.getElementById('diagList').innerHTML = diagnoses.map((d, i) => {
     const isDagger = d.dagger_asterisk === 'dagger';
     const isAsterisk = d.dagger_asterisk === 'asterisk';
     const badgeClass = d.role === 'DU' ? 'du' : 'ds';
-    const dagMark = isDagger ? `<span class="dagger-mark" title="Kode Etiologi">†</span>` : '';
-    const astMark = isAsterisk ? `<span class="asterisk-mark" title="Kode Manifestasi">*</span>` : '';
-    const pairNote = d.paired_with ? `<span style="font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;"> → pasangan: ${d.paired_with}</span>` : '';
+    const dagMark = isDagger ? `<span class="dagger-mark" title="Etiology code">†</span>` : '';
+    const astMark = isAsterisk ? `<span class="asterisk-mark" title="Manifestation code">*</span>` : '';
+    const pairNote = d.paired_with ? `<span style="font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;"> → ${t.labelPasangan}: ${d.paired_with}</span>` : '';
+    const descMain = currentLang === 'id' ? d.description : (d.description_en || d.description);
+    const descAlt = currentLang === 'id' ? (d.description_en ? `<div class="diag-desc-alt">EN: ${d.description_en}</div>` : '') : `<div class="diag-desc-alt">ID: ${d.description}</div>`;
+    const pathLabel = t.labelVol3;
     return `<div class="diag-item" style="animation-delay:${i*0.06}s">
       <div class="diag-main">
         <div><span class="du-badge ${badgeClass}">${d.role}</span></div>
-        <div class="diag-center">
+        <div>
           <div class="diag-code-row"><span class="diag-code">${d.code}</span>${dagMark}${astMark}${pairNote}</div>
-          <div class="diag-desc">${d.description}</div>
+          <div class="diag-desc">${descMain}</div>
+          ${descAlt}
           <div class="diag-category">${d.category}</div>
         </div>
         <div class="conf-wrap">
@@ -432,24 +511,27 @@ function renderResults(result) {
         </div>
       </div>
       ${d.lead_term_path ? `<div class="lead-term-box">
-        <div class="lead-label"><span>▸ Volume 3 Index Path</span>
+        <div class="lead-label"><span>${pathLabel}</span>
         <button class="copy-btn" onclick="copyPath(this,\`${d.lead_term_path.replace(/`/g,"'")}\`)">📋 Copy</button></div>
         <div class="lead-path">${renderLeadPath(d.lead_term_path)}</div>
       </div>` : ''}
       ${renderVol1Notes(d.volume1_notes)}
-      ${d.reasoning ? `<div class="reasoning-box">💬 ${d.reasoning}</div>` : ''}
+      ${d.reasoning ? `<div class="reasoning-box">${t.labelReasoning}${d.reasoning}</div>` : ''}
     </div>`;
   }).join('');
 
   const procedures = result.procedures || [];
-  document.getElementById('procCount').textContent = `${procedures.length} kode`;
-  document.getElementById('procList').innerHTML = procedures.map((p, i) => `
-    <div class="diag-item" style="animation-delay:${(diagnoses.length+i)*0.06}s">
+  document.getElementById('procCount').textContent = `${procedures.length} ${currentLang === 'id' ? 'kode' : 'codes'}`;
+  document.getElementById('procList').innerHTML = procedures.map((p, i) => {
+    const descMain = currentLang === 'id' ? p.description : (p.description_en || p.description);
+    const descAlt = currentLang === 'id' ? (p.description_en ? `<div class="diag-desc-alt">EN: ${p.description_en}</div>` : '') : `<div class="diag-desc-alt">ID: ${p.description}</div>`;
+    return `<div class="diag-item" style="animation-delay:${(diagnoses.length+i)*0.06}s">
       <div class="diag-main">
         <div><span class="du-badge proc">PROC</span></div>
-        <div class="diag-center">
+        <div>
           <div class="diag-code-row"><span class="diag-code">${p.code}</span></div>
-          <div class="diag-desc">${p.description}</div>
+          <div class="diag-desc">${descMain}</div>
+          ${descAlt}
           <div class="diag-category">${p.category}</div>
         </div>
         <div class="conf-wrap">
@@ -458,13 +540,14 @@ function renderResults(result) {
         </div>
       </div>
       ${p.lead_term_path ? `<div class="lead-term-box">
-        <div class="lead-label"><span>▸ ICD-9-CM Vol.3 Index Path</span>
+        <div class="lead-label"><span>${t.labelVol3proc}</span>
         <button class="copy-btn" onclick="copyPath(this,\`${p.lead_term_path.replace(/`/g,"'")}\`)">📋 Copy</button></div>
         <div class="lead-path">${renderLeadPath(p.lead_term_path)}</div>
       </div>` : ''}
       ${renderVol1Notes(p.volume1_notes)}
-      ${p.reasoning ? `<div class="reasoning-box">💬 ${p.reasoning}</div>` : ''}
-    </div>`).join('');
+      ${p.reasoning ? `<div class="reasoning-box">${t.labelReasoning}${p.reasoning}</div>` : ''}
+    </div>`;
+  }).join('');
 }
 </script>
 </body>
