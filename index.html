@@ -376,19 +376,28 @@ FIELD RULES:
   ICD-10 examples: N83.2 = "Other and unspecified ovarian cysts" NOT "Bilateral ovarian cyst". O60.1 = "Preterm labour with preterm delivery" NOT "Preterm labour". O34.2 = "Maternal care due to uterine scar from previous surgery" NOT "Previous caesarean scar".
   ICD-9-CM examples: 74.1 = "Low cervical caesarean section" NOT "Caesarean section". 65.29 = "Other local excision or destruction of ovary" NOT "Bilateral cystectomy". 65.61 = "Other removal of both ovaries and tubes at same operative episode" NOT "Bilateral oophorectomy".
 - "description_id": Indonesian translation of the exact official title above.
-- lead_term_path: Complete Vol.3 hierarchy ALL levels, no skipping:
-  Section
-  - term (modifier) CODE
-  - - subterm
-  - - - deeper subterm CODE
-  CODE Full official English description
+- lead_term_path: Complete Vol.3 index hierarchy ALL levels. NEVER use "CODE" as placeholder — always write the REAL code number.
+  Format exactly like this real example:
+  Injury
+  - fracture
+  - - lower limb
+  - - - femur
+  - - - - shaft S72.3
+  S72.3 Fracture of shaft of femur
+  Another example:
+  Delivery
+  - caesarean (for)
+  - - previous
+  - - - caesarean section O34.2
+  O34.2 Maternal care due to uterine scar from previous surgery
+  Rules: use real code numbers (S72.3, O34.2, 74.1 etc), never write "CODE". Last line = real code + full official description.
 - Dagger†=etiology code, Asterisk*=manifestation code (always DS, never DU), always pair together.
 - Vol.1: report includes/excludes/notes per code.
 - Validate: asterisk as DU=ERROR, missing pair=ERROR, excludes violated=ERROR, wrong DU=WARNING, missing DS=WARNING.
 - Abbreviations: SC/SCTP=sectio caesarea transperitonealis, TTTS=twin-to-twin transfusion syndrome, IUFD=intrauterine fetal death, gemelli=twins, partus prematurus=preterm labour, kista ovarium=ovarian cyst, kistektomi=cystectomy, bekas SC=previous caesarean scar, HT=hypertension, DM=diabetes mellitus, ORIF=open reduction internal fixation, ai=atas indikasi.
 
 Return ONLY valid JSON, no markdown:
-{"summary":"...","du_reasoning":"...","validations":[{"type":"ERROR|WARNING|INFO","message":"..."}],"diagnoses":[{"role":"DU","code":"O60.1","dagger_asterisk":"none|dagger|asterisk","description":"ENGLISH official ICD name","description_id":"Nama resmi Bahasa Indonesia","category":"Chapter XV - Pregnancy childbirth...","confidence":92,"lead_term_path":"Section\n- term CODE\n- - subterm\n- - - subterm CODE\nCODE Full official description","volume1_notes":[{"type":"includes|excludes|note|use_additional|code_first","text":"..."}],"paired_with":"","reasoning":"..."}],"procedures":[{"code":"74.1","description":"ENGLISH official ICD-9-CM name","description_id":"Nama resmi Bahasa Indonesia","category":"ICD-9-CM Vol.3 - ...","confidence":95,"lead_term_path":"...complete path...","volume1_notes":[],"reasoning":"..."}]}`;
+{"summary":"...","du_reasoning":"...","validations":[{"type":"ERROR|WARNING|INFO","message":"..."}],"diagnoses":[{"role":"DU","code":"O60.1","dagger_asterisk":"none|dagger|asterisk","description":"ENGLISH official ICD name","description_id":"Nama resmi Bahasa Indonesia","category":"Chapter XV - Pregnancy childbirth...","confidence":92,"lead_term_path":"Injury\n- fracture\n- - lower limb\n- - - femur\n- - - - shaft S72.3\nS72.3 Fracture of shaft of femur","volume1_notes":[{"type":"includes|excludes|note|use_additional|code_first","text":"..."}],"paired_with":"","reasoning":"..."}],"procedures":[{"code":"74.1","description":"ENGLISH official ICD-9-CM name","description_id":"Nama resmi Bahasa Indonesia","category":"ICD-9-CM Vol.3 - ...","confidence":95,"lead_term_path":"...complete path...","volume1_notes":[],"reasoning":"..."}]}`;
 
   try {
     const resp = await fetch("/api/claude", {
@@ -457,28 +466,36 @@ function copyPath(btn, text) {
 
 function renderLeadPath(pathStr) {
   if (!pathStr) return '';
+  // ICD code pattern: letter+2digits or 2digits, optionally with dot+digits
+  const codeRe = /[A-Z]\d{2}(\.\d+)?|\d{2}(\.\d+)+/;
+  const finalLineRe = /^(CODE\s+)?([A-Z]\d{2}(\.\d+)?|\d{2}(\.\d+)+)(\s+.*)?$/;
   const lines = pathStr.split('\n');
   return lines.map(line => {
-    // Final code line: starts with capital letter + digits (e.g. "O34.2 Description...")
-    if (/^[A-Z]\d{2}[\.\d]*\s/.test(line) || /^\d{2}[\.\d]+\s/.test(line)) {
-      return `<span class="lp-final">${line}</span>`;
+    const trimmed = line.trim();
+    if (!trimmed) return '';
+    // Final code line: "S72.3 Description" or "CODE S72.3 Description" or just "S72.3"
+    if (finalLineRe.test(trimmed) && !trimmed.startsWith('-')) {
+      // Strip leading "CODE " if present
+      const clean = trimmed.replace(/^CODE\s+/, '');
+      // Highlight the code portion
+      const highlighted = clean.replace(codeRe, m => `<span class="lp-code">${m}</span>`);
+      return `<span class="lp-final">${highlighted}</span>`;
     }
-    // Section header (no leading dash)
-    if (!line.startsWith('-')) {
-      return `<span class="lp-section">${line}</span>`;
-    }
-    // Indented terms
-    const dashMatch = line.match(/^(-+\s)/);
-    if (dashMatch) {
-      const dashes = dashMatch[1];
+    // Indented dash lines: "- term CODE" or "- - subterm"
+    if (trimmed.startsWith('-')) {
+      const dashMatch = line.match(/^(\s*-+\s)/);
+      const dashes = dashMatch ? dashMatch[1] : '- ';
       const rest = line.slice(dashes.length);
-      // Highlight code at end of line
-      const highlighted = rest.replace(/([A-Z]\d{2}[\.\d]*)(\s*)$/, '<span class="lp-code">$1</span>$2')
-                              .replace(/(\d{2}[\.\d]+)(\s*)$/, '<span class="lp-code">$1</span>$2');
+      // Highlight code at end of line if present
+      const highlighted = rest.replace(/(\s)([A-Z]\d{2}(\.\d+)?)\s*$/, (m, sp, code) =>
+        `${sp}<span class="lp-code">${code}</span>`)
+        .replace(/(\s)(\d{2}(\.\d+)+)\s*$/, (m, sp, code) =>
+        `${sp}<span class="lp-code">${code}</span>`);
       return `<span class="lp-indent">${dashes}</span>${highlighted}`;
     }
-    return line;
-  }).join('\n');
+    // Section header
+    return `<span class="lp-section">${line}</span>`;
+  }).filter(Boolean).join('\n');
 }
 
 function renderVol1Notes(notes) {
