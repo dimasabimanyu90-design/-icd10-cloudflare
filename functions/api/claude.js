@@ -17,8 +17,9 @@ export async function onRequestPost(context) {
       );
     }
 
+    // Read retry-after from 429 header, fallback to exponential
     let data, response;
-    for (let attempt = 1; attempt <= 4; attempt++) {
+    for (let attempt = 1; attempt <= 3; attempt++) {
       response = await fetch(
         "https://api.groq.com/openai/v1/chat/completions",
         {
@@ -30,30 +31,27 @@ export async function onRequestPost(context) {
           body: JSON.stringify({
             model: "llama-3.3-70b-versatile",
             temperature: 0.1,
-            max_tokens: 8192,
-            messages: [
-              {
-                role: "user",
-                content: body.prompt
-              }
-            ]
+            // Dynamic max_tokens: short note=2048, long note=3072, cap at 3072
+            max_tokens: Math.min(3072, Math.max(2048, Math.ceil(body.prompt.length / 8))),
+            messages: [{ role: "user", content: body.prompt }]
           })
         }
       );
 
       data = await response.json();
 
-      // Retry on 429
       if (response.status === 429) {
-        if (attempt < 4) {
-          await new Promise(r => setTimeout(r, attempt * 5000));
+        if (attempt < 3) {
+          // Use retry-after header if available, else 8s then 16s
+          const retryAfter = response.headers.get("retry-after");
+          const delay = retryAfter ? parseInt(retryAfter) * 1000 : attempt * 8000;
+          await new Promise(r => setTimeout(r, Math.min(delay, 20000)));
           continue;
-        } else {
-          return new Response(
-            JSON.stringify({ error: "Rate limit. Tunggu 1 menit lalu coba lagi." }),
-            { status: 429, headers: corsHeaders }
-          );
         }
+        return new Response(
+          JSON.stringify({ error: "Rate limit Groq. Tunggu 1 menit lalu coba lagi." }),
+          { status: 429, headers: corsHeaders }
+        );
       }
       break;
     }
