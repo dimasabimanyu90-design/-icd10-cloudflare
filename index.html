@@ -536,6 +536,11 @@ CLINICAL NOTE: ${input}
   Angioplasty                                              internal fixation,femur
   - coronary (balloon) 00.66
   00.66 Percutaneous transluminal coronary angioplasty
+  Photocoagulation
+  - retina
+  -- for destruction of lesion
+  --- laser 14.25
+  14.25 Laser photocoagulation of lesion of retina
 - confidence: integer 1-99, estimasi keyakinan koding. WAJIB diisi, jangan kosong atau null.
 - reasoning: WAJIB berisi data klinis spesifik dari teks input (nilai lab, gejala, tindakan) yang menjadi dasar pemilihan kode. DILARANG hanya mengulang nama kode atau deskripsi kode. Contoh SALAH: "Dikategorikan sebagai O99.0 karena anemia kehamilan." Contoh BENAR: "Hb 9,1 g/dL (di bawah normal <10), pasien sedang hamil."
 - dagger_asterisk: "dagger"|"asterisk"|"none". ONLY if OFFICIALLY marked †/* in Vol.1. Most="none".
@@ -633,6 +638,7 @@ E10=DM type1, E11=DM type2. DM WAJIB pakai 4th digit komplikasi:
   Jika ada neuropati diabetik → E11.4
 H36.0=diabetic retinopathy (WAJIB .0, bukan H36 saja).
 Pasangan dagger-asterisk DM+retinopati: E11.3† DU + H36.0* DS — KEDUANYA WAJIB dikoding.
+Laser fotokoagulasi retina → ICD-9-CM 14.25 (BUKAN Z51.4). description HARUS dalam bahasa Inggris resmi: "Laser photocoagulation of lesion of retina".
 E11.3=dagger (etiologi), H36.0=asterisk (manifestasi). JANGAN hanya coding E11.3 tanpa H36.0.
 I61=haemorrhagic stroke, I63=ischaemic+location. Fracture: bone+location+open/closed. 4th/5th digit always; .9 only if truly no detail.
 
@@ -845,6 +851,11 @@ function getCleanPath(pathStr, code, description) {
     '00.66': 'Angioplasty\n- coronary (balloon) 00.66\n00.66 Percutaneous transluminal coronary angioplasty',
     '36.06': 'Insertion\n- stent\n-- coronary artery 36.06\n36.06 Insertion of coronary artery stent',
     '36.01': 'Bypass\n- coronary artery 36.01\n36.01 Single coronary artery bypass using saphenous vein graft',
+    '14.25': 'Photocoagulation\n- retina\n-- for\n--- destruction of lesion\n---- laser 14.25\n14.25 Laser photocoagulation of lesion of retina',
+    '14.24': 'Photocoagulation\n- retina\n-- for\n--- destruction of lesion\n---- xenon arc 14.24\n14.24 Destruction of chorioretinal lesion by xenon arc photocoagulation',
+    '14.26': 'Photocoagulation\n- retina\n-- for\n--- destruction of lesion\n---- cryotherapy 14.26\n14.26 Destruction of chorioretinal lesion by cryotherapy',
+    '16.49': 'Enucleation\n- eyeball 16.49\n16.49 Enucleation of eyeball',
+    '08.36': 'Repair\n- eyelid\n-- blepharoplasty 08.36\n08.36 Eyelid reconstruction',
     'I21.1': 'Infarction\n- myocardial\n-- acute\n--- inferior I21.1\nI21.1 Acute transmural myocardial infarction of inferior wall',
     'I21.0': 'Infarction\n- myocardial\n-- acute\n--- anterior I21.0\nI21.0 Acute transmural myocardial infarction of anterior wall',
     'I21.9': 'Infarction\n- myocardial\n-- acute I21.9\nI21.9 Acute myocardial infarction, unspecified',
@@ -971,6 +982,11 @@ function renderLeadPath(pathStr, code, description) {
     '00.66': 'Angioplasty\n- coronary (balloon) 00.66\n00.66 Percutaneous transluminal coronary angioplasty',
     '36.06': 'Insertion\n- stent\n-- coronary artery 36.06\n36.06 Insertion of coronary artery stent',
     '36.01': 'Bypass\n- coronary artery 36.01\n36.01 Single coronary artery bypass using saphenous vein graft',
+    '14.25': 'Photocoagulation\n- retina\n-- for\n--- destruction of lesion\n---- laser 14.25\n14.25 Laser photocoagulation of lesion of retina',
+    '14.24': 'Photocoagulation\n- retina\n-- for\n--- destruction of lesion\n---- xenon arc 14.24\n14.24 Destruction of chorioretinal lesion by xenon arc photocoagulation',
+    '14.26': 'Photocoagulation\n- retina\n-- for\n--- destruction of lesion\n---- cryotherapy 14.26\n14.26 Destruction of chorioretinal lesion by cryotherapy',
+    '16.49': 'Enucleation\n- eyeball 16.49\n16.49 Enucleation of eyeball',
+    '08.36': 'Repair\n- eyelid\n-- blepharoplasty 08.36\n08.36 Eyelid reconstruction',
     'I21.1': 'Infarction\n- myocardial\n-- acute\n--- inferior I21.1\nI21.1 Acute transmural myocardial infarction of inferior wall',
     'I21.0': 'Infarction\n- myocardial\n-- acute\n--- anterior I21.0\nI21.0 Acute transmural myocardial infarction of anterior wall',
     'I21.9': 'Infarction\n- myocardial\n-- acute I21.9\nI21.9 Acute myocardial infarction, unspecified',
