@@ -28,7 +28,7 @@ export async function onRequestPost(context) {
             "Authorization": `Bearer ${apiKey}`
           },
           body: JSON.stringify({
-            model: "deepseek-r1-distill-llama-70b",
+            model: "llama-3.3-70b-versatile",
             temperature: 0.1,
             max_tokens: 8192,
             messages: [
@@ -73,8 +73,6 @@ export async function onRequestPost(context) {
     }
 
     let text = data.choices[0].message.content || "";
-    // Strip DeepSeek R1 thinking tags
-    text = text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
     text = text.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
 
     return new Response(
