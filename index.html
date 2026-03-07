@@ -427,6 +427,38 @@ O03-O07 ABORTION — shared 4th digit table ("See before O03 for subdivisions"):
     "complete abortion tanpa komplikasi" → O03.9 (DU) + O08.9 (DS)
     "incomplete abortion + infeksi" → O03.4 (DU) + O08.0 (DS) ← NOT O03.0
 
+## EXTERNAL CAUSE CODE RULES (Chapter XX Y40-Y84)
+When a condition has note "Use additional external cause code (Chapter XX), if desired, to identify drug/external cause" → optionally add Y40-Y84 as DS IF the causative drug/agent is EXPLICITLY mentioned in the clinical note.
+
+DRUG-INDUCED CONDITIONS — Y40-Y59 (drugs causing adverse effects in therapeutic use):
+  Y40 = Systemic antibiotics
+  Y41 = Other systemic anti-infectives
+  Y42 = Hormones and synthetic substitutes (incl. corticosteroids, oral contraceptives)
+  Y43 = Primarily systemic agents (incl. antineoplastics, immunosuppressants)
+  Y44 = Agents affecting blood constituents (anticoagulants, antiplatelets)
+  Y45 = Analgesics, antipyretics, anti-inflammatory drugs (NSAIDs, opioids)
+  Y46 = Antiepileptics and antiparkinson drugs
+  Y47 = Sedatives, hypnotics, anxiolytics
+  Y48 = Anaesthetics and therapeutic gases
+  Y49 = Psychotropic drugs
+  Y50 = CNS stimulants
+  Y51 = Autonomic nervous system drugs
+  Y57 = Other and unspecified drugs and medicaments
+
+4th digit for Y40-Y59 (route/circumstance):
+  .0 = used in therapeutic doses (adverse effect) ← most common
+  .1 = accidental poisoning
+  .2 = intentional self-poisoning
+  .9 = unspecified
+
+Rules:
+  - ONLY add Y40-Y59 if specific drug/class is EXPLICITLY mentioned in the clinical note
+  - These are always DS, never DU
+  - Applies to eye conditions (H), skin (L), and any chapter with same note
+  - Example: "glaukoma akibat pemakaian kortikosteroid jangka panjang" → H40.x (DU) + Y42.0 (DS)
+  - Example: "drug-induced cataract, steroid use" → H26.3 (DU) + Y42.0 (DS)
+  - Example: "kondisi mata, tidak disebutkan obat penyebab" → kode mata saja, jangan tambah Y40-Y59
+
 ## MUSCULOSKELETAL RULES (Chapter XIII M00-M99)
 
 SITE CODE (last digit, when noted "See site code at beginning of chapter"):
@@ -438,6 +470,48 @@ B95-B96 BACTERIAL AGENT: Add only if organism EXPLICITLY named in note. Always D
   B95: B95.0=Strep A, B95.1=Strep B, B95.3=S.pneumoniae, B95.6=S.aureus, B95.8=unspec staph
   B96: B96.1=Klebsiella, B96.2=E.coli, B96.3=H.influenzae, B96.5=Pseudomonas, B96.8=other
   Example: septic arthritis+S.aureus → M00.x6+B95.6 | no organism named → no B95-B96
+
+## EXTERNAL CAUSE OF MORBIDITY (Chapter XX V01-Y98)
+When coding injuries, poisoning, or conditions caused by external events → ALWAYS add external cause code as DS alongside the injury code (Chapter XIX S00-T98).
+
+MAIN CATEGORIES:
+  V01-V99 = Transport accidents (kecelakaan lalu lintas/kendaraan)
+    V01-V09 = Pedestrian (pejalan kaki)
+    V10-V19 = Pedal cyclist (sepeda)
+    V20-V29 = Motorcycle rider (motor) ← most common in Indonesia
+    V40-V49 = Car occupant (mobil)
+    V80-V89 = Other land transport
+  W00-X59 = Other external causes of accidental injury
+    W00-W19 = Falls (jatuh) ← W19=unspecified fall
+    W20-W49 = Exposure to inanimate forces (benda mati)
+    W50-W64 = Exposure to animate forces (makhluk hidup/digigit)
+    W65-W74 = Accidental drowning
+    X00-X09 = Exposure to smoke/fire/flames
+    X10-X19 = Contact with heat/hot substances
+    X40-X49 = Accidental poisoning by drugs/substances
+  X60-X84 = Intentional self-harm (menyakiti diri sendiri/bunuh diri)
+  X85-Y09 = Assault (penganiayaan/kekerasan orang lain)
+  Y10-Y34 = Undetermined intent
+  Y40-Y84 = Complications of medical/surgical care
+  Y85-Y89 = Sequelae of external causes
+
+PLACE OF OCCURRENCE (Y92) — add as DS if place mentioned:
+  Y92.0 = Home, Y92.1 = Residential institution, Y92.2 = School
+  Y92.3 = Sports area, Y92.4 = Street/highway, Y92.5 = Trade/service area
+  Y92.6 = Industrial area, Y92.8 = Other, Y92.9 = Unspecified
+
+ACTIVITY CODE (Y93) — add as DS if activity mentioned:
+  Y93.0 = Sports, Y93.1 = Leisure, Y93.2 = Working, Y93.9 = Unspecified
+
+RULES:
+  - Injury/trauma case → ALWAYS add V/W/X/Y external cause code as DS
+  - Add Y92 (place) if location of injury mentioned
+  - Add Y93 (activity) if activity at time of injury mentioned
+  - External cause codes are ALWAYS DS, never DU
+  - If mechanism unclear → use most specific available; truly unknown → Y59.9
+  - Example: "fraktur femur akibat KLL motor" → S72.3x (DU) + V29.9 (DS) + Y92.4 (DS jika di jalan)
+  - Example: "luka bakar tangan akibat api kompor di rumah" → T23.x (DU) + X10.x (DS) + Y92.0 (DS)
+  - Example: "jatuh dari tangga" → injury code (DU) + W11 (DS fall on/from ladder)
 
 ## EAR CODING RULES (Chapter VIII H60-H95)
 OTITIS MEDIA — distinguish carefully, do NOT code H72.x (tympanic membrane perforation) as substitute for otitis media:
