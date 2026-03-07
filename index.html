@@ -686,174 +686,54 @@ function getCleanPath(pathStr, code, description) {
   else pathStr = String(pathStr);
 
   // Sama dengan renderLeadPath tapi return plain text
-  if (!pathStr.includes('\n')) {
-    const parts = pathStr.split(' - ');
+  // ── Lookup table: path resmi per kode untuk kode yang sering salah format ──
+  const KNOWN_PATHS = {
+    'O36.4': 'Death\n- fetus, fetal\n-- (near term) O36.4\nO36.4 Maternal care for intrauterine death',
+    'O43.0': 'Syndrome\n- transfusion\n-- feto-fetal O43.0\nO43.0 Placental transfusion syndromes',
+    'O30.0': 'Pregnancy\n- complicated by\n-- multiple gestation\n--- twin O30.0\nO30.0 Twin pregnancy',
+    'O60.1': 'Labour\n- premature\n-- with delivery O60.1\nO60.1 Preterm labour with preterm delivery',
+    'O60.0': 'Labour\n- premature O60.0\nO60.0 Preterm labour without delivery',
+    'O34.2': 'Section\n- cesarean (for)\n-- previous\n--- cesarean section O34.2\nO34.2 Maternal care due to uterine scar from previous surgery',
+    'O03.5': 'Abortion\n- spontaneous\n-- complicated by\n--- genital tract and pelvic infection O03.5\nO03.5 Spontaneous abortion, complete, complicated by genital tract and pelvic infection',
+    'O03.9': 'Abortion\n- spontaneous\n-- unspecified O03.9\nO03.9 Spontaneous abortion, unspecified',
+    'O03.4': 'Abortion\n- spontaneous\n-- incomplete, without complication O03.4\nO03.4 Spontaneous abortion, incomplete, without complication',
+    'O08.0': 'Complications\n- following\n-- abortion and ectopic and molar pregnancy\n--- infection O08.0\nO08.0 Genital tract and pelvic infection following abortion and ectopic and molar pregnancy',
+    'O00.1': 'Pregnancy\n- ectopic\n-- tubal\n--- ruptured O00.1\nO00.1 Tubal pregnancy',
+    'Z37.3': 'Outcome of delivery\n- twins\n-- one liveborn one stillborn Z37.3\nZ37.3 Twins, one liveborn and one stillborn',
+    'Z37.0': 'Outcome of delivery\n- single\n-- liveborn Z37.0\nZ37.0 Single liveborn infant',
+    'N83.2': 'Cyst\n- ovary, ovarian N83.2\nN83.2 Other and unspecified ovarian cysts',
+  };
+
+  // Gunakan lookup jika tersedia DAN format tidak rapi (tidak ada \n atau format rusak)
+  const looksMessy = !pathStr.includes('\n') || /[A-Z]\d{2}.*[A-Z]\d{2}/.test(pathStr);
+  if (code && KNOWN_PATHS[code] && looksMessy) {
+    pathStr = KNOWN_PATHS[code];
+  } else if (!pathStr.includes('\n')) {
+    // Fallback: split by " - " jika ada
+    const parts = pathStr.split(' - ').filter(Boolean);
     if (parts.length >= 2) {
       const finalIdx = parts.findIndex(p => /^[A-Z]\d{2}/.test(p.trim()) || /^\d{2}\./.test(p.trim()));
       let lines = [];
       parts.forEach((part, i) => {
         const trimmed = part.trim();
+        if (!trimmed) return;
         if (i === 0) lines.push(trimmed);
         else if (finalIdx >= 0 && i === finalIdx) {
           if (lines.length > 0) lines[lines.length - 1] += ' ' + trimmed.split(' ')[0];
           lines.push(trimmed);
-        } else lines.push('-'.repeat(i) + ' ' + trimmed);
+        } else {
+          lines.push('-'.repeat(lines.filter(l => l.startsWith('-')).length + 1) + ' ' + trimmed);
+        }
       });
       pathStr = lines.join('\n');
     } else {
+      // Last resort: inject baris final
       const hasCode = /\b[A-Z]\d{2}(\.\d+)?\b/.test(pathStr) || /\b\d{2}\.\d+\b/.test(pathStr);
       if (!hasCode && (code || description)) {
         pathStr = pathStr + '\n' + (description ? code + ' ' + description : code);
       }
     }
   }
-
-  const normalizeLine = (line) => line.replace(/^(\s*)(--+)(\s*)/, (m, pre, dashes) =>
-    pre + '-'.repeat(dashes.length) + ' ');
-
-  // Jika AI gabungkan dua path dalam satu string, pisahkan per kode
-  if (code) {
-    const splitLines = pathStr.split('\n');
-    const ourCodeRe = new RegExp('^' + code.replace('.', '\\.'));
-    const hasOtherCode = splitLines.some(l => {
-      const t = l.trim();
-      return /^[A-Z]\d{2}/.test(t) && !ourCodeRe.test(t);
-    });
-    if (hasOtherCode) {
-      // Strategi: ambil semua baris non-kode di awal (lead+subterm),
-      // lalu hanya baris final yang cocok dengan kode kita
-      const headerLines = []; // lead term + subterm sebelum kode pertama
-      const finalLine = [];
-      let foundAnyCode = false;
-      for (const line of splitLines) {
-        const t = line.trim();
-        if (/^[A-Z]\d{2}/.test(t)) {
-          foundAnyCode = true;
-          if (ourCodeRe.test(t)) finalLine.push(line); // baris final kode kita
-          // kode lain: skip
-        } else if (!foundAnyCode) {
-          headerLines.push(line); // lead term & subterm sebelum kode pertama
-        }
-      }
-      // Rebuild: header + subterm yang mengandung kode kita + baris final
-      // Ambil subterm yang mengandung kode kita (jika belum ada di headerLines)
-      const subtermWithOurCode = splitLines.filter(l => {
-        const t = l.trim();
-        return t.startsWith('-') && ourCodeRe.test(t.replace(/.*\s/, ''))
-          && !headerLines.includes(l);
-      });
-      const rebuilt = [...headerLines, ...subtermWithOurCode, ...finalLine].filter(Boolean);
-      if (rebuilt.length > 0) pathStr = rebuilt.join('\n');
-    }
-  }
-  const normalizeDashes = (line) => {
-    const trimmed = line.trimStart();
-    if (!trimmed.startsWith('-')) return line.trimEnd();
-    const spaces = line.length - trimmed.length;
-    const dashParts = trimmed.split(/\s+/);
-    let dashCount = 0;
-    for (const p of dashParts) { if (p === '-') dashCount++; else break; }
-    const level = Math.max(dashCount, Math.floor(spaces / 2) + 1);
-    const rest = trimmed.replace(/^[-\s]+/, '').trim();
-    return '-'.repeat(level) + ' ' + rest;
-  };
-
-  const isFinalLine = (s) => /^(CODE\s+)?[A-Z]\d{2}(\.|\b)/.test(s) || /^\d{2}\.\d/.test(s);
-  const normalizelevelsClean = (lines) => {
-    let prevLevel = 0;
-    return lines.map(line => {
-      const trimmed = line.trim();
-      if (!trimmed.startsWith('-')) { prevLevel = 0; return line; }
-      let level = 0;
-      while (level < trimmed.length && trimmed[level] === '-') level++;
-      const rest = trimmed.slice(level).trim();
-      const allowedLevel = Math.min(level, prevLevel + 1);
-      prevLevel = allowedLevel;
-      return '-'.repeat(allowedLevel) + ' ' + rest;
-    });
-  };
-  const lines = normalizelevelsClean(
-    pathStr.split('\n').map(l => normalizeDashes(normalizeLine(l))).filter(l => l.trim())
-  );
-  const hasExplicitFinal = lines.some(l => !l.trim().startsWith('-') && isFinalLine(l.trim()));
-  const subtermLines = lines.filter(l => l.trim().startsWith('-'));
-  const lastSubterm = subtermLines[subtermLines.length - 1] || '';
-  const autoCodeMatch = lastSubterm.match(/\b([A-Z]\d{2}(\.\d+)?)\s*$/) || lastSubterm.match(/\b(\d{2}\.\d+)\s*$/);
-  const autoCode = autoCodeMatch ? autoCodeMatch[1] : null;
-
-  const result = lines.map(line => {
-    const trimmed = line.trim();
-    if (!trimmed) return '';
-    if (!trimmed.startsWith('-') && isFinalLine(trimmed)) return trimmed.replace(/^CODE\s+/, '');
-    if (trimmed.startsWith('-')) {
-      const parts = trimmed.split(/\s+/);
-      let level = 0;
-      while (level < parts.length && parts[level] === '-') level++;
-      return '-'.repeat(level) + ' ' + parts.slice(level).join(' ');
-    }
-    return line;
-  }).filter(Boolean);
-
-  if (!hasExplicitFinal) {
-    const finalCode = autoCode || code || '';
-    const finalDesc = description || '';
-    if (finalCode) result.push(finalDesc ? finalCode + ' ' + finalDesc : finalCode);
-  }
-  return result.join('\n');
-}
-
-function renderLeadPath(pathStr, code, description) {
-  if (!pathStr) return '';
-  // Guard: AI kadang kirim array atau object bukan string
-  if (Array.isArray(pathStr)) pathStr = pathStr.join('\n');
-  else pathStr = String(pathStr);
-
-  // Detect format horizontal: "Abortion - spontaneous - complete - ..."
-  // AI kadang kirim semua dalam satu baris dengan " - " sebagai separator
-  // Konversi ke format vertikal dengan newline
-  if (!pathStr.includes('\n')) {
-    // Format 1: "LeadTerm - subterm - subterm - CODE desc" (separator " - ")
-    const parts = pathStr.split(' - ');
-    if (parts.length >= 2) {
-      const finalIdx = parts.findIndex(p => /^[A-Z]\d{2}/.test(p.trim()) || /^\d{2}\./.test(p.trim()));
-      let lines = [];
-      parts.forEach((part, i) => {
-        const trimmed = part.trim();
-        if (i === 0) {
-          lines.push(trimmed);
-        } else if (finalIdx >= 0 && i === finalIdx) {
-          if (lines.length > 0) {
-            lines[lines.length - 1] = lines[lines.length - 1] + ' ' + trimmed.split(' ')[0];
-          }
-          lines.push(trimmed);
-        } else {
-          lines.push('-'.repeat(i) + ' ' + trimmed);
-        }
-      });
-      pathStr = lines.join('\n');
-    } else {
-      // Format 2: satu kalimat panjang tanpa separator (mis. "Infection following abortion, ectopic...")
-      // Jadikan lead term di baris 1, lalu inject baris final dari code+description
-      const hasCode = /\b[A-Z]\d{2}(\.\d+)?\b/.test(pathStr) || /\b\d{2}\.\d+\b/.test(pathStr);
-      if (!hasCode && (code || description)) {
-        const finalLine = description ? (code + ' ' + description) : code;
-        pathStr = pathStr + '\n' + finalLine;
-      }
-    }
-  }
-  const codeRe = /\b([A-Z]\d{2}(\.\d+)?|\d{2}(\.\d+)*)\b/g;
-  const isFinalLine = (s) => /^(CODE\s+)?[A-Z]\d{2}(\.\d+)?/.test(s) || /^\d{2}\.\d/.test(s);
-  const highlightCodes = (s) => s.replace(codeRe, m => `<span class="lp-code">${m}</span>`);
-
-  // Normalise dash format: "--tubal" → "- - tubal", "---x" → "- - - x"
-  const normalizeLine = (line) => {
-    // Ganti --+ di awal dengan spasi-separated dashes
-    return line.replace(/^(\s*)(--+)(\s*)/, (m, pre, dashes, post) => {
-      const level = dashes.length;
-      return pre + Array(level).fill('-').join(' ') + ' ';
-    });
-  };
-
   // Normalize semua format dash ke "---" style
   const normalizeDashes = (line) => {
     const trimmed = line.trimStart();
