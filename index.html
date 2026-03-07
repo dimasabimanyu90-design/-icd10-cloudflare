@@ -849,7 +849,8 @@ function getCleanPath(pathStr, code, description) {
   const pathLines = pathStr.split('\n');
   const subtermLinesM = pathLines.filter(l => l.trim().startsWith('-'));
   const hasMultiLevel = subtermLinesM.some(l => l.trim().startsWith('--'));
-  const isFlat = subtermLinesM.length >= 3 && !hasMultiLevel;
+  // isFlat: 2+ subterm tapi semua level 1 — kemungkinan AI kirim flat tanpa hierarki
+  const isFlat = subtermLinesM.length >= 2 && !hasMultiLevel;
   const looksMessy = !pathStr.includes('\n')
     || /[A-Z]\d{2}.*[A-Z]\d{2}/.test(pathStr)
     || pathStr.includes('/')
@@ -970,7 +971,8 @@ function renderLeadPath(pathStr, code, description) {
   const pathLines = pathStr.split('\n');
   const subtermLinesM = pathLines.filter(l => l.trim().startsWith('-'));
   const hasMultiLevel = subtermLinesM.some(l => l.trim().startsWith('--'));
-  const isFlat = subtermLinesM.length >= 3 && !hasMultiLevel;
+  // isFlat: 2+ subterm tapi semua level 1 — kemungkinan AI kirim flat tanpa hierarki
+  const isFlat = subtermLinesM.length >= 2 && !hasMultiLevel;
   const looksMessy = !pathStr.includes('\n')
     || /[A-Z]\d{2}.*[A-Z]\d{2}/.test(pathStr)
     || pathStr.includes('/')
