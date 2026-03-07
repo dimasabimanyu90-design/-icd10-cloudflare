@@ -667,6 +667,8 @@ Site digit: 0=multi,1=shoulder,2=elbow,3=wrist,4=hand,5=hip,6=knee,7=ankle,8=oth
 B95-B96: kode TAMBAHAN (additional code) — BUKAN dagger/asterisk, BUKAN pasangan †/*
   PENTING: dagger_asterisk="none" dan paired_with=null untuk SEMUA kode B95.x/B96.x
   J13/J14/J15.x juga BUKAN dagger → dagger_asterisk="none", paired_with=null
+  B96.1 bukan pasangan J15.0 secara †/* — paired_with=null untuk keduanya
+  B95.3 bukan pasangan J13 secara †/* — paired_with=null untuk keduanya
   B95.3=S.pneumoniae | B95.6=S.aureus | B96.1=Klebsiella | B96.2=E.coli | B96.5=Pseudomonas
   HANYA dikoding jika kuman disebut EKSPLISIT dari kultur/pemeriksaan mikrobiologi
 
@@ -689,6 +691,8 @@ Pneumonia — WAJIB spesifik jika kuman disebutkan:
   CONTOH: Klebsiella pneumoniae di kultur → J15.0 DU (BUKAN J18.0 bronchopneumonia)
   CONTOH: S.pneumoniae di kultur → J13 DU (BUKAN J18.9)
   J18.0/J18.1/J18.9 = HANYA jika kuman benar-benar tidak diketahui dari pemeriksaan apapun
+  Pneumonia + PPOK eksaserbasi: DU=pneumonia (J13/J15.x), PPOK=DS — pneumonia resource terbesar
+  HANYA BOLEH 1 DU — jika ada 2 kondisi berat, pilih yang paling banyak resource
   Pasangan wajib:
     J13 → B95.3 DS wajib
     J15.0 → B96.1 DS wajib
@@ -1016,6 +1020,9 @@ function getCleanPath(pathStr, code, description) {
     'J15.2': 'Pneumonia\n- due to\n-- Staphylococcus J15.2\nJ15.2 Pneumonia due to staphylococcus',
     'J18.1': 'Pneumonia\n- lobar J18.1\nJ18.1 Lobar pneumonia, unspecified',
     'J18.9': 'Pneumonia\n- unspecified J18.9\nJ18.9 Pneumonia, unspecified',
+    'J44.0': 'Disease\n- pulmonary\n-- chronic obstructive\n--- with acute lower respiratory infection J44.0\nJ44.0 Chronic obstructive pulmonary disease with acute lower respiratory infection',
+    'J44.1': 'Disease\n- pulmonary\n-- chronic obstructive\n--- with acute exacerbation J44.1\nJ44.1 Chronic obstructive pulmonary disease with acute exacerbation',
+    'J44.9': 'Disease\n- pulmonary\n-- chronic obstructive\n--- unspecified J44.9\nJ44.9 Chronic obstructive pulmonary disease, unspecified',
     'J96.0': 'Failure\n- respiratory\n-- acute J96.0\nJ96.0 Acute respiratory failure',
     'J96.1': 'Failure\n- respiratory\n-- chronic J96.1\nJ96.1 Chronic respiratory failure',
     'J96.1': 'Failure\n- respiratory\n-- chronic J96.1\nJ96.1 Chronic respiratory failure',
@@ -1201,6 +1208,9 @@ function renderLeadPath(pathStr, code, description) {
     'J15.2': 'Pneumonia\n- due to\n-- Staphylococcus J15.2\nJ15.2 Pneumonia due to staphylococcus',
     'J18.1': 'Pneumonia\n- lobar J18.1\nJ18.1 Lobar pneumonia, unspecified',
     'J18.9': 'Pneumonia\n- unspecified J18.9\nJ18.9 Pneumonia, unspecified',
+    'J44.0': 'Disease\n- pulmonary\n-- chronic obstructive\n--- with acute lower respiratory infection J44.0\nJ44.0 Chronic obstructive pulmonary disease with acute lower respiratory infection',
+    'J44.1': 'Disease\n- pulmonary\n-- chronic obstructive\n--- with acute exacerbation J44.1\nJ44.1 Chronic obstructive pulmonary disease with acute exacerbation',
+    'J44.9': 'Disease\n- pulmonary\n-- chronic obstructive\n--- unspecified J44.9\nJ44.9 Chronic obstructive pulmonary disease, unspecified',
     'J96.0': 'Failure\n- respiratory\n-- acute J96.0\nJ96.0 Acute respiratory failure',
     'J96.1': 'Failure\n- respiratory\n-- chronic J96.1\nJ96.1 Chronic respiratory failure',
     'J96.1': 'Failure\n- respiratory\n-- chronic J96.1\nJ96.1 Chronic respiratory failure',
