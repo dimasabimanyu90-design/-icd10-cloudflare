@@ -492,120 +492,35 @@ CLINICAL NOTE: ${input}
   N83.2="Other and unspecified ovarian cysts", O34.2="Maternal care due to uterine scar from previous surgery"
   74.1="Low cervical caesarean section", 65.29="Other local excision or destruction of ovary"
 - description_id: Indonesian translation of official title.
-- lead_term_path: WAJIB tampilkan SEMUA level hierarki Vol.3 persis seperti buku. Format:
-  LeadTerm
-  - subterm level 1
-  - - subterm level 2
-  - - - subterm level 3 CODE
-  CODE Full official description
+- lead_term_path: Tampilkan hierarki Vol.3 lengkap. WAJIB 3 bagian:
+  [1] Lead term  [2] Subterm (- / - - / - - -)  [3] Baris final: CODE deskripsi resmi
+  DILARANG: arrow(→), skip level, lead term langsung ke final tanpa subterm, kode tanpa deskripsi.
+  DILARANG: baris final hilang — SELALU tulis "CODE Deskripsi resmi" setelah subterm terakhir.
 
-  CONTOH 1 — dengan see also cross-reference:
-  Section
-  - cesarean (see also Delivery, cesarean) O82.9
-  - cesarean (for) O82.9
-  - - previous
-  - - - cesarean section O34.2
-  O34.2 Maternal care due to uterine scar from previous surgery
+  ICD-10 diagnosis:
+  Section                                    Labour                          Abortion
+  - cesarean (see also Delivery,cesarean) O82.9  - premature O60            - spontaneous O03
+  - cesarean (for) O82.9                     - - with delivery O60.1        - - complicated by
+  - - previous                               O60.1 Preterm labour with      - - - genital tract infection O03.5
+  - - - cesarean section O34.2                     preterm delivery         O03.5 Spontaneous abortion,
+  O34.2 Maternal care due to uterine scar                                         complete, with pelvic infection
+  from previous surgery
+  Syndrome                  Death                      Outcome of delivery     Pregnancy
+  - transfusion             - fetus, fetal             - twins                 - complicated by
+  - - feto-fetal O43.0      - - (near term) O36.4      - - one liveborn        - - multiple gestation
+  O43.0 Placental           O36.4 Maternal care              one stillborn Z37.3    - - - twin O30.0
+        transfusion               for intrauterine     Z37.3 Twins, one liveborn   O30.0 Twin pregnancy
+        syndromes                 death                      and one stillborn
 
-  CONTOH 2 — subterm langsung ke kode:
-  Labour
-  - premature O60
-  - - with delivery O60.1
-  O60.1 Preterm labour with preterm delivery
-
-  CONTOH 3 — prosedur ICD-9-CM SC:
-  Cesarean section
-  - low cervical 74.1
-  74.1 Low cervical caesarean section
-
-  CONTOH 4 — kistektomi ovarium:
-  Cystectomy
-  - ovary
-  - - partial 65.29
-  65.29 Other local excision or destruction of ovary
-
-  CONTOH 5 — ORIF fraktur femur:
-  Reduction, fracture
-  - femur (closed) 79.05
-  - - with internal fixation 79.15
-  79.15 Open reduction of fracture with internal fixation, femur
-
-  CONTOH 6 — laser fotokoagulasi retina:
-  Laser
-  - photocoagulation
-  - - retina 14.24
-  14.24 Destruction of lesion of retina by photocoagulation
-
-  CONTOH 7 — PCI / PTCA:
-  Angioplasty
+  ICD-9-CM prosedur:
+  Cesarean section          Cystectomy               Reduction, fracture        Nailing,intramedullary
+  - low cervical 74.1       - ovary                  - femur (closed) 79.05     - femur 79.35
+  74.1 Low cervical         - - partial 65.29        - - with internal          79.35 Open reduction,
+       caesarean section    65.29 Other local              fixation 79.15             internal fixation,femur
+                                  excision,ovary     79.15 Open reduction,
+  Angioplasty                                              internal fixation,femur
   - coronary (balloon) 00.66
-  00.66 Percutaneous transluminal coronary angioplasty (PTCA)
-
-  CONTOH 8 — stent koroner:
-  Insertion
-  - stent
-  - - coronary artery 36.06
-  36.06 Insertion of non-drug-eluting coronary artery stent(s)
-
-  CONTOH 9 — nail intramedular femur:
-  Nailing, intramedullary
-  - femur 79.35
-  79.35 Open reduction of fracture with internal fixation, femur (nail)
-
-  CONTOH 11 — TTTS (O43.0):
-  Syndrome
-  - transfusion
-  - - feto-fetal O43.0
-  O43.0 Placental transfusion syndromes
-
-  CONTOH 12 — IUFD (O36.4):
-  Death
-  - fetus, fetal
-  - - (near term) O36.4
-  O36.4 Maternal care for intrauterine death
-
-  CONTOH 13 — outcome of delivery kembar (Z37.3):
-  Outcome of delivery
-  - twins
-  - - one liveborn one stillborn Z37.3
-  Z37.3 Twins, one liveborn and one stillborn
-
-  CONTOH 14 — twin pregnancy (O30.0):
-  Pregnancy
-  - complicated by
-  - - multiple gestation
-  - - - twin O30.0
-  O30.0 Twin pregnancy
-
-  CONTOH 15 — anaemia dalam kehamilan (O99.0):
-  Anaemia
-  - complicating
-  - - pregnancy O99.0
-  O99.0 Anaemia complicating pregnancy, childbirth and the puerperium
-
-  STRUKTUR WAJIB — 3 bagian, SEMUA harus ada:
-  [1] Lead term (kata pertama pencarian di index)
-  [2] Subterm bertingkat (- / - - / - - -) selengkap mungkin
-  [3] Baris kode final: CODE spasi deskripsi resmi lengkap ← WAJIB SELALU ADA
-
-  CONTOH BENAR (lengkap):
-  Labour
-  - premature
-  - - with delivery O60.1
-  O60.1 Preterm labour with preterm delivery
-
-  CONTOH SALAH — baris final HILANG (paling sering terjadi):
-  Labour
-  - premature
-  - - with delivery O60.1   ← STOP DI SINI DILARANG, harus lanjut ke baris kode final
-
-  CONTOH SALAH — kode tanpa deskripsi:
-  O60.1   ← DILARANG, harus "O60.1 Preterm labour with preterm delivery"
-
-  RULE: Setelah subterm terakhir, WAJIB tulis 1 baris kosong lalu baris kode final.
-  DILARANG: arrow (→) sebagai pengganti subterm.
-  DILARANG: skip level (jika buku "- -" maka tulis "- -" bukan "-").
-  DILARANG: menghilangkan cross-reference (see also / see) jika ada.
+  00.66 Percutaneous transluminal coronary angioplasty
 - confidence: integer 1-99, estimasi keyakinan koding. WAJIB diisi, jangan kosong atau null.
 - dagger_asterisk: "dagger"|"asterisk"|"none". ONLY if OFFICIALLY marked †/* in Vol.1. Most="none".
 - volume1_notes: includes/excludes/notes per code.
@@ -632,39 +547,18 @@ WARNING: wrong DU, missing DS, Excludes2 needs confirmation, R-code as DU (provi
 SC/SCTP=sectio caesarea, TTTS=twin-twin transfusion, IUFD=intrauterine fetal death, gemelli=twins, partus prematurus=preterm labour, kista ovarium=ovarian cyst, kistektomi=cystectomy, bekas SC=previous caesarean scar, HT=hypertension, DM=diabetes mellitus, ORIF=open reduction internal fixation, ai=atas indikasi.
 
 ## OBSTETRIC RULES
-O00: O00.1=tubal, O00.2=ovarian, O00.0=abdominal. Ruptur→+O08.1 DS. O08.0=infection, O08.3=shock, O08.9=unspecified.
-O02.1=missed abortion (fetal death+NO expulsion). +O08.9 DS. "janin mati+tidak ada pengeluaran"→O02.1 NOT O03.x.
-O03-O07 (shared 4th digit "See before O03"):
-  Incomplete base=.4 | Complete base=.9. ALWAYS .4 or .9. NEVER .0/.1/.2/.3/.6/.7/.8.
-  +O08.x always as DS: O08.9=no specific complication, O08.1=haemorrhage, O08.0=infection.
-  "incomplete+perdarahan"→O03.4+O08.1 | "complete tanpa komplikasi"→O03.9+O08.9
-
-PRETERM LABOUR:
-  O60.0=preterm labour without delivery | O60.1=preterm labour+preterm delivery | O60.2=preterm labour+term delivery.
-  "partus prematurus" dengan SC → O60.1 DU.
-
-TWINS / GEMELLI:
-  O30.0=twin pregnancy DS. ALWAYS code if gemelli documented.
-
-TTTS (Twin-to-Twin Transfusion Syndrome):
-  O36.4† "Maternal care for intrauterine death" ONLY for IUFD twin.
-  TTTS itself → O43.0† "Placental transfusion syndromes" (dagger) + O36.5* DS jika ada fetal growth retardation.
-  Kode TTTS: O43.0 DU jika TTTS adalah kondisi utama, atau DS jika IUFD lebih dominan.
-
-IUFD (Intrauterine Fetal Death):
-  O36.4 "Maternal care for intrauterine death" — SELALU kode jika IUFD disebutkan. DS.
-
-OUTCOME OF DELIVERY — WAJIB ditambahkan sebagai DS terakhir:
-  Z37.0=single liveborn | Z37.1=single stillbirth | Z37.2=twins both liveborn | Z37.3=twins one liveborn one stillbirth
-  Z37.4=twins both stillborn | Z37.5=other multiple liveborn | Z37.6=other multiple some stillborn | Z37.7=all stillborn
-  Kasus Ny. X (gemelli, anak ke-2 IUFD) → Z37.3 DS.
-
-ANAEMIA IN PREGNANCY:
-  Hb rendah (< 10) → O99.0 "Anaemia complicating pregnancy" DS jika Hb disebutkan < normal.
-  Kasus Ny. X Hb 9.1 → O99.0 DS.
-
-BEKAS SC / PREVIOUS CAESAREAN:
-  O34.2 "Maternal care due to uterine scar from previous surgery" — SELALU code jika bekas SC. DS.
+O00: O00.1=tubal, O00.2=ovarian, O00.0=abdominal. Ruptur→+O08.1 DS.
+O02.1=missed abortion (fetal death+NO expulsion). +O08.9 DS. BUKAN O03.x.
+O03-O07 4th digit (COMPLETE vs INCOMPLETE — tentukan dulu sebelum digit komplikasi):
+  COMPLETE (sudah kuret/tindakan): .5=infeksi | .6=perdarahan | .7=emboli | .9=tanpa komplikasi
+  INCOMPLETE (belum tindakan):     .0=infeksi | .1=perdarahan | .2=emboli | .4=tanpa komplikasi
+  +O08.x selalu DS: O08.0=infection | O08.1=haemorrhage | O08.3=shock | O08.9=unspecified
+  "infeksi setelah kuretase"→O03.5+O08.0 | "infeksi belum kuret"→O03.0+O08.0 | "perdarahan belum kuret"→O03.1+O08.1 | "incomplete tanpa komplikasi"→O03.4+O08.9 | "complete tanpa komplikasi"→O03.9+O08.9
+O60: .0=tanpa delivery | .1=preterm delivery (SC prematurus→O60.1 DU) | .2=term delivery
+O30.0=twin pregnancy DS. ALWAYS jika gemelli.
+TTTS→O43.0† DS. IUFD→O36.4 DS. TTTS+IUFD: O36.4 DU+O43.0 DS.
+Z37 WAJIB DS terakhir: Z37.0=single live | Z37.1=single still | Z37.2=twins both live | Z37.3=twins one live one still | Z37.4=twins both still
+O99.0=anaemia in pregnancy (Hb<10) DS. O34.2=bekas SC DS (ALWAYS).
 
 ## R CODES
 - Do NOT code R if definitive dx explains symptom.
@@ -672,16 +566,16 @@ BEKAS SC / PREVIOUS CAESAREAN:
 - DM→no R73 | fever unknown→R50.9 DU+WARNING | post-op fever→R50.9 DS.
 
 ## MUSCULOSKELETAL (M00-M99)
-Site digit (last char): 0=multiple,1=shoulder,2=upper arm/elbow,3=forearm/wrist,4=hand,5=pelvis/thigh/hip,6=lower leg/knee,7=ankle/foot,8=other,9=unspecified. Never omit.
-B95-B96: ONLY if organism explicitly named. Always DS. B95.6=S.aureus, B95.3=S.pneumoniae, B96.1=Klebsiella, B96.2=E.coli, B96.5=Pseudomonas, B96.8=other.
+Site digit: 0=multi,1=shoulder,2=elbow,3=wrist,4=hand,5=hip,6=knee,7=ankle,8=other,9=unspec. NEVER omit.
+B95-B96 ONLY jika kuman disebut eksplisit DS: B95.6=S.aureus,B95.3=S.pneumoniae,B96.1=Klebsiella,B96.2=E.coli,B96.5=Pseudomonas.
 
 ## EAR (H60-H95)
-H66.3=Other chronic suppurative otitis media. "CSOM"→H66.3 NOT H72.x (perforation only if separately stated).
-H90: H90.3="Sensorineural hearing loss, unilateral with unrestricted hearing on the contralateral side" | H90.4="Sensorineural hearing loss, bilateral" | H90.5="Sensorineural hearing loss, unspecified" | H90.1="Conductive hearing loss, unilateral with unrestricted hearing on the contralateral side" | H90.0="Conductive hearing loss, bilateral" | H90.2="Conductive hearing loss, unspecified".
+H66.3=CSOM. BUKAN H72.x kecuali perforasi disebut terpisah.
+H90: .0=conductive bilateral | .1=conductive unilateral | .2=conductive unspecified | .3=sensorineural unilateral | .4=sensorineural bilateral | .5=sensorineural unspecified.
 
 ## EXTERNAL CAUSE (Chapter XX)
-Injury/trauma → ALWAYS add external cause DS: V20-V29=motorcycle, V40-V49=car, W00-W19=falls, X00-X09=fire, X60-X84=self-harm, X85-Y09=assault. Y92=place (Y92.4=street, Y92.0=home) if mentioned. Always DS.
-Drug-induced (Y40-Y59): ONLY if drug explicitly named. Y42=corticosteroids, Y44=anticoagulants, Y45=NSAIDs, Y57=other. Always DS.
+Trauma → ALWAYS DS: V20-V29=motor, V40-V49=car, W00-W19=jatuh, X00-X09=api, X60-X84=self-harm, X85-Y09=assault. Y92=tempat (Y92.0=home,Y92.4=street) jika disebut.
+Drug-induced (Y40-Y59) ONLY jika obat disebut eksplisit: Y42=steroid,Y44=antikoagulan,Y45=NSAID,Y57=lain.
 
 ## SPECIFICITY
 E10=DM type1, E11=DM type2 + complication. I61=haemorrhagic stroke, I63=ischaemic+location. Fracture: bone+location+open/closed. 4th/5th digit always; .9 only if truly no detail.
