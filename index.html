@@ -828,6 +828,120 @@ function getCleanPath(pathStr, code, description) {
   return rendered.map(line => `<div class="lp-line">${line}</div>`).join('');
 }
 
+function renderLeadPath(pathStr, code, description) {
+  if (!pathStr) return '';
+  if (Array.isArray(pathStr)) pathStr = pathStr.join('\n');
+  else pathStr = String(pathStr);
+
+  // Lookup table untuk kode yang sering dikirim AI dengan format rusak
+  const KNOWN_PATHS = {
+    'O36.4': 'Death\n- fetus, fetal\n-- (near term) O36.4\nO36.4 Maternal care for intrauterine death',
+    'O43.0': 'Syndrome\n- transfusion\n-- feto-fetal O43.0\nO43.0 Placental transfusion syndromes',
+    'O30.0': 'Pregnancy\n- complicated by\n-- multiple gestation\n--- twin O30.0\nO30.0 Twin pregnancy',
+    'O60.1': 'Labour\n- premature\n-- with delivery O60.1\nO60.1 Preterm labour with preterm delivery',
+    'O60.0': 'Labour\n- premature O60.0\nO60.0 Preterm labour without delivery',
+    'O34.2': 'Section\n- cesarean (for)\n-- previous\n--- cesarean section O34.2\nO34.2 Maternal care due to uterine scar from previous surgery',
+    'O03.5': 'Abortion\n- spontaneous\n-- complicated by\n--- genital tract and pelvic infection O03.5\nO03.5 Spontaneous abortion, complete, complicated by genital tract and pelvic infection',
+    'O03.0': 'Abortion\n- spontaneous\n-- complicated by\n--- genital tract and pelvic infection O03.0\nO03.0 Spontaneous abortion, incomplete, complicated by genital tract and pelvic infection',
+    'O03.9': 'Abortion\n- spontaneous\n-- unspecified O03.9\nO03.9 Spontaneous abortion, unspecified',
+    'O03.4': 'Abortion\n- spontaneous\n-- incomplete, without complication O03.4\nO03.4 Spontaneous abortion, incomplete, without complication',
+    'O08.0': 'Complications\n- following\n-- abortion and ectopic and molar pregnancy\n--- infection O08.0\nO08.0 Genital tract and pelvic infection following abortion and ectopic and molar pregnancy',
+    'O00.1': 'Pregnancy\n- ectopic\n-- tubal\n--- ruptured O00.1\nO00.1 Tubal pregnancy',
+    'Z37.3': 'Outcome of delivery\n- twins\n-- one liveborn one stillborn Z37.3\nZ37.3 Twins, one liveborn and one stillborn',
+    'Z37.0': 'Outcome of delivery\n- single\n-- liveborn Z37.0\nZ37.0 Single liveborn infant',
+    'N83.2': 'Cyst\n- ovary, ovarian N83.2\nN83.2 Other and unspecified ovarian cysts',
+  };
+
+  const looksMessy = !pathStr.includes('\n') || /[A-Z]\d{2}.*[A-Z]\d{2}/.test(pathStr);
+  if (code && KNOWN_PATHS[code] && looksMessy) {
+    pathStr = KNOWN_PATHS[code];
+  } else if (!pathStr.includes('\n')) {
+    const parts = pathStr.split(' - ').filter(Boolean);
+    if (parts.length >= 2) {
+      const finalIdx = parts.findIndex(p => /^[A-Z]\d{2}/.test(p.trim()) || /^\d{2}\./.test(p.trim()));
+      let lines = [];
+      parts.forEach((part, i) => {
+        const trimmed = part.trim();
+        if (!trimmed) return;
+        if (i === 0) lines.push(trimmed);
+        else if (finalIdx >= 0 && i === finalIdx) {
+          if (lines.length > 0) lines[lines.length - 1] += ' ' + trimmed.split(' ')[0];
+          lines.push(trimmed);
+        } else {
+          lines.push('-'.repeat(lines.filter(l => l.startsWith('-')).length + 1) + ' ' + trimmed);
+        }
+      });
+      pathStr = lines.join('\n');
+    } else {
+      const hasCode = /\b[A-Z]\d{2}(\.\d+)?\b/.test(pathStr);
+      if (!hasCode && (code || description)) {
+        pathStr = pathStr + '\n' + (description ? code + ' ' + description : code);
+      }
+    }
+  }
+
+  // Split jika AI gabung dua path
+  if (code) {
+    const splitLines = pathStr.split('\n');
+    const ourCodeRe = new RegExp('^' + code.replace('.', '\\.'));
+    const hasOtherCode = splitLines.some(l => /^[A-Z]\d{2}/.test(l.trim()) && !ourCodeRe.test(l.trim()));
+    if (hasOtherCode) {
+      const headerLines = [], finalLine = [];
+      let foundAnyCode = false;
+      for (const line of splitLines) {
+        const t = line.trim();
+        if (/^[A-Z]\d{2}/.test(t)) {
+          foundAnyCode = true;
+          if (ourCodeRe.test(t)) finalLine.push(line);
+        } else if (!foundAnyCode) headerLines.push(line);
+      }
+      const subtermWithOurCode = splitLines.filter(l => {
+        const t = l.trim();
+        return t.startsWith('-') && ourCodeRe.test(t.replace(/.*\s/, '')) && !headerLines.includes(l);
+      });
+      const rebuilt = [...headerLines, ...subtermWithOurCode, ...finalLine].filter(Boolean);
+      if (rebuilt.length > 0) pathStr = rebuilt.join('\n');
+    }
+  }
+
+  const rawLines = pathStr.split('\n')
+    .map(l => normalizeDashesShared(normalizeLine(l)))
+    .filter(l => l.trim());
+  const lines = normalizeLevelsShared(rawLines);
+
+  const hasExplicitFinal = lines.some(l => !l.trim().startsWith('-') && isFinalLine(l.trim()));
+  const subtermLines = lines.filter(l => l.trim().startsWith('-'));
+  const lastSubterm = subtermLines[subtermLines.length - 1] || '';
+  const autoCodeMatch = lastSubterm.match(/\b([A-Z]\d{2}(\.\d+)?)\s*$/) || lastSubterm.match(/\b(\d{2}\.\d+)\s*$/);
+  const autoCode = autoCodeMatch ? autoCodeMatch[1] : null;
+
+  const rendered = lines.map(line => {
+    const trimmed = line.trim();
+    if (!trimmed) return '';
+    if (!trimmed.startsWith('-') && isFinalLine(trimmed)) {
+      return `<span class="lp-final">${highlightCodes(trimmed.replace(/^CODE\s+/, ''))}</span>`;
+    }
+    if (trimmed.startsWith('-')) {
+      let level = 0;
+      while (level < trimmed.length && trimmed[level] === '-') level++;
+      const rest = trimmed.slice(level).trim();
+      return `<span class="lp-indent">${'-'.repeat(level)} </span>${highlightCodes(rest)}`;
+    }
+    return `<span class="lp-section">${line}</span>`;
+  }).filter(Boolean);
+
+  if (!hasExplicitFinal) {
+    const finalCode = autoCode || code || '';
+    const finalDesc = description || '';
+    if (finalCode) {
+      const finalText = finalDesc ? `${finalCode} ${finalDesc}` : finalCode;
+      rendered.push(`<span class="lp-final">${highlightCodes(finalText)}</span>`);
+    }
+  }
+
+  return rendered.map(line => `<div class="lp-line">${line}</div>`).join('');
+}
+
 function renderVol1Notes(notes) {
   if (!Array.isArray(notes) || notes.length === 0) return '';
   const typeMap = {
