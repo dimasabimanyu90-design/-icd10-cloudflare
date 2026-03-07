@@ -523,9 +523,12 @@ CLINICAL NOTE: ${input}
   - ovary 65.29
   65.29 Other local excision or destruction of ovary
 
-  WAJIB: baris terakhir SELALU berupa CODE + deskripsi resmi lengkap.
+  WAJIB: baris terakhir SELALU berupa CODE + spasi + deskripsi resmi lengkap.
+  CONTOH SALAH baris final: "O60" atau "O60.1" (kode tanpa deskripsi) ← DILARANG
+  CONTOH BENAR baris final: "O60.1 Preterm labour with preterm delivery" ← WAJIB
   DILARANG: menulis arrow (→) sebagai pengganti hierarki subterm.
   DILARANG: menghilangkan cross-reference (see also / see) jika ada di buku.
+  DILARANG: skip level subterm — jika buku tulis "- -" maka HARUS tulis "- -" bukan "-".
 - dagger_asterisk: "dagger"|"asterisk"|"none". ONLY if OFFICIALLY marked †/* in Vol.1. Most="none".
 - volume1_notes: includes/excludes/notes per code.
 
@@ -701,23 +704,40 @@ function copyPath(btn, text) {
 
 function renderLeadPath(pathStr) {
   if (!pathStr) return '';
-  const codeRe = /[A-Z]\d{2}(\.\d+)?|\d{2}(\.\d+)+/;
-  const finalLineRe = /^(CODE\s+)?([A-Z]\d{2}(\.\d+)?|\d{2}(\.\d+)+)(\s+.*)?$/;
+
+  // Regex: kode ICD (huruf+2digit atau 2digit) dengan optional .digit
+  const codeRe = /\b([A-Z]\d{2}(\.\d+)?|\d{2}(\.\d+)*)\b/g;
+
+  // Baris final: dimulai dengan kode ICD (bukan dash), boleh diikuti deskripsi atau tidak
+  const isFinalLine = (s) => /^(CODE\s+)?[A-Z]\d{2}(\.\d+)?\b/.test(s) || /^\d{2}(\.\d+)+\b/.test(s);
+
+  // Highlight semua kode ICD dalam string
+  const highlightCodes = (s) => s.replace(codeRe, (m) => `<span class="lp-code">${m}</span>`);
+
   return pathStr.split('\n').map(line => {
     const trimmed = line.trim();
     if (!trimmed) return '';
-    if (finalLineRe.test(trimmed) && !trimmed.startsWith('-')) {
+
+    // Baris final kode — dimulai dengan kode ICD
+    if (isFinalLine(trimmed) && !trimmed.startsWith('-')) {
       const cl = trimmed.replace(/^CODE\s+/, '');
-      return `<span class="lp-final">${cl.replace(codeRe, m => `<span class="lp-code">${m}</span>`)}</span>`;
+      return `<span class="lp-final">${highlightCodes(cl)}</span>`;
     }
+
+    // Baris subterm — dimulai dengan satu atau lebih dash
     if (trimmed.startsWith('-')) {
-      const dashMatch = line.match(/^(\s*-+\s)/);
-      const dashes = dashMatch ? dashMatch[1] : '- ';
-      const rest = line.slice(dashes.length)
-        .replace(/(\s)([A-Z]\d{2}(\.\d+)?)\s*$/, (m, sp, code) => `${sp}<span class="lp-code">${code}</span>`)
-        .replace(/(\s)(\d{2}(\.\d+)+)\s*$/,       (m, sp, code) => `${sp}<span class="lp-code">${code}</span>`);
-      return `<span class="lp-indent">${dashes}</span>${rest}`;
+      // Hitung jumlah dash di awal (- atau - - atau - - -)
+      const dashMatch = line.match(/^((?:-\s*)+)/);
+      const rawDashes = dashMatch ? dashMatch[1] : '- ';
+      // Hitung level: jumlah '-' karakter
+      const level = (rawDashes.match(/-/g) || []).length;
+      // Buat label indent visual: "- " / "- - " / "- - - "
+      const dashLabel = Array(level).fill('-').join(' ') + ' ';
+      const rest = line.slice(rawDashes.length).trim();
+      return `<span class="lp-indent">${dashLabel}</span>${highlightCodes(rest)}`;
     }
+
+    // Section header / lead term
     return `<span class="lp-section">${line}</span>`;
   }).filter(Boolean).join('\n');
 }
