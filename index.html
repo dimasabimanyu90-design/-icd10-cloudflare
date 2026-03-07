@@ -415,10 +415,14 @@ SPECIFICITY RULES - always choose the most specific code available:
     .8 = complete/unspecified, with other/unspecified complications
     .9 = complete/unspecified, WITHOUT complication ← only use when truly no detail
   Key clinical clues:
-    * "serviks terbuka + sisa jaringan" = INCOMPLETE → .4 (no complication) or .1 (with haemorrhage)
-    * "perdarahan banyak/excessive haemorrhage" = add 4th digit .1 or add O08.1 as DS
-    * NEVER use .9 if note says incomplete or gives complication detail
-    * Example: "serviks terbuka, sebagian jaringan keluar, masih ada sisa, perdarahan banyak" → O03.4 + O08.1
+    * "serviks terbuka + sisa jaringan/retained products" = INCOMPLETE → .4 (no complication) or .1 (with haemorrhage)
+    * "seluruh jaringan keluar/abortus komplit/lengkap/complete" = COMPLETE → .9 (no complication) or .6 (with haemorrhage)
+    * O08.x = complications following abortion — ALWAYS add O08.x as DS companion to O03-O07:
+      - O08.9 = unspecified complication following abortion → add when no specific complication stated but abortion occurred
+      - O08.1 = delayed or excessive haemorrhage → add when "perdarahan banyak" is mentioned
+      - O08.0 = genital tract infection → add when infection is mentioned
+    * Example "abortus spontan lengkap tanpa komplikasi 8 minggu" → O03.9 (DU) + O08.9 (DS)
+    * Example "serviks terbuka, sebagian jaringan keluar, masih ada sisa, perdarahan banyak" → O03.4 (DU) + O08.1 (DS)
 - For diabetes: specify type (E10=type1, E11=type2) and complication subcategory
 - For fractures: specify bone, location (shaft/neck/head), open vs closed
 - For hypertension: specify primary (I10) vs secondary, with/without heart disease
