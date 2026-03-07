@@ -628,7 +628,12 @@ Jika nilai abnormal ditemukan, tambahkan kode yang sesuai meskipun dokter tidak 
 - Kalium rendah (<3.5) → E87.6 hipokalemia | Kalium tinggi (>5.5) → E87.5 hiperkalemia
 - Kreatinin tinggi → N19 gagal ginjal / N17/N18 sesuai konteks
 - Leukosit tinggi (>11.000) tanpa dx infeksi eksplisit → pertimbangkan sebagai supporting dx
-- Saturasi O2 rendah (<95%) → pertimbangkan J96 / R09.0
+- Saturasi O2 / SpO2 rendah (<95%) → WAJIB tambah kode:
+  SpO2 <95% onset akut → J96.0 Acute respiratory failure DS
+  SpO2 <95% kronik → J96.1 Chronic respiratory failure DS
+  SpO2 <95% tanpa info durasi → J96.9 Respiratory failure, unspecified DS
+  RR >24x/menit + SpO2 <95% → perkuat J96.0
+  JANGAN hanya "pertimbangkan" — jika nilai ada di teks, WAJIB dikoding
 - Nilai lain yang jelas abnormal: tetap kode sesuai konteks klinis
 - JANGAN abaikan nilai abnormal hanya karena dokter tidak menyebutnya di diagnosis.
 
@@ -651,16 +656,41 @@ Pneumonia — WAJIB spesifik jika kuman disebutkan:
   J18.9 HANYA jika kuman benar-benar tidak diketahui
 
 ## ICD-9-CM PROCEDURE RULES
-DILARANG coding terapi medis/obat sebagai prosedur ICD-9-CM:
-  - Antibiotik IV, nebulisasi obat, infus cairan = BUKAN prosedur ICD-9-CM
-  - ICD-9-CM Vol.3 hanya untuk tindakan/prosedur invasif atau diagnostik:
-    BOLEH: operasi, biopsi, intubasi, ventilator, kateter, bronkoskopi, drainage, dll
-    TIDAK BOLEH: "antibiotic therapy 80.1", "nebulization 93.91" — kode ini tidak valid
-  - Jika tidak ada prosedur invasif → procedures: [] (kosong)
-  Nebulisasi = tindakan medis rutin, TIDAK dikoding ICD-9-CM kecuali ada tindakan khusus
-  Ventilator mekanik → 96.70-96.72 (boleh dikoding)
-  Intubasi endotrakeal → 96.04
-  Bronkoskopi → 33.22-33.23
+ICD-9-CM Vol.3 mencakup TIGA kategori — semua wajib dikoding jika disebutkan:
+
+### 1. PROSEDUR OPERATIF / INVASIF
+  Operasi, biopsi, intubasi, drainase, kateter, bronkoskopi, dll
+  Ventilator mekanik → 96.70-96.72 | Intubasi → 96.04 | Bronkoskopi → 33.22
+
+### 2. PEMERIKSAAN DIAGNOSTIK — WAJIB dikoding jika disebutkan
+  Foto thorax/rontgen:
+    87.44=Routine chest x-ray | 87.49=Other x-ray of thorax
+  CT Scan:
+    87.03=CT scan of head | 87.41=CT scan of thorax | 88.01=CT scan of abdomen
+  MRI:
+    88.91=MRI of brain | 88.92=MRI of chest | 88.93=MRI of abdomen
+  USG:
+    88.72=Echography of heart (echocardiogram) | 88.76=USG abdomen
+    88.78=USG obstetrik | 88.79=USG lain
+  EKG → 89.52 | EEG → 89.14 | Spirometri → 89.37
+  Endoskopi: 45.13=kolonoskopi | 44.13=gastroskopi | 33.22=bronkoskopi
+
+### 3. PEMERIKSAAN LAB — WAJIB dikoding jika disebutkan
+  Darah rutin/CBC → 90.59 | Kimia darah/panel → 90.59
+  Kultur darah → 90.54 | Kultur sputum → 90.41 | Kultur urin → 90.29
+  Analisa gas darah/AGD → 89.65
+  Troponin/enzim jantung → 90.59
+  HbA1c → 90.59 | Urinalisis → 91.31
+  Histopatologi/PA → 91.49
+
+### DILARANG:
+  Antibiotik IV, nebulisasi obat, infus cairan = BUKAN prosedur ICD-9-CM
+  "antibiotic therapy 80.1", "nebulization 93.91" — kode ini TIDAK VALID
+  Nebulisasi = tindakan medis rutin, TIDAK dikoding
+
+### CONTOH kasus pneumonia dengan lab + foto:
+  Foto thorax → 87.44 | Kultur sputum → 90.41 | Lab darah (leukosit/CRP) → 90.59
+  AGD → 89.65 | EKG → 89.52
 
 ## EYE (H00-H59)
 Katarak — WAJIB spesifik, jangan langsung H26.9:
@@ -941,6 +971,22 @@ function getCleanPath(pathStr, code, description) {
     'B95.3': 'Streptococcus\n- pneumoniae\n-- as cause of disease classified elsewhere B95.3\nB95.3 Streptococcus pneumoniae as the cause of diseases classified elsewhere',
     'B96.1': 'Klebsiella\n- pneumoniae\n-- as cause of disease classified elsewhere B96.1\nB96.1 Klebsiella pneumoniae as the cause of diseases classified elsewhere',
     'B96.2': 'Escherichia\n- coli\n-- as cause of disease classified elsewhere B96.2\nB96.2 Escherichia coli as the cause of diseases classified elsewhere',
+    '87.44': 'X-ray\n- chest\n-- routine 87.44\n87.44 Routine chest x-ray',
+    '87.49': 'X-ray\n- chest\n-- other 87.49\n87.49 Other x-ray of chest',
+    '87.03': 'Scan\n- CT\n-- head 87.03\n87.03 Computerized axial tomography of head',
+    '87.41': 'Scan\n- CT\n-- thorax 87.41\n87.41 Computerized axial tomography of thorax',
+    '88.01': 'Scan\n- CT\n-- abdomen 88.01\n88.01 Computerized axial tomography of abdomen',
+    '88.91': 'Imaging\n- magnetic resonance\n-- brain 88.91\n88.91 Magnetic resonance imaging of brain',
+    '88.76': 'Ultrasonography\n- abdominal 88.76\n88.76 Abdominal ultrasonography',
+    '88.78': 'Ultrasonography\n- gravid uterus 88.78\n88.78 Diagnostic ultrasound of gravid uterus',
+    '88.72': 'Echocardiography\n- cardiac 88.72\n88.72 Diagnostic ultrasound of heart',
+    '89.52': 'Electrocardiogram\n- routine ECG 89.52\n89.52 Electrocardiogram',
+    '89.65': 'Measurement\n- arterial blood gases 89.65\n89.65 Measurement of arterial blood gases',
+    '90.59': 'Examination\n- blood\n-- chemical 90.59\n90.59 Other blood chemistry',
+    '90.41': 'Examination\n- sputum\n-- culture 90.41\n90.41 Bacteriological examination of sputum',
+    '90.54': 'Examination\n- blood\n-- culture 90.54\n90.54 Blood culture',
+    '91.31': 'Examination\n- urine\n-- routine 91.31\n91.31 Urinalysis',
+    '91.49': 'Examination\n- histological\n-- other 91.49\n91.49 Other histological examination',
     'H25.1': 'Cataract\n- senile\n-- nuclear H25.1\nH25.1 Senile nuclear cataract',
     'H25.2': 'Cataract\n- senile\n-- morgagnian H25.2\nH25.2 Morgagnian cataract',
     'H25.9': 'Cataract\n- senile\n-- unspecified H25.9\nH25.9 Senile cataract, unspecified',
@@ -1100,6 +1146,22 @@ function renderLeadPath(pathStr, code, description) {
     'B95.3': 'Streptococcus\n- pneumoniae\n-- as cause of disease classified elsewhere B95.3\nB95.3 Streptococcus pneumoniae as the cause of diseases classified elsewhere',
     'B96.1': 'Klebsiella\n- pneumoniae\n-- as cause of disease classified elsewhere B96.1\nB96.1 Klebsiella pneumoniae as the cause of diseases classified elsewhere',
     'B96.2': 'Escherichia\n- coli\n-- as cause of disease classified elsewhere B96.2\nB96.2 Escherichia coli as the cause of diseases classified elsewhere',
+    '87.44': 'X-ray\n- chest\n-- routine 87.44\n87.44 Routine chest x-ray',
+    '87.49': 'X-ray\n- chest\n-- other 87.49\n87.49 Other x-ray of chest',
+    '87.03': 'Scan\n- CT\n-- head 87.03\n87.03 Computerized axial tomography of head',
+    '87.41': 'Scan\n- CT\n-- thorax 87.41\n87.41 Computerized axial tomography of thorax',
+    '88.01': 'Scan\n- CT\n-- abdomen 88.01\n88.01 Computerized axial tomography of abdomen',
+    '88.91': 'Imaging\n- magnetic resonance\n-- brain 88.91\n88.91 Magnetic resonance imaging of brain',
+    '88.76': 'Ultrasonography\n- abdominal 88.76\n88.76 Abdominal ultrasonography',
+    '88.78': 'Ultrasonography\n- gravid uterus 88.78\n88.78 Diagnostic ultrasound of gravid uterus',
+    '88.72': 'Echocardiography\n- cardiac 88.72\n88.72 Diagnostic ultrasound of heart',
+    '89.52': 'Electrocardiogram\n- routine ECG 89.52\n89.52 Electrocardiogram',
+    '89.65': 'Measurement\n- arterial blood gases 89.65\n89.65 Measurement of arterial blood gases',
+    '90.59': 'Examination\n- blood\n-- chemical 90.59\n90.59 Other blood chemistry',
+    '90.41': 'Examination\n- sputum\n-- culture 90.41\n90.41 Bacteriological examination of sputum',
+    '90.54': 'Examination\n- blood\n-- culture 90.54\n90.54 Blood culture',
+    '91.31': 'Examination\n- urine\n-- routine 91.31\n91.31 Urinalysis',
+    '91.49': 'Examination\n- histological\n-- other 91.49\n91.49 Other histological examination',
     'H25.1': 'Cataract\n- senile\n-- nuclear H25.1\nH25.1 Senile nuclear cataract',
     'H25.2': 'Cataract\n- senile\n-- morgagnian H25.2\nH25.2 Morgagnian cataract',
     'H25.9': 'Cataract\n- senile\n-- unspecified H25.9\nH25.9 Senile cataract, unspecified',
