@@ -7,27 +7,45 @@ export async function onRequestPost(context) {
   };
 
   const MODELS = [
-    "llama-3.3-70b-versatile",                    // Terbaik untuk ICD-10, 70B
-    "meta-llama/llama-4-scout-17b-16e-instruct",  // Fallback: Llama 4 Scout, cepat & limit longgar
-    "llama-3.1-8b-instant",                       // Fallback terakhir
+    "llama-3.3-70b-versatile",
+    "meta-llama/llama-4-scout-17b-16e-instruct",
+    "llama-3.1-8b-instant",
   ];
+
+  // ── MULTI API KEY FALLBACK ──
+  // Tambah GROQ_API_KEY_2, GROQ_API_KEY_3 di Cloudflare env vars
+  // Kalau key 1 rate limit → otomatis coba key 2 → key 3 → balik ke key 1
+  const API_KEYS = [
+    context.env.GROQ_API_KEY,
+    context.env.GROQ_API_KEY_2,
+    context.env.GROQ_API_KEY_3,
+  ].filter(Boolean); // hapus yang tidak diset
+
+  if (API_KEYS.length === 0) {
+    return new Response(
+      JSON.stringify({ error: "GROQ_API_KEY tidak ditemukan di environment variables" }),
+      { status: 500, headers: corsHeaders }
+    );
+  }
 
   try {
     const body = await context.request.json();
-    const apiKey = context.env.GROQ_API_KEY;
 
-    if (!apiKey) {
-      return new Response(
-        JSON.stringify({ error: "GROQ_API_KEY tidak ditemukan di environment variables" }),
-        { status: 500, headers: corsHeaders }
-      );
+    // Coba setiap kombinasi API key × model
+    // Urutan: key1+model1 → key1+model2 → key2+model1 → key2+model2 → dst
+    const attempts = [];
+    for (const key of API_KEYS) {
+      for (const model of MODELS) {
+        attempts.push({ key, model });
+      }
     }
 
     let lastError = null;
 
-    for (const model of MODELS) {
-      let data, response;
+    for (const { key, model } of attempts) {
+      let response, data;
 
+      // 1 retry per kombinasi jika 429 sementara
       for (let attempt = 1; attempt <= 2; attempt++) {
         response = await fetch(
           "https://api.groq.com/openai/v1/chat/completions",
@@ -35,7 +53,7 @@ export async function onRequestPost(context) {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "Authorization": `Bearer ${apiKey}`
+              "Authorization": `Bearer ${key}`
             },
             body: JSON.stringify({
               model: model,
@@ -50,24 +68,32 @@ export async function onRequestPost(context) {
 
         if (response.status === 429) {
           if (attempt < 2) {
+            // Tunggu sebentar lalu retry sekali
             const retryAfter = response.headers.get("retry-after");
-            const delay = retryAfter ? parseInt(retryAfter) * 1000 : 8000;
-            await new Promise(r => setTimeout(r, Math.min(delay, 15000)));
+            const delay = retryAfter ? parseInt(retryAfter) * 1000 : 5000;
+            await new Promise(r => setTimeout(r, Math.min(delay, 10000)));
             continue;
           }
-          lastError = `Rate limit pada model ${model}`;
+          // Masih 429 setelah retry → skip ke kombinasi berikutnya
+          const keyIdx = API_KEYS.indexOf(key) + 1;
+          lastError = `Rate limit — key ${keyIdx}, model ${model}`;
           break;
         }
-        break;
+        break; // sukses atau error non-429
       }
 
-      if (response.status === 429) continue;
+      if (response.status === 429) continue; // coba kombinasi berikutnya
 
       if (data.error) {
-        return new Response(
-          JSON.stringify({ error: `Groq (${model}): ${data.error.code} - ${data.error.message}` }),
-          { status: 500, headers: corsHeaders }
-        );
+        lastError = `Groq (key${API_KEYS.indexOf(key)+1}/${model}): ${data.error.code} - ${data.error.message}`;
+        // Kalau error bukan rate limit, langsung return error
+        if (response.status !== 429 && response.status !== 503) {
+          return new Response(
+            JSON.stringify({ error: lastError }),
+            { status: 500, headers: corsHeaders }
+          );
+        }
+        continue;
       }
 
       if (!data.choices || data.choices.length === 0) {
@@ -77,21 +103,22 @@ export async function onRequestPost(context) {
         );
       }
 
-      let text = data.choices[0].message.content || "";
-      text = text.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+      const text = (data.choices[0].message.content || "")
+        .replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
 
-      // Baca quota info dari response headers Groq
+      const keyIdx = API_KEYS.indexOf(key) + 1;
       const quota = {
         model: model,
-        rpm_limit:       response.headers.get("x-ratelimit-limit-requests")       || null,
-        rpm_remaining:   response.headers.get("x-ratelimit-remaining-requests")    || null,
-        rpm_reset:       response.headers.get("x-ratelimit-reset-requests")        || null,
-        tpm_limit:       response.headers.get("x-ratelimit-limit-tokens")          || null,
-        tpm_remaining:   response.headers.get("x-ratelimit-remaining-tokens")      || null,
-        tpm_reset:       response.headers.get("x-ratelimit-reset-tokens")          || null,
-        tokens_used:     data.usage ? data.usage.total_tokens                      : null,
-        prompt_tokens:   data.usage ? data.usage.prompt_tokens                     : null,
-        completion_tokens: data.usage ? data.usage.completion_tokens               : null,
+        api_key_used: `key_${keyIdx}`,
+        rpm_limit:          response.headers.get("x-ratelimit-limit-requests")     || null,
+        rpm_remaining:      response.headers.get("x-ratelimit-remaining-requests") || null,
+        rpm_reset:          response.headers.get("x-ratelimit-reset-requests")     || null,
+        tpm_limit:          response.headers.get("x-ratelimit-limit-tokens")       || null,
+        tpm_remaining:      response.headers.get("x-ratelimit-remaining-tokens")   || null,
+        tpm_reset:          response.headers.get("x-ratelimit-reset-tokens")       || null,
+        tokens_used:        data.usage ? data.usage.total_tokens                   : null,
+        prompt_tokens:      data.usage ? data.usage.prompt_tokens                  : null,
+        completion_tokens:  data.usage ? data.usage.completion_tokens              : null,
       };
 
       return new Response(
@@ -100,8 +127,11 @@ export async function onRequestPost(context) {
       );
     }
 
+    // Semua kombinasi key+model habis
     return new Response(
-      JSON.stringify({ error: "Semua model Groq sedang rate limit. Tunggu 1-2 menit lalu coba lagi." }),
+      JSON.stringify({
+        error: `Semua API key & model sedang rate limit. Tunggu 1-2 menit. (${lastError})`
+      }),
       { status: 429, headers: corsHeaders }
     );
 
