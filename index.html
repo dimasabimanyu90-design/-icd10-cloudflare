@@ -554,11 +554,13 @@ DU = kondisi yang menjadi alasan UTAMA pasien dirawat/diterapi pada episode ini.
   Angioplasty                                              internal fixation,femur
   - coronary (balloon) 00.66
   00.66 Percutaneous transluminal coronary angioplasty
-  Photocoagulation
-  - retina
-  -- for destruction of lesion
-  --- laser 14.24
-  14.24 Destruction of chorioretinal lesion by laser photocoagulation
+  Photocoagulation            Extraction of lens
+  - retina                    - phacoemulsification
+  -- for destruction of       -- with insertion of
+  --- laser 14.24             --- intraocular lens prosthesis 13.72
+  14.24 Destruction of        13.72 Phacoemulsification and insertion
+        chorioretinal lesion        of intraocular lens prosthesis
+        by laser photocoagulation
 - confidence: integer 1-99, estimasi keyakinan koding. WAJIB diisi, jangan kosong atau null.
 - reasoning: WAJIB berisi data klinis spesifik dari teks input (nilai lab, gejala, tindakan) yang menjadi dasar pemilihan kode. DILARANG hanya mengulang nama kode atau deskripsi kode. Contoh SALAH: "Dikategorikan sebagai O99.0 karena anemia kehamilan." Contoh BENAR: "Hb 9,1 g/dL (di bawah normal <10), pasien sedang hamil."
 - dagger_asterisk: "dagger"|"asterisk"|"none". ONLY if OFFICIALLY marked †/* in Vol.1. Most="none".
@@ -639,6 +641,16 @@ Jika nilai abnormal ditemukan, tambahkan kode yang sesuai meskipun dokter tidak 
 Site digit: 0=multi,1=shoulder,2=elbow,3=wrist,4=hand,5=hip,6=knee,7=ankle,8=other,9=unspec. NEVER omit.
 B95-B96 ONLY jika kuman disebut eksplisit DS: B95.6=S.aureus,B95.3=S.pneumoniae,B96.1=Klebsiella,B96.2=E.coli,B96.5=Pseudomonas.
 
+## EYE (H00-H59)
+Katarak — WAJIB spesifik, jangan langsung H26.9:
+  H25.0=senile incipient | H25.1=senile nuclear | H25.2=morgagnian (hypermature)
+  H25.8=combined forms senile | H25.9=senile unspecified
+  H26.1=traumatic cataract | H26.1 juga dipakai untuk immature senile di beberapa referensi
+  Kata "imatur/immature" → H26.1 | "nuklear/nuclear" → H25.1 | "hipermatur/hypermature" → H25.2
+  "katarak senilis" tanpa detail → H25.9 (bukan H26.9)
+  H26.9 = unspecified cataract — HANYA jika benar-benar tidak ada info jenis katarak
+Retinopati: H36.0† paired E11.3* — HANYA jika retinopati disebutkan eksplisit
+
 ## EAR (H60-H95)
 H66.3=CSOM. BUKAN H72.x kecuali perforasi disebut terpisah.
 H90: .0=conductive bilateral | .1=conductive unilateral | .2=conductive unspecified | .3=sensorineural unilateral | .4=sensorineural bilateral | .5=sensorineural unspecified.
@@ -662,6 +674,9 @@ E10=DM type1, E11=DM type2. DM WAJIB pakai 4th digit komplikasi:
   GDS tinggi saja tanpa komplikasi organ → E11.9 (bukan E11.3/E11.2)
 H36.0=diabetic retinopathy (WAJIB .0, bukan H36 saja).
 Pasangan dagger-asterisk DM+retinopati: E11.3† DU + H36.0* DS — KEDUANYA WAJIB dikoding.
+Fakoemulsifikasi/phacoemulsification + IOL → ICD-9-CM 13.72 "Phacoemulsification and insertion of intraocular lens prosthesis" (BUKAN 74.x yang untuk SC)
+Fakoemulsifikasi tanpa IOL → 13.41
+Ekstraksi katarak ECCE → 13.71
 Laser fotokoagulasi retina → ICD-9-CM 14.24 "Destruction of chorioretinal lesion by laser photocoagulation" (BUKAN Z51.4, BUKAN 14.25). 14.25=unspecified type (hindari jika laser disebut eksplisit).
 E11.3=dagger (etiologi), H36.0=asterisk (manifestasi). JANGAN hanya coding E11.3 tanpa H36.0.
 I61=haemorrhagic stroke, I63=ischaemic+location. Fracture: bone+location+open/closed. 4th/5th digit always; .9 only if truly no detail.
