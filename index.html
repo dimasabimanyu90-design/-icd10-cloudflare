@@ -1063,7 +1063,8 @@ function getCleanPath(pathStr, code, description) {
     || pathStr.includes('/')
     || isFlat
     || !hasStandaloneFinal; // final line tanpa deskripsi → override dengan KNOWN_PATHS
-  if (code && KNOWN_PATHS[code] && looksMessy) {
+  // Jika kode ada di KNOWN_PATHS → SELALU gunakan (deskripsi resmi terjamin benar)
+  if (code && KNOWN_PATHS[code]) {
     pathStr = KNOWN_PATHS[code];
   } else if (!pathStr.includes('\n')) {
     const parts = pathStr.split(' - ').filter(Boolean);
@@ -1244,7 +1245,8 @@ function renderLeadPath(pathStr, code, description) {
     || pathStr.includes('/')
     || isFlat
     || !hasStandaloneFinal; // final line tanpa deskripsi → override dengan KNOWN_PATHS
-  if (code && KNOWN_PATHS[code] && looksMessy) {
+  // Jika kode ada di KNOWN_PATHS → SELALU gunakan (deskripsi resmi terjamin benar)
+  if (code && KNOWN_PATHS[code]) {
     pathStr = KNOWN_PATHS[code];
   } else if (!pathStr.includes('\n')) {
     const parts = pathStr.split(' - ').filter(Boolean);
