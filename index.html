@@ -336,6 +336,24 @@ function setLoading(on) {
   document.getElementById('btnSpinner').style.display = on ? 'inline' : 'none';
   document.getElementById('btnLabel').textContent = on ? T[currentLang].btnAnalyzing : T[currentLang].btnAnalyze;
 }
+let cooldownTimer = null;
+function startCooldown(seconds) {
+  let remaining = seconds;
+  const btn = document.getElementById('analyzeBtn');
+  const label = document.getElementById('btnLabel');
+  btn.disabled = true;
+  clearInterval(cooldownTimer);
+  cooldownTimer = setInterval(() => {
+    remaining--;
+    label.textContent = `Tunggu ${remaining}s...`;
+    if (remaining <= 0) {
+      clearInterval(cooldownTimer);
+      btn.disabled = false;
+      label.textContent = 'Analyze & Code';
+    }
+  }, 1000);
+}
+
 function showError(msg) {
   document.getElementById('resultsSection').style.display = 'block';
   document.getElementById('emptyState').style.display = 'none';
@@ -383,10 +401,6 @@ CLINICAL NOTE: ${input}
 3. See: MUST go to referenced term instead.
 4. Use most specific subterm before accepting code.
 
-## LATIN/GREEK → LEAD TERM
-Suffixes: -itis=Inflammation, -oma=Neoplasm, -ectomy=Excision, -otomy=Incision, -ostomy=procedure name, -plasty=Repair, -rraphy=Suture, -rrhage=Haemorrhage, -stenosis=Stenosis, -cele=Hernia, -plegia=Paralysis, -algia=Pain, -pathy=Disease/Disorder, -megaly=Enlargement, -ptosis=Prolapse, -emia=condition name, -uria=condition name.
-Organs: cardi=heart, hepat=liver, nephr=kidney, gastr=stomach, enter=intestine, col=colon, cholecyst=gallbladder, pneum=lung, bronch=bronchus, ophthalm=eye, derm=skin, oste=bone, arthr=joint, my=muscle, neur=nerve, angi=vessel, ren=kidney, uter=uterus, oophor=ovary, mast=breast.
-Latin: sinistra=left, dextra=right, acuta=acute, chronica=chronic, ante/post/intra partum, status post=condition after, ai/ex=due to.
 
 ## INCLUDES/EXCLUDES
 - Includes: already covered → do NOT code separately.
@@ -438,6 +452,10 @@ Return ONLY valid JSON:
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prompt: PROMPT })
     });
+    if (resp.status === 429) {
+      startCooldown(60);
+      throw new Error("Rate limit Groq. Silakan tunggu 60 detik.");
+    }
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const data = await resp.json();
     if (data.error) throw new Error(data.error);
