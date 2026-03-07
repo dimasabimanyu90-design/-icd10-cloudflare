@@ -26,10 +26,28 @@ header { position: relative; z-index: 10; background: var(--ink); color: var(--p
 .htag { font-size: 10px; font-family: 'IBM Plex Mono', monospace; font-weight: 500; letter-spacing: 0.5px; padding: 3px 8px; border-radius: 3px; text-transform: uppercase; }
 .htag-red { background: var(--red); color: #fff; }
 .htag-outline { border: 1px solid #444; color: #a8a29e; }
-/* Language switch */
 .lang-switch { display: flex; background: #2d2a27; border-radius: 4px; overflow: hidden; border: 1px solid #444; }
 .lang-btn { font-size: 11px; font-family: 'IBM Plex Mono', monospace; font-weight: 500; padding: 4px 10px; cursor: pointer; border: none; background: transparent; color: #a8a29e; transition: all .15s; letter-spacing: 0.5px; }
 .lang-btn.active { background: var(--red); color: #fff; }
+
+/* ── QUOTA BAR ── */
+.quota-strip { background: #111; border-bottom: 1px solid #222; padding: 6px 40px; display: none; align-items: center; gap: 20px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #6b6460; flex-wrap: wrap; position: relative; z-index: 9; }
+.quota-strip.visible { display: flex; }
+.quota-item { display: flex; align-items: center; gap: 7px; }
+.quota-label { color: #444; letter-spacing: 0.6px; text-transform: uppercase; font-size: 9px; }
+.quota-bar-wrap { width: 60px; height: 4px; background: #252525; border-radius: 10px; overflow: hidden; }
+.quota-bar-fill { height: 100%; border-radius: 10px; transition: width .6s ease, background-color .4s; }
+.quota-val { color: #888; font-size: 10px; }
+.quota-divider { width: 1px; height: 12px; background: #2a2a2a; }
+.quota-tokens { display: flex; align-items: center; gap: 6px; }
+.quota-tokens-label { color: #444; font-size: 9px; text-transform: uppercase; letter-spacing: 0.6px; }
+.quota-tokens-val { color: #666; font-size: 10px; }
+.quota-tokens-detail { color: #3a3a3a; font-size: 9px; }
+.quota-model-wrap { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.quota-model-label { color: #3a3a3a; font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; }
+.quota-model-val { background: #1e1200; color: #92400e; font-size: 9px; padding: 1px 7px; border-radius: 2px; border: 1px solid #2e1e00; letter-spacing: 0.3px; }
+.quota-reset { color: #3a3a3a; font-size: 9px; }
+
 main { position: relative; z-index: 1; max-width: 960px; margin: 0 auto; padding: 40px 24px 80px; }
 .section-rule { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
 .section-rule-line { flex: 1; height: 1px; background: var(--rule); }
@@ -118,19 +136,11 @@ textarea::placeholder { color: #b8b0a6; font-style: italic; }
 .footer-powered { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px; }
 .footer-groq { background: #f55036; color: #fff; font-size: 10px; font-family: 'IBM Plex Mono', monospace; font-weight: 500; padding: 2px 8px; border-radius: 3px; letter-spacing: 0.5px; }
 .disclaimer { text-align: center; font-size: 11.5px; margin-top: 40px; line-height: 1.9; font-family: 'IBM Plex Mono', monospace; letter-spacing: 0.3px; width: 100%; padding: 14px 24px; background: linear-gradient(135deg, #fff7ed, #fef3c7); border-top: 2px solid #f97316; border-bottom: 2px solid #f97316; color: #92400e; }
-/* Quota Bar */
-.quota-strip { background: #111; border-top: 1px solid #2a2a2a; padding: 5px 40px; display: flex; align-items: center; gap: 16px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #6b6460; position: relative; z-index: 9; flex-wrap: wrap; }
-.quota-strip.hidden { display: none; }
-.quota-item { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
-.quota-label { color: #504a46; letter-spacing: 0.5px; text-transform: uppercase; }
-.quota-bar-wrap { width: 64px; height: 5px; background: #2a2a2a; border-radius: 10px; overflow: hidden; }
-.quota-bar-fill { height: 100%; border-radius: 10px; transition: width .5s ease, background .3s; }
-.quota-val { color: #a8a29e; }
-.quota-model { margin-left: auto; color: #504a46; font-size: 9px; letter-spacing: 0.5px; }
-.quota-model span { color: #92400e; background: #2a1a00; padding: 1px 6px; border-radius: 2px; }
-.quota-tokens-used { color: #504a46; }
-.quota-tokens-used span { color: #6b6460; }
-@media(max-width:600px){ header{padding:0 16px;} .header-right{gap:6px;} .htag{display:none;} main{padding:24px 12px 60px;} .diag-main{grid-template-columns:auto 1fr; gap:10px;} .conf-wrap{display:none;} .quota-strip{padding:5px 12px;} .quota-model{display:none;} }
+@media(max-width:600px){
+  header{padding:0 16px;} .header-right{gap:6px;} .htag{display:none;}
+  main{padding:24px 12px 60px;} .diag-main{grid-template-columns:auto 1fr; gap:10px;} .conf-wrap{display:none;}
+  .quota-strip{padding:6px 12px; gap:10px;} .quota-model-wrap{display:none;} .quota-reset{display:none;}
+}
 </style>
 </head>
 <body>
@@ -153,23 +163,30 @@ textarea::placeholder { color: #b8b0a6; font-style: italic; }
   </div>
 </header>
 
-<!-- Quota Bar -->
-<div class="quota-strip hidden" id="quotaStrip">
+<!-- ── QUOTA BAR ── -->
+<div class="quota-strip" id="quotaStrip">
   <div class="quota-item">
     <span class="quota-label">RPM</span>
-    <div class="quota-bar-wrap"><div class="quota-bar-fill" id="qBarRpm" style="width:100%;background:#22c55e"></div></div>
+    <div class="quota-bar-wrap"><div class="quota-bar-fill" id="qBarRpm" style="width:0%"></div></div>
     <span class="quota-val" id="qValRpm">–</span>
   </div>
+  <div class="quota-divider"></div>
   <div class="quota-item">
     <span class="quota-label">TPM</span>
-    <div class="quota-bar-wrap"><div class="quota-bar-fill" id="qBarTpm" style="width:100%;background:#22c55e"></div></div>
+    <div class="quota-bar-wrap"><div class="quota-bar-fill" id="qBarTpm" style="width:0%"></div></div>
     <span class="quota-val" id="qValTpm">–</span>
   </div>
-  <div class="quota-item">
-    <span class="quota-label">Request ini</span>
-    <span class="quota-val" id="qTokensUsed">–</span>
+  <div class="quota-divider"></div>
+  <div class="quota-tokens">
+    <span class="quota-tokens-label">Request ini</span>
+    <span class="quota-tokens-val" id="qTokensUsed">–</span>
+    <span class="quota-tokens-detail" id="qTokensDetail"></span>
   </div>
-  <div class="quota-model" id="qModel">Model: <span>–</span></div>
+  <div class="quota-model-wrap">
+    <span class="quota-model-label">Model</span>
+    <span class="quota-model-val" id="qModelVal">–</span>
+    <span class="quota-reset" id="qResetInfo"></span>
+  </div>
 </div>
 
 <main>
@@ -380,7 +397,7 @@ function startCooldown(seconds) {
     if (remaining <= 0) {
       clearInterval(cooldownTimer);
       btn.disabled = false;
-      label.textContent = 'Analyze & Code';
+      label.textContent = T[currentLang].btnAnalyze;
     }
   }, 1000);
 }
@@ -395,49 +412,58 @@ function showError(msg) {
   document.getElementById('procCount').textContent = 'Error';
 }
 
+// ── QUOTA BAR ──
+function barColor(pct) {
+  if (pct === null) return '#333';
+  if (pct > 50) return '#22c55e';
+  if (pct > 20) return '#f59e0b';
+  return '#ef4444';
+}
+function calcPct(remaining, limit) {
+  if (!remaining || !limit) return null;
+  return Math.max(0, Math.min(100, Math.round(parseInt(remaining) / parseInt(limit) * 100)));
+}
+function fmtNum(n) {
+  if (!n) return '–';
+  return parseInt(n).toLocaleString('id-ID');
+}
 function updateQuotaBar(quota) {
   const strip = document.getElementById('quotaStrip');
-  strip.classList.remove('hidden');
-
-  // Helper: hitung persen sisa, warna berdasarkan level
-  function pct(remaining, limit) {
-    if (!remaining || !limit) return null;
-    return Math.max(0, Math.min(100, Math.round((parseInt(remaining) / parseInt(limit)) * 100)));
-  }
-  function barColor(p) {
-    if (p === null) return '#444';
-    if (p > 50) return '#22c55e';   // hijau
-    if (p > 20) return '#f59e0b';   // kuning
-    return '#ef4444';               // merah
-  }
-  function fmt(remaining, limit) {
-    if (!remaining || !limit) return '–';
-    const r = parseInt(remaining).toLocaleString();
-    const l = parseInt(limit).toLocaleString();
-    return `${r}/${l}`;
-  }
+  strip.classList.add('visible');
 
   // RPM
-  const rpmPct = pct(quota.rpm_remaining, quota.rpm_limit);
-  document.getElementById('qBarRpm').style.width   = (rpmPct ?? 100) + '%';
-  document.getElementById('qBarRpm').style.background = barColor(rpmPct);
-  document.getElementById('qValRpm').textContent   = fmt(quota.rpm_remaining, quota.rpm_limit);
+  const rpmPct = calcPct(quota.rpm_remaining, quota.rpm_limit);
+  const rpmBar = document.getElementById('qBarRpm');
+  rpmBar.style.width = (rpmPct ?? 0) + '%';
+  rpmBar.style.backgroundColor = barColor(rpmPct);
+  document.getElementById('qValRpm').textContent =
+    (quota.rpm_remaining && quota.rpm_limit)
+      ? `${fmtNum(quota.rpm_remaining)}/${fmtNum(quota.rpm_limit)}`
+      : '–';
 
   // TPM
-  const tpmPct = pct(quota.tpm_remaining, quota.tpm_limit);
-  document.getElementById('qBarTpm').style.width   = (tpmPct ?? 100) + '%';
-  document.getElementById('qBarTpm').style.background = barColor(tpmPct);
-  document.getElementById('qValTpm').textContent   = fmt(quota.tpm_remaining, quota.tpm_limit);
+  const tpmPct = calcPct(quota.tpm_remaining, quota.tpm_limit);
+  const tpmBar = document.getElementById('qBarTpm');
+  tpmBar.style.width = (tpmPct ?? 0) + '%';
+  tpmBar.style.backgroundColor = barColor(tpmPct);
+  document.getElementById('qValTpm').textContent =
+    (quota.tpm_remaining && quota.tpm_limit)
+      ? `${fmtNum(quota.tpm_remaining)}/${fmtNum(quota.tpm_limit)}`
+      : '–';
 
-  // Token request ini
+  // Token usage request ini
   if (quota.tokens_used) {
-    document.getElementById('qTokensUsed').textContent =
-      `${quota.tokens_used.toLocaleString()} token (prompt: ${(quota.prompt_tokens||0).toLocaleString()}, output: ${(quota.completion_tokens||0).toLocaleString()})`;
+    document.getElementById('qTokensUsed').textContent = `${fmtNum(quota.tokens_used)} tok`;
+    document.getElementById('qTokensDetail').textContent =
+      `(↑${fmtNum(quota.prompt_tokens)} ↓${fmtNum(quota.completion_tokens)})`;
   }
 
-  // Model yang dipakai
-  if (quota.model) {
-    document.getElementById('qModel').innerHTML = `Model: <span>${quota.model}</span>`;
+  // Model
+  document.getElementById('qModelVal').textContent = quota.model || '–';
+
+  // Reset info
+  if (quota.tpm_reset) {
+    document.getElementById('qResetInfo').textContent = `reset: ${quota.tpm_reset}`;
   }
 }
 
@@ -468,59 +494,39 @@ CLINICAL NOTE: ${input}
 - description_id: Indonesian translation of official title.
 - lead_term_path: complete Vol.3 hierarchy, REAL codes never placeholder.
   Format: Term\n- subterm\n- - subterm CODE\nCODE Full description
-- dagger_asterisk: "dagger"|"asterisk"|"none". ONLY if OFFICIALLY marked †/* in Vol.1. Most="none".
+- dagger_asterisk: "dagger"|"asterisk"|"none". ONLY if OFFICIALLY marked in Vol.1. Most="none".
 - volume1_notes: includes/excludes/notes per code.
 
 ## VOL.3 INDEX RULES
-1. NEVER use anatomical site as lead term → always says "see condition".
-   WRONG: Femur-fracture, Uterus-rupture. RIGHT: Fracture→femur, Rupture→uterus.
-2. See also: follow cross-reference for more specific code. Show path if followed.
-3. See: MUST go to referenced term instead.
+1. NEVER use anatomical site as lead term.
+   WRONG: Femur-fracture. RIGHT: Fracture→femur.
+2. See also: follow cross-reference. Show path if followed.
+3. See: MUST go to referenced term.
 4. Use most specific subterm before accepting code.
-
 
 ## INCLUDES/EXCLUDES
 - Includes: already covered → do NOT code separately.
 - Excludes1 (mutually exclusive): NEVER code both → ERROR.
 - Excludes2 (can coexist): allowed if genuinely both present → WARNING.
-- Hierarchy: chapter>block>category; specific overrides general.
 
 ## VALIDATION
-ERROR: asterisk as DU, missing †/* pair, Excludes1 violated, R-code when definitive dx exists.
-WARNING: wrong DU, missing DS, Excludes2 needs confirmation, R-code as DU (provisional, verify after workup).
+ERROR: asterisk as DU, missing pair, Excludes1 violated, R-code when definitive dx exists.
+WARNING: wrong DU, missing DS, Excludes2 needs confirmation, R-code as DU.
 
 ## ABBREVIATIONS
 SC/SCTP=sectio caesarea, TTTS=twin-twin transfusion, IUFD=intrauterine fetal death, gemelli=twins, partus prematurus=preterm labour, kista ovarium=ovarian cyst, kistektomi=cystectomy, bekas SC=previous caesarean scar, HT=hypertension, DM=diabetes mellitus, ORIF=open reduction internal fixation, ai=atas indikasi.
 
 ## OBSTETRIC RULES
-O00: O00.1=tubal, O00.2=ovarian, O00.0=abdominal. Ruptur→+O08.1 DS. O08.0=infection, O08.3=shock, O08.9=unspecified.
-O02.1=missed abortion (fetal death+NO expulsion). +O08.9 DS. "janin mati+tidak ada pengeluaran"→O02.1 NOT O03.x.
-O03-O07 (shared 4th digit "See before O03"):
-  Incomplete base=.4 | Complete base=.9. ALWAYS .4 or .9. NEVER .0/.1/.2/.3/.6/.7/.8.
-  +O08.x always as DS: O08.9=no specific complication, O08.1=haemorrhage, O08.0=infection.
-  "incomplete+perdarahan"→O03.4+O08.1 | "complete tanpa komplikasi"→O03.9+O08.9
-
-## R CODES
-- Do NOT code R if definitive dx explains symptom.
-- R as DU: valid if no definitive dx → WARNING provisional.
-- DM→no R73 | fever unknown→R50.9 DU+WARNING | post-op fever→R50.9 DS.
-
-## MUSCULOSKELETAL (M00-M99)
-Site digit (last char): 0=multiple,1=shoulder,2=upper arm/elbow,3=forearm/wrist,4=hand,5=pelvis/thigh/hip,6=lower leg/knee,7=ankle/foot,8=other,9=unspecified. Never omit.
-B95-B96: ONLY if organism explicitly named. Always DS. B95.6=S.aureus, B95.3=S.pneumoniae, B96.1=Klebsiella, B96.2=E.coli, B96.5=Pseudomonas, B96.8=other.
-
-## EAR (H60-H95)
-H66.3=Other chronic suppurative otitis media. "CSOM"→H66.3 NOT H72.x (perforation only if separately stated).
-H90: H90.3="Sensorineural hearing loss, unilateral with unrestricted hearing on the contralateral side" | H90.4="Sensorineural hearing loss, bilateral" | H90.5="Sensorineural hearing loss, unspecified" | H90.1="Conductive hearing loss, unilateral with unrestricted hearing on the contralateral side" | H90.0="Conductive hearing loss, bilateral" | H90.2="Conductive hearing loss, unspecified".
-
-## EXTERNAL CAUSE (Chapter XX)
-Injury/trauma → ALWAYS add external cause DS: V20-V29=motorcycle, V40-V49=car, W00-W19=falls, X00-X09=fire, X60-X84=self-harm, X85-Y09=assault. Y92=place (Y92.4=street, Y92.0=home) if mentioned. Always DS.
-Drug-induced (Y40-Y59): ONLY if drug explicitly named. Y42=corticosteroids, Y44=anticoagulants, Y45=NSAIDs, Y57=other. Always DS.
+O03-O07: Incomplete=.4 | Complete=.9. ALWAYS .4 or .9. +O08.x as DS always.
+O02.1=missed abortion (fetal death+NO expulsion).
 
 ## SPECIFICITY
-E10=DM type1, E11=DM type2 + complication. I61=haemorrhagic stroke, I63=ischaemic+location. Fracture: bone+location+open/closed. 4th/5th digit always; .9 only if truly no detail.
+E10=DM type1, E11=DM type2. I61=haemorrhagic stroke, I63=ischaemic. 4th/5th digit always.
 
-Return ONLY valid JSON with these keys:
+## EXTERNAL CAUSE
+Injury → ALWAYS add DS: V20-V29=motorcycle, V40-V49=car, W00-W19=falls. Always DS.
+
+Return ONLY valid JSON:
 {"summary","du_reasoning","validations":[{"type","message"}],"diagnoses":[{"role","code","dagger_asterisk","description","description_id","category","confidence","lead_term_path","volume1_notes":[{"type","text"}],"paired_with","reasoning"}],"procedures":[{"code","description","description_id","category","confidence","lead_term_path","volume1_notes","reasoning"}]}`;
 
   try {
@@ -536,16 +542,15 @@ Return ONLY valid JSON with these keys:
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const data = await resp.json();
     if (data.error) throw new Error(data.error);
-    // Tampilkan info quota dari response
+
+    // ── Tampilkan quota dari response ──
     if (data.quota) updateQuotaBar(data.quota);
+
     const raw = data.text;
     if (!raw || raw.trim() === '') throw new Error("Empty response. Please try again.");
 
-    // Fix literal newlines inside JSON strings (common Groq issue)
     function fixLiteralNewlines(str) {
-      let result = '';
-      let inString = false;
-      let escaped = false;
+      let result = '', inString = false, escaped = false;
       for (let i = 0; i < str.length; i++) {
         const ch = str[i];
         if (escaped) { result += ch; escaped = false; continue; }
@@ -565,27 +570,25 @@ Return ONLY valid JSON with these keys:
     if (!match) throw new Error("Invalid response format. Please try again.");
     clean = match[0];
 
-    let result;
     function repairJSON(str) {
       str = str.replace(/,\s*"[^"]*":\s*$/, '');
       str = str.replace(/,\s*\{[^{}]*$/, '');
       str = str.replace(/,\s*$/, '');
-      const opens = (str.match(/\[/g)||[]).length - (str.match(/\]/g)||[]).length;
+      const opens  = (str.match(/\[/g)||[]).length - (str.match(/\]/g)||[]).length;
       const braces = (str.match(/\{/g)||[]).length - (str.match(/\}/g)||[]).length;
-      for(let i=0;i<opens;i++) str += ']';
-      for(let i=0;i<braces;i++) str += '}';
+      for (let i = 0; i < opens;  i++) str += ']';
+      for (let i = 0; i < braces; i++) str += '}';
       return str;
     }
 
+    let result;
     try { result = JSON.parse(clean); }
     catch(e) {
       try { result = JSON.parse(repairJSON(clean)); }
       catch(e2) { throw new Error("Failed to parse AI response. Please try again."); }
     }
 
-    // ── FIX: Normalisasi semua array agar .map() tidak crash ──
-    // Terjadi jika Groq memotong JSON di tengah (max_tokens habis)
-    // atau mengembalikan tipe data yang bukan array
+    // ── FIX: normalisasi array agar .map() tidak crash ──
     if (!Array.isArray(result.diagnoses))   result.diagnoses   = [];
     if (!Array.isArray(result.procedures))  result.procedures  = [];
     if (!Array.isArray(result.validations)) result.validations = [];
@@ -608,46 +611,35 @@ function copyPath(btn, text) {
 
 function renderLeadPath(pathStr) {
   if (!pathStr) return '';
-  // ICD code pattern: letter+2digits or 2digits, optionally with dot+digits
   const codeRe = /[A-Z]\d{2}(\.\d+)?|\d{2}(\.\d+)+/;
   const finalLineRe = /^(CODE\s+)?([A-Z]\d{2}(\.\d+)?|\d{2}(\.\d+)+)(\s+.*)?$/;
-  const lines = pathStr.split('\n');
-  return lines.map(line => {
+  return pathStr.split('\n').map(line => {
     const trimmed = line.trim();
     if (!trimmed) return '';
-    // Final code line: "S72.3 Description" or "CODE S72.3 Description" or just "S72.3"
     if (finalLineRe.test(trimmed) && !trimmed.startsWith('-')) {
-      // Strip leading "CODE " if present
-      const clean = trimmed.replace(/^CODE\s+/, '');
-      // Highlight the code portion
-      const highlighted = clean.replace(codeRe, m => `<span class="lp-code">${m}</span>`);
-      return `<span class="lp-final">${highlighted}</span>`;
+      const cl = trimmed.replace(/^CODE\s+/, '');
+      return `<span class="lp-final">${cl.replace(codeRe, m => `<span class="lp-code">${m}</span>`)}</span>`;
     }
-    // Indented dash lines: "- term CODE" or "- - subterm"
     if (trimmed.startsWith('-')) {
       const dashMatch = line.match(/^(\s*-+\s)/);
       const dashes = dashMatch ? dashMatch[1] : '- ';
-      const rest = line.slice(dashes.length);
-      // Highlight code at end of line if present
-      const highlighted = rest.replace(/(\s)([A-Z]\d{2}(\.\d+)?)\s*$/, (m, sp, code) =>
-        `${sp}<span class="lp-code">${code}</span>`)
-        .replace(/(\s)(\d{2}(\.\d+)+)\s*$/, (m, sp, code) =>
-        `${sp}<span class="lp-code">${code}</span>`);
-      return `<span class="lp-indent">${dashes}</span>${highlighted}`;
+      const rest = line.slice(dashes.length)
+        .replace(/(\s)([A-Z]\d{2}(\.\d+)?)\s*$/, (m, sp, code) => `${sp}<span class="lp-code">${code}</span>`)
+        .replace(/(\s)(\d{2}(\.\d+)+)\s*$/,       (m, sp, code) => `${sp}<span class="lp-code">${code}</span>`);
+      return `<span class="lp-indent">${dashes}</span>${rest}`;
     }
-    // Section header
     return `<span class="lp-section">${line}</span>`;
   }).filter(Boolean).join('\n');
 }
 
 function renderVol1Notes(notes) {
-  if (!notes || !Array.isArray(notes) || notes.length === 0) return '';
+  if (!Array.isArray(notes) || notes.length === 0) return '';
   const typeMap = {
-    includes: { cls: 'vnt-includes', label: 'Includes' },
-    excludes: { cls: 'vnt-excludes', label: 'Excludes' },
-    note: { cls: 'vnt-note', label: 'Note' },
-    use_additional: { cls: 'vnt-use', label: 'Use additional code' },
-    code_first: { cls: 'vnt-code-first', label: 'Code first' }
+    includes:     { cls: 'vnt-includes',  label: 'Includes' },
+    excludes:     { cls: 'vnt-excludes',  label: 'Excludes' },
+    note:         { cls: 'vnt-note',      label: 'Note' },
+    use_additional: { cls: 'vnt-use',     label: 'Use additional code' },
+    code_first:   { cls: 'vnt-code-first',label: 'Code first' }
   };
   const items = notes.map(n => {
     const t = typeMap[n.type] || { cls: 'vnt-note', label: n.type };
@@ -657,7 +649,7 @@ function renderVol1Notes(notes) {
 }
 
 function renderValidations(validations) {
-  if (!validations || !Array.isArray(validations) || validations.length === 0) return '';
+  if (!Array.isArray(validations) || validations.length === 0) return '';
   const iconMap = { ERROR: '🔴', WARNING: '🟡', INFO: '🔵' };
   const items = validations.map(v =>
     `<div class="val-item"><span>${iconMap[v.type]||'ℹ'}</span><span><strong>${v.type}:</strong> ${v.message}</span></div>`
@@ -676,26 +668,22 @@ function renderResults(result) {
       <strong style="color:#1d4ed8">${t.labelDUReason}</strong>${result.du_reasoning}</div>` : ''}
     ${renderValidations(result.validations)}`;
 
-  const diagnoses = result.diagnoses || [];
+  const diagnoses = result.diagnoses;
   document.getElementById('diagCount').textContent = `${diagnoses.length} ${currentLang === 'id' ? 'kode' : 'codes'}`;
   document.getElementById('diagList').innerHTML = diagnoses.map((d, i) => {
-    const isDagger = d.dagger_asterisk === 'dagger';
+    const isDagger   = d.dagger_asterisk === 'dagger';
     const isAsterisk = d.dagger_asterisk === 'asterisk';
     const badgeClass = d.role === 'DU' ? 'du' : 'ds';
-    const dagMark = isDagger ? `<span class="dagger-mark" title="Etiology code">†</span>` : '';
-    const astMark = isAsterisk ? `<span class="asterisk-mark" title="Manifestation code">*</span>` : '';
-    const pairNote = d.paired_with ? `<span style="font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;"> → ${t.labelPasangan}: ${d.paired_with}</span>` : '';
-    const descMain = d.description;
-    const descAlt = currentLang === 'id'
-      ? (d.description_id ? `<div class="diag-desc-alt">🇮🇩 ${d.description_id}</div>` : '')
-      : '';
-    const pathLabel = t.labelVol3;
+    const dagMark    = isDagger   ? `<span class="dagger-mark" title="Etiology code">†</span>` : '';
+    const astMark    = isAsterisk ? `<span class="asterisk-mark" title="Manifestation code">*</span>` : '';
+    const pairNote   = d.paired_with ? `<span style="font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;"> → ${t.labelPasangan}: ${d.paired_with}</span>` : '';
+    const descAlt    = currentLang === 'id' && d.description_id ? `<div class="diag-desc-alt">🇮🇩 ${d.description_id}</div>` : '';
     return `<div class="diag-item" style="animation-delay:${i*0.06}s">
       <div class="diag-main">
         <div><span class="du-badge ${badgeClass}">${d.role}</span></div>
         <div>
           <div class="diag-code-row"><span class="diag-code">${d.code}</span>${dagMark}${astMark}${pairNote}</div>
-          <div class="diag-desc">${descMain}</div>
+          <div class="diag-desc">${d.description}</div>
           ${descAlt}
           <div class="diag-category">${d.category}</div>
         </div>
@@ -705,7 +693,7 @@ function renderResults(result) {
         </div>
       </div>
       ${d.lead_term_path ? `<div class="lead-term-box">
-        <div class="lead-label"><span>${pathLabel}</span>
+        <div class="lead-label"><span>${t.labelVol3}</span>
         <button class="copy-btn" onclick="copyPath(this,\`${d.lead_term_path.replace(/`/g,"'")}\`)">📋 Copy</button></div>
         <div class="lead-path">${renderLeadPath(d.lead_term_path)}</div>
       </div>` : ''}
@@ -714,19 +702,16 @@ function renderResults(result) {
     </div>`;
   }).join('');
 
-  const procedures = result.procedures || [];
+  const procedures = result.procedures;
   document.getElementById('procCount').textContent = `${procedures.length} ${currentLang === 'id' ? 'kode' : 'codes'}`;
   document.getElementById('procList').innerHTML = procedures.map((p, i) => {
-    const descMain = p.description;
-    const descAlt = currentLang === 'id'
-      ? (p.description_id ? `<div class="diag-desc-alt">🇮🇩 ${p.description_id}</div>` : '')
-      : '';
+    const descAlt = currentLang === 'id' && p.description_id ? `<div class="diag-desc-alt">🇮🇩 ${p.description_id}</div>` : '';
     return `<div class="diag-item" style="animation-delay:${(diagnoses.length+i)*0.06}s">
       <div class="diag-main">
         <div><span class="du-badge proc">PROC</span></div>
         <div>
           <div class="diag-code-row"><span class="diag-code">${p.code}</span></div>
-          <div class="diag-desc">${descMain}</div>
+          <div class="diag-desc">${p.description}</div>
           ${descAlt}
           <div class="diag-category">${p.category}</div>
         </div>
