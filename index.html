@@ -492,16 +492,40 @@ CLINICAL NOTE: ${input}
   N83.2="Other and unspecified ovarian cysts", O34.2="Maternal care due to uterine scar from previous surgery"
   74.1="Low cervical caesarean section", 65.29="Other local excision or destruction of ovary"
 - description_id: Indonesian translation of official title.
-- lead_term_path: WAJIB tampilkan SEMUA level hierarki Vol.3 sampai kode final. Format:
+- lead_term_path: WAJIB tampilkan SEMUA level hierarki Vol.3 persis seperti buku. Format:
   LeadTerm
-  - subterm1
-  - - subterm2 CODE
+  - subterm level 1
+  - - subterm level 2
+  - - - subterm level 3 CODE
   CODE Full official description
-  CONTOH BENAR:
+
+  CONTOH 1 — dengan see also cross-reference:
+  Section
+  - cesarean (see also Delivery, cesarean) O82.9
+  - cesarean (for) O82.9
+  - - previous
+  - - - cesarean section O34.2
+  O34.2 Maternal care due to uterine scar from previous surgery
+
+  CONTOH 2 — subterm langsung ke kode:
   Labour
-  - premature NEC O60.0
-  O60.0 Preterm labour without delivery
-  CONTOH SALAH: "Pregnancy→complication→fetal" (terlalu pendek, tidak ada kode final)
+  - premature O60
+  - - with delivery O60.1
+  O60.1 Preterm labour with preterm delivery
+
+  CONTOH 3 — prosedur ICD-9-CM:
+  Cesarean section
+  - low cervical 74.1
+  74.1 Low cervical caesarean section
+
+  CONTOH 4 — kista ovarium:
+  Cystectomy
+  - ovary 65.29
+  65.29 Other local excision or destruction of ovary
+
+  WAJIB: baris terakhir SELALU berupa CODE + deskripsi resmi lengkap.
+  DILARANG: menulis arrow (→) sebagai pengganti hierarki subterm.
+  DILARANG: menghilangkan cross-reference (see also / see) jika ada di buku.
 - dagger_asterisk: "dagger"|"asterisk"|"none". ONLY if OFFICIALLY marked †/* in Vol.1. Most="none".
 - volume1_notes: includes/excludes/notes per code.
 
@@ -533,6 +557,33 @@ O03-O07 (shared 4th digit "See before O03"):
   Incomplete base=.4 | Complete base=.9. ALWAYS .4 or .9. NEVER .0/.1/.2/.3/.6/.7/.8.
   +O08.x always as DS: O08.9=no specific complication, O08.1=haemorrhage, O08.0=infection.
   "incomplete+perdarahan"→O03.4+O08.1 | "complete tanpa komplikasi"→O03.9+O08.9
+
+PRETERM LABOUR:
+  O60.0=preterm labour without delivery | O60.1=preterm labour+preterm delivery | O60.2=preterm labour+term delivery.
+  "partus prematurus" dengan SC → O60.1 DU.
+
+TWINS / GEMELLI:
+  O30.0=twin pregnancy DS. ALWAYS code if gemelli documented.
+
+TTTS (Twin-to-Twin Transfusion Syndrome):
+  O36.4† "Maternal care for intrauterine death" ONLY for IUFD twin.
+  TTTS itself → O43.0† "Placental transfusion syndromes" (dagger) + O36.5* DS jika ada fetal growth retardation.
+  Kode TTTS: O43.0 DU jika TTTS adalah kondisi utama, atau DS jika IUFD lebih dominan.
+
+IUFD (Intrauterine Fetal Death):
+  O36.4 "Maternal care for intrauterine death" — SELALU kode jika IUFD disebutkan. DS.
+
+OUTCOME OF DELIVERY — WAJIB ditambahkan sebagai DS terakhir:
+  Z37.0=single liveborn | Z37.1=single stillbirth | Z37.2=twins both liveborn | Z37.3=twins one liveborn one stillbirth
+  Z37.4=twins both stillborn | Z37.5=other multiple liveborn | Z37.6=other multiple some stillborn | Z37.7=all stillborn
+  Kasus Ny. X (gemelli, anak ke-2 IUFD) → Z37.3 DS.
+
+ANAEMIA IN PREGNANCY:
+  Hb rendah (< 10) → O99.0 "Anaemia complicating pregnancy" DS jika Hb disebutkan < normal.
+  Kasus Ny. X Hb 9.1 → O99.0 DS.
+
+BEKAS SC / PREVIOUS CAESAREAN:
+  O34.2 "Maternal care due to uterine scar from previous surgery" — SELALU code jika bekas SC. DS.
 
 ## R CODES
 - Do NOT code R if definitive dx explains symptom.
@@ -623,8 +674,10 @@ Return ONLY valid JSON with these keys:
 
     // ── FIX: normalisasi confidence — AI kadang kirim 0.9 bukan 90 ──
     function fixConf(val) {
-      const n = parseFloat(val);
-      if (isNaN(n)) return 80;
+      if (val === null || val === undefined || val === '') return null;
+      const n = parseFloat(String(val).replace('%',''));
+      if (isNaN(n)) return null;
+      // AI kadang kirim 0.85 (desimal) bukan 85 (persen)
       return n <= 1 ? Math.round(n * 100) : Math.round(n);
     }
     result.diagnoses  = result.diagnoses.map(d => ({ ...d, confidence: fixConf(d.confidence) }));
@@ -725,8 +778,8 @@ function renderResults(result) {
           <div class="diag-category">${d.category}</div>
         </div>
         <div class="conf-wrap">
-          <div class="conf-val">${d.confidence}%</div>
-          <div class="conf-bar"><div class="conf-fill" style="width:${d.confidence}%"></div></div>
+          <div class="conf-val">${d.confidence != null ? d.confidence+'%' : '–'}</div>
+          <div class="conf-bar"><div class="conf-fill" style="width:${d.confidence ?? 0}%"></div></div>
         </div>
       </div>
       ${d.lead_term_path ? `<div class="lead-term-box">
@@ -753,8 +806,8 @@ function renderResults(result) {
           <div class="diag-category">${p.category}</div>
         </div>
         <div class="conf-wrap">
-          <div class="conf-val">${p.confidence}%</div>
-          <div class="conf-bar"><div class="conf-fill" style="width:${p.confidence}%"></div></div>
+          <div class="conf-val">${p.confidence != null ? p.confidence+'%' : '–'}</div>
+          <div class="conf-bar"><div class="conf-fill" style="width:${p.confidence ?? 0}%"></div></div>
         </div>
       </div>
       ${p.lead_term_path ? `<div class="lead-term-box">
