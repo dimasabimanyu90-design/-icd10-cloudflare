@@ -400,6 +400,19 @@ FIELD RULES:
 - Validate: asterisk as DU=ERROR, missing pair=ERROR, excludes violated=ERROR, wrong DU=WARNING, missing DS=WARNING.
 - Abbreviations: SC/SCTP=sectio caesarea transperitonealis, TTTS=twin-to-twin transfusion syndrome, IUFD=intrauterine fetal death, gemelli=twins, partus prematurus=preterm labour, kista ovarium=ovarian cyst, kistektomi=cystectomy, bekas SC=previous caesarean scar, HT=hypertension, DM=diabetes mellitus, ORIF=open reduction internal fixation, ai=atas indikasi.
 
+SPECIFICITY RULES - always choose the most specific code available:
+- For abortion (O03-O07): determine COMPLETE vs INCOMPLETE from clinical clues:
+  * "sebagian jaringan keluar/masih ada sisa/retained products" = INCOMPLETE → use 4th digit 4 (without complication) or 1 (complicated by delayed/excessive haemorrhage)
+  * "seluruh jaringan keluar/abortus komplit" = COMPLETE → use 4th digit 5 (without complication)
+  * "perdarahan banyak/haemorrhage" after abortion = add O08.1 (Delayed or excessive haemorrhage following abortion)
+  * NEVER use O03.9 (unspecified) if clinical details allow a more specific code
+  * Example: "serviks terbuka, sebagian jaringan keluar, masih ada sisa, perdarahan banyak" → O03.4 (incomplete spontaneous abortion without complication) + O08.1 (haemorrhage following abortion)
+- For diabetes: specify type (E10=type1, E11=type2) and complication subcategory
+- For fractures: specify bone, location (shaft/neck/head), open vs closed
+- For hypertension: specify primary (I10) vs secondary, with/without heart disease
+- For stroke: specify haemorrhagic (I61.x) vs ischaemic (I63.x) vs unspecified (I64), and location
+- General rule: if clinical note gives enough detail → use specific 4th/5th digit. Only use .9 (unspecified) when truly no further detail available.
+
 Return ONLY valid JSON, no markdown:
 {"summary":"...","du_reasoning":"...","validations":[{"type":"ERROR|WARNING|INFO","message":"..."}],"diagnoses":[{"role":"DU","code":"O60.1","dagger_asterisk":"none|dagger|asterisk","description":"ENGLISH official ICD name","description_id":"Nama resmi Bahasa Indonesia","category":"Chapter XV - Pregnancy childbirth...","confidence":92,"lead_term_path":"Injury\n- fracture\n- - lower limb\n- - - femur\n- - - - shaft S72.3\nS72.3 Fracture of shaft of femur","volume1_notes":[{"type":"includes|excludes|note|use_additional|code_first","text":"..."}],"paired_with":"","reasoning":"..."}],"procedures":[{"code":"74.1","description":"ENGLISH official ICD-9-CM name","description_id":"Nama resmi Bahasa Indonesia","category":"ICD-9-CM Vol.3 - ...","confidence":95,"lead_term_path":"...complete path...","volume1_notes":[],"reasoning":"..."}]}`;
 
