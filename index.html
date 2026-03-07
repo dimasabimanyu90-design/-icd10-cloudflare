@@ -489,17 +489,34 @@ CLINICAL NOTE: ${input}
 - Procedures: ONLY explicitly mentioned. None → procedures:[]. Code ALL if multiple.
 
 ## DU SELECTION RULES (WHO ICD-10 Vol.2)
-DU = kondisi yang menjadi alasan UTAMA pasien dirawat/diterapi pada episode ini.
-1. Kondisi yang ditangani/dioperasi = DU. Komorbid = DS.
-   CONTOH: pasien operasi katarak + riwayat DM → DU=katarak (H26.x), DS=DM (E11.x)
-   CONTOH: STEMI + riwayat DM → DU=STEMI (I21.x), DS=DM (E11.x)
-2. Jika ada dua kondisi yang sama-sama ditangani → pilih yang paling banyak menggunakan sumber daya.
-3. Gejala/keluhan TIDAK boleh jadi DU jika diagnosis definitif sudah ada.
-4. Komorbid (DM, HT, dll) = DS, KECUALI komorbid itu yang menjadi tujuan utama perawatan.
-5. Jika DM + komplikasi mata (katarak/retinopati): 
-   - Katarak senilis (H25/H26) → DU jika operasi katarak adalah alasan utama rawat
-   - E11.3† = DS (DM dengan komplikasi oftalmik)
-   - H36.0* = DS (diabetic retinopathy) — HANYA jika retinopati ditemukan/disebutkan
+DU = kondisi yang setelah diteliti PALING BERTANGGUNG JAWAB atas kebutuhan perawatan pada episode ini.
+Dua kriteria utama yang HARUS dipertimbangkan BERSAMA-SAMA:
+
+### Kriteria 1 — RESOURCE/SUMBER DAYA TERBESAR
+DU = kondisi yang paling banyak mengonsumsi sumber daya RS (tindakan, obat, monitoring, LOS).
+CONTOH: STEMI + DM → STEMI=DU (PCI, ICU, monitoring ketat), DM=DS
+CONTOH: Pneumonia + HT → Pneumonia=DU (antibiotik IV, oksigen, foto thorax), HT=DS
+CONTOH: Operasi katarak + DM → Katarak=DU (operasi phaco, IOL), DM=DS
+CONTOH: Fraktur femur + DM → Fraktur=DU (ORIF, fisioterapi), DM=DS
+
+### Kriteria 2 — KAIDAH KODING WHO ICD-10 Vol.2
+1. Gejala/keluhan TIDAK boleh DU jika diagnosis definitif sudah ada.
+   SALAH: R50.9 (demam) sebagai DU jika ada pneumonia.
+2. Komorbid stabil (DM, HT, dll) = DS, BUKAN DU, kecuali komorbid itu yang dirawat aktif.
+3. Kode † (dagger) boleh DU jika berpasangan dengan * (asterisk).
+4. Kode * (asterisk) TIDAK BOLEH DU — selalu DS.
+5. Kondisi yang paling spesifik dan definitif dipilih sebagai DU.
+6. Jika dua kondisi sama-sama besar → pilih yang lebih spesifik atau yang ditindaklanjuti operatif.
+
+### Kriteria 3 — KONTEKS KLINIS
+Perhatikan: tindakan apa yang dilakukan? Bangsal apa? Spesialis apa?
+CONTOH: pasien di bangsal paru dengan pneumonia + DM → pneumonia=DU
+CONTOH: pasien di bangsal mata dengan katarak + DM → katarak=DU
+CONTOH: pasien di ICU dengan sepsis + DM + HT → sepsis=DU
+
+### Khusus DM + komplikasi mata:
+   - Operasi katarak = alasan utama rawat → DU=H25.x/H26.x, DS=E11.3†
+   - H36.0* = DS HANYA jika retinopati ditemukan/disebutkan eksplisit
    - Katarak saja tanpa retinopati → TIDAK perlu H36.0*
 
 ## FIELDS
