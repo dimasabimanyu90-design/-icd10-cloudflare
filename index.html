@@ -367,9 +367,11 @@ DIAGNOSES: Code ONLY explicitly stated diagnoses. 1 DU + ALL DS separately — n
 PROCEDURES: Code ONLY explicitly mentioned procedures. None mentioned → procedures:[]. Code ALL if multiple.
 
 ## FIELD RULES
-- description: EXACT verbatim official title from ICD-10 Vol.1 or ICD-9-CM tabular. Never paraphrase.
-  ICD-10: N83.2="Other and unspecified ovarian cysts", O60.1="Preterm labour with preterm delivery", O34.2="Maternal care due to uterine scar from previous surgery"
+- description: EXACT official title as printed in ICD-10 Vol.1 for that code — NOT the patient diagnosis, NOT a paraphrase. The code title, not the clinical condition.
+  CORRECT: H72.1="Attic perforation of tympanic membrane" (title of H72.1), NOT "Chronic suppurative otitis media" (that is the patient diagnosis, not the code title)
+  CORRECT: N83.2="Other and unspecified ovarian cysts", O60.1="Preterm labour with preterm delivery", O34.2="Maternal care due to uterine scar from previous surgery"
   ICD-9-CM: 74.1="Low cervical caesarean section", 65.29="Other local excision or destruction of ovary"
+  WRONG: filling description with patient clinical diagnosis instead of the code official Vol.1 title.
 - description_id: Indonesian translation of official title.
 - lead_term_path: Complete Vol.3 hierarchy all levels, REAL code numbers (never placeholder "CODE").
   Format: Term\n- subterm\n- - subterm CODE\nCODE Full description
@@ -436,6 +438,19 @@ B95-B96 BACTERIAL AGENT: Add only if organism EXPLICITLY named in note. Always D
   B95: B95.0=Strep A, B95.1=Strep B, B95.3=S.pneumoniae, B95.6=S.aureus, B95.8=unspec staph
   B96: B96.1=Klebsiella, B96.2=E.coli, B96.3=H.influenzae, B96.5=Pseudomonas, B96.8=other
   Example: septic arthritis+S.aureus → M00.x6+B95.6 | no organism named → no B95-B96
+
+## EAR CODING RULES (Chapter VIII H60-H95)
+OTITIS MEDIA — distinguish carefully, do NOT code H72.x (tympanic membrane perforation) as substitute for otitis media:
+  H65.x = Nonsuppurative otitis media (serous, mucoid, allergic — no pus)
+  H66.0 = Acute suppurative otitis media
+  H66.1 = Chronic tubotympanic suppurative otitis media (benign CSOM)
+  H66.2 = Chronic atticoantral suppurative otitis media (dangerous CSOM)
+  H66.3 = Other chronic suppurative otitis media ← use when CSOM stated without further specification
+  H66.4 = Suppurative otitis media, unspecified
+  H72.x = Perforation of tympanic membrane ← ONLY code separately if perforation is the focus, NOT as replacement for otitis media diagnosis
+  Rule: "chronic suppurative otitis media" without further detail → H66.3, NOT H72.x
+  Rule: if BOTH otitis media AND perforation explicitly stated as separate findings → code both H66.x + H72.x
+  Example: "cairan telinga bernanah >3 bulan, CSOM" → H66.3 only
 
 ## OTHER SPECIFICITY RULES
 - Diabetes: E10=type1, E11=type2 + complication subcategory
