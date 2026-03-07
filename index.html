@@ -487,6 +487,20 @@ CLINICAL NOTE: ${input}
 ## EXTRACTION
 - Diagnoses: ONLY explicitly stated. 1 DU + ALL DS. No dx → diagnoses:[] unless strong objective evidence.
 - Procedures: ONLY explicitly mentioned. None → procedures:[]. Code ALL if multiple.
+  KRITIS: SETIAP tindakan/pemeriksaan yang disebut di teks WAJIB dikoding — TIDAK BOLEH skip.
+  Checklist wajib sebelum submit — pastikan semua ini sudah dikoding jika disebut di teks:
+  □ Foto thorax/rontgen → 87.44
+  □ CT scan kepala → 87.03 | CT thorax → 87.41 | CT abdomen → 88.01
+  □ Lab darah (leukosit/Hb/CRP/troponin/GDS/kreatinin/dll) → 90.59
+  □ Kultur sputum → 90.41 | Kultur darah → 90.54 | Kultur urin → 90.29
+  □ AGD/analisa gas darah → 89.65
+  □ EKG → 89.52 | Echocardiografi → 88.72 | USG → 88.76/88.78
+  □ Nebulisasi → 93.94
+  □ Oksigen/O2 nasal kanul/masker → 93.96
+  □ Bronkoskopi → 33.22
+  □ Intubasi → 96.04 | Ventilator → 96.70
+  □ Operasi/tindakan bedah → kode sesuai
+  JANGAN lewatkan satu pun — model wajib scan ulang teks sebelum finalisasi prosedur.
 
 ## DU SELECTION RULES (WHO ICD-10 Vol.2)
 DU = kondisi yang setelah diteliti PALING BERTANGGUNG JAWAB atas kebutuhan perawatan pada episode ini.
