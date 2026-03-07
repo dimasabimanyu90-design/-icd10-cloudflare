@@ -118,7 +118,19 @@ textarea::placeholder { color: #b8b0a6; font-style: italic; }
 .footer-powered { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px; }
 .footer-groq { background: #f55036; color: #fff; font-size: 10px; font-family: 'IBM Plex Mono', monospace; font-weight: 500; padding: 2px 8px; border-radius: 3px; letter-spacing: 0.5px; }
 .disclaimer { text-align: center; font-size: 11.5px; margin-top: 40px; line-height: 1.9; font-family: 'IBM Plex Mono', monospace; letter-spacing: 0.3px; width: 100%; padding: 14px 24px; background: linear-gradient(135deg, #fff7ed, #fef3c7); border-top: 2px solid #f97316; border-bottom: 2px solid #f97316; color: #92400e; }
-@media(max-width:600px){ header{padding:0 16px;} .header-right{gap:6px;} .htag{display:none;} main{padding:24px 12px 60px;} .diag-main{grid-template-columns:auto 1fr; gap:10px;} .conf-wrap{display:none;} }
+/* Quota Bar */
+.quota-strip { background: #111; border-top: 1px solid #2a2a2a; padding: 5px 40px; display: flex; align-items: center; gap: 16px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #6b6460; position: relative; z-index: 9; flex-wrap: wrap; }
+.quota-strip.hidden { display: none; }
+.quota-item { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.quota-label { color: #504a46; letter-spacing: 0.5px; text-transform: uppercase; }
+.quota-bar-wrap { width: 64px; height: 5px; background: #2a2a2a; border-radius: 10px; overflow: hidden; }
+.quota-bar-fill { height: 100%; border-radius: 10px; transition: width .5s ease, background .3s; }
+.quota-val { color: #a8a29e; }
+.quota-model { margin-left: auto; color: #504a46; font-size: 9px; letter-spacing: 0.5px; }
+.quota-model span { color: #92400e; background: #2a1a00; padding: 1px 6px; border-radius: 2px; }
+.quota-tokens-used { color: #504a46; }
+.quota-tokens-used span { color: #6b6460; }
+@media(max-width:600px){ header{padding:0 16px;} .header-right{gap:6px;} .htag{display:none;} main{padding:24px 12px 60px;} .diag-main{grid-template-columns:auto 1fr; gap:10px;} .conf-wrap{display:none;} .quota-strip{padding:5px 12px;} .quota-model{display:none;} }
 </style>
 </head>
 <body>
@@ -140,6 +152,25 @@ textarea::placeholder { color: #b8b0a6; font-style: italic; }
     </div>
   </div>
 </header>
+
+<!-- Quota Bar -->
+<div class="quota-strip hidden" id="quotaStrip">
+  <div class="quota-item">
+    <span class="quota-label">RPM</span>
+    <div class="quota-bar-wrap"><div class="quota-bar-fill" id="qBarRpm" style="width:100%;background:#22c55e"></div></div>
+    <span class="quota-val" id="qValRpm">–</span>
+  </div>
+  <div class="quota-item">
+    <span class="quota-label">TPM</span>
+    <div class="quota-bar-wrap"><div class="quota-bar-fill" id="qBarTpm" style="width:100%;background:#22c55e"></div></div>
+    <span class="quota-val" id="qValTpm">–</span>
+  </div>
+  <div class="quota-item">
+    <span class="quota-label">Request ini</span>
+    <span class="quota-val" id="qTokensUsed">–</span>
+  </div>
+  <div class="quota-model" id="qModel">Model: <span>–</span></div>
+</div>
 
 <main>
   <div class="section-rule">
@@ -364,6 +395,52 @@ function showError(msg) {
   document.getElementById('procCount').textContent = 'Error';
 }
 
+function updateQuotaBar(quota) {
+  const strip = document.getElementById('quotaStrip');
+  strip.classList.remove('hidden');
+
+  // Helper: hitung persen sisa, warna berdasarkan level
+  function pct(remaining, limit) {
+    if (!remaining || !limit) return null;
+    return Math.max(0, Math.min(100, Math.round((parseInt(remaining) / parseInt(limit)) * 100)));
+  }
+  function barColor(p) {
+    if (p === null) return '#444';
+    if (p > 50) return '#22c55e';   // hijau
+    if (p > 20) return '#f59e0b';   // kuning
+    return '#ef4444';               // merah
+  }
+  function fmt(remaining, limit) {
+    if (!remaining || !limit) return '–';
+    const r = parseInt(remaining).toLocaleString();
+    const l = parseInt(limit).toLocaleString();
+    return `${r}/${l}`;
+  }
+
+  // RPM
+  const rpmPct = pct(quota.rpm_remaining, quota.rpm_limit);
+  document.getElementById('qBarRpm').style.width   = (rpmPct ?? 100) + '%';
+  document.getElementById('qBarRpm').style.background = barColor(rpmPct);
+  document.getElementById('qValRpm').textContent   = fmt(quota.rpm_remaining, quota.rpm_limit);
+
+  // TPM
+  const tpmPct = pct(quota.tpm_remaining, quota.tpm_limit);
+  document.getElementById('qBarTpm').style.width   = (tpmPct ?? 100) + '%';
+  document.getElementById('qBarTpm').style.background = barColor(tpmPct);
+  document.getElementById('qValTpm').textContent   = fmt(quota.tpm_remaining, quota.tpm_limit);
+
+  // Token request ini
+  if (quota.tokens_used) {
+    document.getElementById('qTokensUsed').textContent =
+      `${quota.tokens_used.toLocaleString()} token (prompt: ${(quota.prompt_tokens||0).toLocaleString()}, output: ${(quota.completion_tokens||0).toLocaleString()})`;
+  }
+
+  // Model yang dipakai
+  if (quota.model) {
+    document.getElementById('qModel').innerHTML = `Model: <span>${quota.model}</span>`;
+  }
+}
+
 async function analyze() {
   const input = document.getElementById('clinicalInput').value.trim();
   if (!input) return;
@@ -459,8 +536,11 @@ Return ONLY valid JSON with these keys:
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const data = await resp.json();
     if (data.error) throw new Error(data.error);
+    // Tampilkan info quota dari response
+    if (data.quota) updateQuotaBar(data.quota);
     const raw = data.text;
     if (!raw || raw.trim() === '') throw new Error("Empty response. Please try again.");
+
     // Fix literal newlines inside JSON strings (common Groq issue)
     function fixLiteralNewlines(str) {
       let result = '';
@@ -478,11 +558,13 @@ Return ONLY valid JSON with these keys:
       }
       return result;
     }
+
     let clean = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
     clean = fixLiteralNewlines(clean);
     const match = clean.match(/\{[\s\S]*\}/);
     if (!match) throw new Error("Invalid response format. Please try again.");
     clean = match[0];
+
     let result;
     function repairJSON(str) {
       str = str.replace(/,\s*"[^"]*":\s*$/, '');
@@ -494,11 +576,20 @@ Return ONLY valid JSON with these keys:
       for(let i=0;i<braces;i++) str += '}';
       return str;
     }
+
     try { result = JSON.parse(clean); }
     catch(e) {
       try { result = JSON.parse(repairJSON(clean)); }
       catch(e2) { throw new Error("Failed to parse AI response. Please try again."); }
     }
+
+    // ── FIX: Normalisasi semua array agar .map() tidak crash ──
+    // Terjadi jika Groq memotong JSON di tengah (max_tokens habis)
+    // atau mengembalikan tipe data yang bukan array
+    if (!Array.isArray(result.diagnoses))   result.diagnoses   = [];
+    if (!Array.isArray(result.procedures))  result.procedures  = [];
+    if (!Array.isArray(result.validations)) result.validations = [];
+
     renderResults(result);
   } catch(err) {
     showError(T[currentLang].errorPrefix + err.message);
@@ -550,7 +641,7 @@ function renderLeadPath(pathStr) {
 }
 
 function renderVol1Notes(notes) {
-  if (!notes || notes.length === 0) return '';
+  if (!notes || !Array.isArray(notes) || notes.length === 0) return '';
   const typeMap = {
     includes: { cls: 'vnt-includes', label: 'Includes' },
     excludes: { cls: 'vnt-excludes', label: 'Excludes' },
@@ -566,7 +657,7 @@ function renderVol1Notes(notes) {
 }
 
 function renderValidations(validations) {
-  if (!validations || validations.length === 0) return '';
+  if (!validations || !Array.isArray(validations) || validations.length === 0) return '';
   const iconMap = { ERROR: '🔴', WARNING: '🟡', INFO: '🔵' };
   const items = validations.map(v =>
     `<div class="val-item"><span>${iconMap[v.type]||'ℹ'}</span><span><strong>${v.type}:</strong> ${v.message}</span></div>`
