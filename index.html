@@ -361,176 +361,84 @@ ${langInstruction}
 
 CLINICAL NOTE: ${input}
 
-DIAGNOSIS EXTRACTION - CRITICAL:
-- ONLY code diagnoses that are EXPLICITLY stated in the clinical note.
-- If the note contains explicit diagnosis/diagnoses → extract 1 DU + ALL DS separately. NEVER omit any stated condition.
-- If the note contains ONLY procedures/tindakan with NO explicit diagnosis → return "diagnoses": [] UNLESS objective findings (lab results, EKG, imaging, pathology) strongly and unambiguously confirm a specific diagnosis. Example: "EKG: ST elevasi lead II, III, aVF + Troponin I (+)" → may code STEMI. But vague symptoms alone → do NOT assume diagnosis.
-- DU = ONE condition chiefly responsible for admission (WHO Vol.2).
-- DS = EVERY other explicitly stated condition separately: all complications, comorbidities, history, findings.
-- Example "partus prematurus + gemelli + TTTS + IUFD + bekas SC + kista ovarium bilateral" MUST produce ALL these separately: preterm labour (DU), twin pregnancy (DS), TTTS (DS), IUFD (DS), previous caesarean scar (DS), bilateral ovarian cyst (DS). Do NOT omit any.
+## EXTRACTION RULES
+DIAGNOSES: Code ONLY explicitly stated diagnoses. 1 DU + ALL DS separately — never omit any.
+- No explicit diagnosis but strong objective evidence (EKG/lab/imaging) → may infer; vague symptoms alone → diagnoses:[]
+PROCEDURES: Code ONLY explicitly mentioned procedures. None mentioned → procedures:[]. Code ALL if multiple.
 
-PROCEDURE EXTRACTION - CRITICAL:
-- ONLY code procedures EXPLICITLY mentioned in the clinical note. NEVER infer or assume procedures not written.
-- If NO procedure/tindakan mentioned → return "procedures": [] empty array.
-- If procedures ARE mentioned → code ALL of them separately. NEVER omit any.
-- Example "SCTP + kistektomi bilateral": MUST code BOTH caesarean section (74.1) AND bilateral cystectomy (65.29 or 65.61).
+## FIELD RULES
+- description: EXACT verbatim official title from ICD-10 Vol.1 or ICD-9-CM tabular. Never paraphrase.
+  ICD-10: N83.2="Other and unspecified ovarian cysts", O60.1="Preterm labour with preterm delivery", O34.2="Maternal care due to uterine scar from previous surgery"
+  ICD-9-CM: 74.1="Low cervical caesarean section", 65.29="Other local excision or destruction of ovary"
+- description_id: Indonesian translation of official title.
+- lead_term_path: Complete Vol.3 hierarchy all levels, REAL code numbers (never placeholder "CODE").
+  Format: Term\n- subterm\n- - subterm CODE\nCODE Full description
+- Dagger†=etiology (DU if primary), Asterisk*=manifestation (always DS, never DU), always paired.
+- volume1_notes: report includes/excludes/notes per code.
 
-FIELD RULES:
-- "description": MUST be the EXACT official title from ICD-10 Vol.1 tabular list or ICD-9-CM tabular list. Copy verbatim, do NOT paraphrase or create your own wording.
-  ICD-10 examples: N83.2 = "Other and unspecified ovarian cysts" NOT "Bilateral ovarian cyst". O60.1 = "Preterm labour with preterm delivery" NOT "Preterm labour". O34.2 = "Maternal care due to uterine scar from previous surgery" NOT "Previous caesarean scar".
-  ICD-9-CM examples: 74.1 = "Low cervical caesarean section" NOT "Caesarean section". 65.29 = "Other local excision or destruction of ovary" NOT "Bilateral cystectomy". 65.61 = "Other removal of both ovaries and tubes at same operative episode" NOT "Bilateral oophorectomy".
-- "description_id": Indonesian translation of the exact official title above.
-- lead_term_path: Complete Vol.3 index hierarchy ALL levels. NEVER use "CODE" as placeholder — always write the REAL code number.
-  Format exactly like this real example:
-  Injury
-  - fracture
-  - - lower limb
-  - - - femur
-  - - - - shaft S72.3
-  S72.3 Fracture of shaft of femur
-  Another example:
-  Delivery
-  - caesarean (for)
-  - - previous
-  - - - caesarean section O34.2
-  O34.2 Maternal care due to uterine scar from previous surgery
-  Rules: use real code numbers (S72.3, O34.2, 74.1 etc), never write "CODE". Last line = real code + full official description.
-- Dagger†=etiology code, Asterisk*=manifestation code (always DS, never DU), always pair together.
-- Vol.1: report includes/excludes/notes per code.
-- Validate: asterisk as DU=ERROR, missing pair=ERROR, excludes violated=ERROR, wrong DU=WARNING, missing DS=WARNING, R-code as DU=WARNING (add message that diagnosis is provisional and must be verified after complete workup), R-code used when definitive diagnosis exists=ERROR.
+## INCLUDES / EXCLUDES
+- Includes: condition already covered → do NOT code separately.
+- Excludes1 (mutually exclusive): NEVER code both → ERROR if violated.
+- Excludes2 (can coexist): allowed together if patient genuinely has both → WARNING to confirm.
+- Hierarchy: chapter > block > category; more specific overrides higher level.
 
-INCLUDES/EXCLUDES RULES:
-INCLUDES notes:
-- Conditions listed under "Includes" are ALREADY covered by that code — do NOT add a separate code for them.
-- Example: if I10 Includes "high blood pressure" → do not add separate code for high blood pressure, it is already I10.
-- If a condition matches an Includes note → use that code confidently.
+## VALIDATION
+ERROR: asterisk as DU, missing dagger-asterisk pair, Excludes1 violated, R-code when definitive dx exists.
+WARNING: wrong DU selection, missing DS, Excludes2 pair needs confirmation, R-code as DU (provisional).
+INFO: reminders, BPJS/INA-CBGs flags.
 
-EXCLUDES notes — ICD-10 has TWO types:
-1. EXCLUDES 1 (pure excludes — mutually exclusive):
-   - Means the excluded condition and this code are MUTUALLY EXCLUSIVE — they CANNOT occur together by definition, OR the excluded condition should be coded elsewhere entirely.
-   - NEVER code both together. If patient has the excluded condition → use the excluded code instead, NOT this code.
-   - Example: O03 Excludes1 "current traumatic abortion (O08)" → cannot code O03 + O08 together as dual diagnosis.
-   - Validate as ERROR if both codes appear together violating Excludes1.
+## ABBREVIATIONS
+SC/SCTP=sectio caesarea, TTTS=twin-twin transfusion syndrome, IUFD=intrauterine fetal death, gemelli=twins, partus prematurus=preterm labour, kista ovarium=ovarian cyst, kistektomi=cystectomy, bekas SC=previous caesarean scar, HT=hypertension, DM=diabetes mellitus, ORIF=open reduction internal fixation, ai=atas indikasi.
 
-2. EXCLUDES 2 (not included here — can coexist):
-   - Means the excluded condition is NOT part of this code, BUT the patient CAN have both conditions simultaneously.
-   - ALLOWED to code both together if patient genuinely has both conditions.
-   - Example: J44 COPD Excludes2 "asthma (J45)" → if patient has both COPD AND asthma, code both J44 + J45.
-   - Validate as WARNING to confirm patient truly has both conditions.
+## OBSTETRIC CODING RULES
 
-HIERARCHY of includes/excludes:
-- Excludes/Includes notes at CHAPTER level → apply to ALL codes in that chapter.
-- Excludes/Includes notes at BLOCK level (e.g. O00-O08) → apply to all codes in that block.
-- Excludes/Includes notes at CATEGORY level (e.g. O03) → apply to all subcategories.
-- More specific (lower level) notes override higher level notes.
+O00 ECTOPIC PREGNANCY:
+- O00.0=abdominal, O00.1=tubal, O00.2=ovarian, O00.9=unspecified
+- RUPTURE → always add O08.1 (haemorrhage) as DS. Other O08.x: O08.0=infection, O08.2=embolism, O08.3=shock, O08.4=renal failure, O08.9=unspecified complication
+- Example: tuba kanan ruptur → O00.1 + O08.1
 
-PRACTICAL RULES:
-- Before finalising any code, check: does the selected code have an Excludes note that covers the patient's condition? If yes → follow Excludes1 or Excludes2 rule above.
-- If a condition is listed under Includes of a code → that condition is coded there, not separately.
-- If two codes are chosen → verify neither has Excludes1 pointing to the other.
-- Always report Excludes violations in the validations array.
-- Abbreviations: SC/SCTP=sectio caesarea transperitonealis, TTTS=twin-to-twin transfusion syndrome, IUFD=intrauterine fetal death, gemelli=twins, partus prematurus=preterm labour, kista ovarium=ovarian cyst, kistektomi=cystectomy, bekas SC=previous caesarean scar, HT=hypertension, DM=diabetes mellitus, ORIF=open reduction internal fixation, ai=atas indikasi.
+O02 ABNORMAL PRODUCTS OF CONCEPTION:
+- O02.0=blighted ovum/nonhydatidiform mole (no embryo formed)
+- O02.1=missed abortion: fetal death <22wk + NO expulsion/retained. Always add O08.9 as DS.
+  Key: "janin mati + tidak ada pengeluaran/retained" → O02.1. Do NOT use O03.x.
+- Example: "USG janin mati 10 minggu, tidak ada pengeluaran" → O02.1 + O08.9
 
-B95-B96 BACTERIAL AGENT CODE RULE:
-When a condition has note "Use additional code (B95-B96), if desired, to identify bacterial agent" → optionally add B95.x or B96.x as DS to specify the causative bacteria IF the organism is mentioned in the clinical note.
-B95 = Streptococcus and Staphylococcus as cause of diseases:
-  B95.0 = Streptococcus group A
-  B95.1 = Streptococcus group B
-  B95.2 = Streptococcus group D
-  B95.3 = Streptococcus pneumoniae
-  B95.4 = Other streptococcus
-  B95.5 = Unspecified streptococcus
-  B95.6 = Staphylococcus aureus
-  B95.7 = Other staphylococcus
-  B95.8 = Unspecified staphylococcus
-B96 = Other bacterial agents as cause of diseases:
-  B96.0 = Mycoplasma pneumoniae
-  B96.1 = Klebsiella pneumoniae
-  B96.2 = Escherichia coli
-  B96.3 = Haemophilus influenzae
-  B96.4 = Proteus (mirabilis/morganii)
-  B96.5 = Pseudomonas
-  B96.6 = Bacillus fragilis
-  B96.7 = Clostridium perfringens
-  B96.8 = Other specified bacterial agents
-Rules:
-  - ONLY add B95-B96 if the specific bacteria/organism is EXPLICITLY mentioned in the clinical note
-  - If note says "infeksi bakteri" without specifying organism → do NOT add B95-B96
-  - These are always DS, never DU
-  - Applies to: infectious arthritis (M00-M03), infectious bone diseases, and other infections in Chapter XIII, also respiratory (J), urinary (N), and other chapters with same note
-  - Example: "septic arthritis caused by Staphylococcus aureus" → M00.x6 + B95.6
-  - Example: "infectious arthritis, no organism specified" → M00.x9 only, no B95-B96
+O03-O07 ABORTION — shared 4th digit table ("See before O03 for subdivisions"):
+  INCOMPLETE (.0-.4): serviks terbuka/sisa jaringan/retained products
+    .0=+infection, .1=+haemorrhage, .2=+embolism, .3=+other complication, .4=no complication
+  COMPLETE (.5-.9): seluruh jaringan keluar/komplit
+    .5=+infection, .6=+haemorrhage, .7=+embolism, .8=+other complication, .9=no complication
+  O08.x COMPANION — always add as DS:
+    O08.9=no specific complication, O08.1=haemorrhage, O08.0=infection
+  Examples: "abortus spontan lengkap tanpa komplikasi" → O03.9+O08.9 | "incomplete+perdarahan" → O03.1+O08.1 (not O03.4+O08.1)
 
-SITE CODE RULE - Chapter XIII Musculoskeletal (M00-M99):
-Many codes in Chapter XIII require a site digit as the LAST character using this standard table:
-  0 = Multiple sites
-  1 = Shoulder region (clavicle, acromioclavicular/glenohumeral/sternoclavicular joint, scapula)
-  2 = Upper arm (elbow joint, humerus)
-  3 = Forearm (radius, ulna, wrist joint)
-  4 = Hand (carpus, fingers, metacarpus, wrist joints)
-  5 = Pelvic region and thigh (buttock, femur, hip joint, sacroiliac joint, pelvis)
-  6 = Lower leg (fibula, knee joint, patella, tibia) ← includes KNEE
-  7 = Ankle and foot (metatarsus, tarsus, toe joints, ankle joint)
-  8 = Other (head, neck, ribs, skull, thoracic spine, trunk)
-  9 = Site unspecified ← only use if no location mentioned
-Apply this table when code description says "See site code at the beginning of this chapter".
-Examples:
-  - Rheumatoid arthritis of knee → M05.x6 (lower leg includes knee)
-  - Osteoarthritis of hip → M19.x5 (pelvic region and thigh includes hip)
-  - Gout of ankle → M10.x7 (ankle and foot)
-  - No site mentioned → use .9 (site unspecified)
-ALWAYS apply the correct site digit — never leave it as .x or omit it.
+## MUSCULOSKELETAL RULES (Chapter XIII M00-M99)
 
-SPECIFICITY RULES - always choose the most specific code available:
-- O02 OTHER ABNORMAL PRODUCTS OF CONCEPTION — distinguish carefully:
-  * O02.0 = Blighted ovum and nonhydatidiform mole — anembryonic pregnancy, no embryo formed
-  * O02.1 = Missed abortion = early fetal death (before 22 weeks) with RETENTION — janin mati tapi TIDAK ADA pengeluaran hasil konsepsi sama sekali. Key clues: "janin meninggal/fetal death + tidak ada pengeluaran/retained/belum keluar". ALWAYS add O08.9 as DS companion.
-  * O02.8 = Other specified abnormal products of conception
-  * O02.9 = Abnormal product of conception, unspecified
-  Do NOT use O03.x for missed abortion — O03 requires actual expulsion to have started.
-  Example: "USG: janin mati usia 10 minggu, tidak ada pengeluaran" → O02.1 + O08.9
+SITE CODE (last digit, when noted "See site code at beginning of chapter"):
+  0=multiple, 1=shoulder, 2=upper arm/elbow, 3=forearm/wrist, 4=hand/fingers
+  5=pelvis/thigh/hip, 6=lower leg/knee, 7=ankle/foot, 8=other(head/neck/spine), 9=unspecified
+  Never omit site digit. Example: arthritis knee → M05.x6
 
-- For abortion O03-O07: these codes share the SAME 4th digit subdivision table ("See before O03 for subdivisions"). Apply this table to ALL of O03/O04/O05/O06/O07:
-  INCOMPLETE abortion (serviks terbuka, sebagian jaringan keluar, masih ada sisa, retained products):
-    .0 = incomplete, complicated by genital tract/pelvic infection
-    .1 = incomplete, complicated by delayed or excessive haemorrhage
-    .2 = incomplete, complicated by embolism
-    .3 = incomplete, with other/unspecified complications
-    .4 = incomplete, WITHOUT complication ← use when no complication stated
-  COMPLETE/UNSPECIFIED abortion (seluruh jaringan keluar, abortus komplit):
-    .5 = complete/unspecified, complicated by genital tract/pelvic infection
-    .6 = complete/unspecified, complicated by delayed or excessive haemorrhage
-    .7 = complete/unspecified, complicated by embolism
-    .8 = complete/unspecified, with other/unspecified complications
-    .9 = complete/unspecified, WITHOUT complication ← only use when truly no detail
-  Key clinical clues:
-    * "serviks terbuka + sisa jaringan/retained products" = INCOMPLETE → .4 (no complication) or .1 (with haemorrhage)
-    * "seluruh jaringan keluar/abortus komplit/lengkap/complete" = COMPLETE → .9 (no complication) or .6 (with haemorrhage)
-    * O08.x = complications following abortion — ALWAYS add O08.x as DS companion to O03-O07:
-      - O08.9 = unspecified complication following abortion → add when no specific complication stated but abortion occurred
-      - O08.1 = delayed or excessive haemorrhage → add when "perdarahan banyak" is mentioned
-      - O08.0 = genital tract infection → add when infection is mentioned
-    * Example "abortus spontan lengkap tanpa komplikasi 8 minggu" → O03.9 (DU) + O08.9 (DS)
-    * Example "serviks terbuka, sebagian jaringan keluar, masih ada sisa, perdarahan banyak" → O03.4 (DU) + O08.1 (DS)
-- For diabetes: specify type (E10=type1, E11=type2) and complication subcategory
-- For fractures: specify bone, location (shaft/neck/head), open vs closed
-- For hypertension: specify primary (I10) vs secondary, with/without heart disease
-- For stroke: specify haemorrhagic (I61.x) vs ischaemic (I63.x) vs unspecified (I64), and location
-- General rule: if clinical note gives enough detail → use specific 4th/5th digit. Only use .9 (unspecified) when truly no further detail available.
+B95-B96 BACTERIAL AGENT: Add only if organism EXPLICITLY named in note. Always DS.
+  B95: B95.0=Strep A, B95.1=Strep B, B95.3=S.pneumoniae, B95.6=S.aureus, B95.8=unspec staph
+  B96: B96.1=Klebsiella, B96.2=E.coli, B96.3=H.influenzae, B96.5=Pseudomonas, B96.8=other
+  Example: septic arthritis+S.aureus → M00.x6+B95.6 | no organism named → no B95-B96
 
-CHAPTER XVIII - SYMPTOMS & SIGNS (R CODES) RULES:
-- Do NOT code R codes if a definitive diagnosis already explains the symptom (e.g. stroke + headache → do not add R51, headache is integral to stroke).
-- DO code R codes as DS if the symptom/sign is NOT integral to the main diagnosis and adds clinical information.
-- DO use R codes as DU if no definitive diagnosis was established after study — this is valid temporary/provisional coding. Add validation WARNING: "Kode R digunakan karena diagnosis definitif belum ditegakkan. Verifikasi setelah hasil pemeriksaan lengkap." 
-- DO use R codes when abnormal lab/investigation results are clinically significant and not explained by existing diagnosis.
-- Examples:
-  * Fever unknown origin, no diagnosis → R50.9 as DU (valid, add WARNING)
-  * DM + hyperglycaemia → do NOT add R73, already covered by E11
-  * Post-op unexplained fever → R50.9 as DS (valid)
-  * Stroke + aphasia → do NOT add R47, integral to stroke
+## OTHER SPECIFICITY RULES
+- Diabetes: E10=type1, E11=type2 + complication subcategory
+- Fracture: specify bone+location+open/closed
+- Hypertension: I10=primary; specify secondary if stated
+- Stroke: I61.x=haemorrhagic, I63.x=ischaemic, I64=unspecified + location
+- Use 4th/5th digit specificity; .9 only when truly no detail available
+
+## R CODES (Chapter XVIII)
+- Do NOT code R if definitive dx explains the symptom (integral symptom).
+- DO code R as DS if symptom NOT integral to main dx.
+- R as DU: valid if no definitive dx established → add WARNING "diagnosis provisional, verify after workup".
+- Example: DM+hyperglycaemia → no R73 | fever unknown origin → R50.9 as DU+WARNING | post-op unexplained fever → R50.9 as DS
 
 Return ONLY valid JSON, no markdown:
-{"summary":"...","du_reasoning":"...","validations":[{"type":"ERROR|WARNING|INFO","message":"..."}],"diagnoses":[{"role":"DU","code":"O60.1","dagger_asterisk":"none|dagger|asterisk","description":"ENGLISH official ICD name","description_id":"Nama resmi Bahasa Indonesia","category":"Chapter XV - Pregnancy childbirth...","confidence":92,"lead_term_path":"Injury\n- fracture\n- - lower limb\n- - - femur\n- - - - shaft S72.3\nS72.3 Fracture of shaft of femur","volume1_notes":[{"type":"includes|excludes|note|use_additional|code_first","text":"..."}],"paired_with":"","reasoning":"..."}],"procedures":[{"code":"74.1","description":"ENGLISH official ICD-9-CM name","description_id":"Nama resmi Bahasa Indonesia","category":"ICD-9-CM Vol.3 - ...","confidence":95,"lead_term_path":"...complete path...","volume1_notes":[],"reasoning":"..."}]}`;
+{"summary":"...","du_reasoning":"...","validations":[{"type":"ERROR|WARNING|INFO","message":"..."}],"diagnoses":[{"role":"DU","code":"O60.1","dagger_asterisk":"none|dagger|asterisk","description":"ENGLISH official ICD name","description_id":"Nama resmi Bahasa Indonesia","category":"Chapter XV...","confidence":92,"lead_term_path":"Delivery\n- caesarean (for)\n- - previous\n- - - caesarean section O34.2\nO34.2 Maternal care due to uterine scar from previous surgery","volume1_notes":[{"type":"includes|excludes|note|use_additional|code_first","text":"..."}],"paired_with":"","reasoning":"..."}],"procedures":[{"code":"74.1","description":"ENGLISH official ICD-9-CM name","description_id":"Nama resmi Bahasa Indonesia","category":"ICD-9-CM Vol.3...","confidence":95,"lead_term_path":"...","volume1_notes":[],"reasoning":"..."}]}`;
 
   try {
     const resp = await fetch("/api/claude", {
