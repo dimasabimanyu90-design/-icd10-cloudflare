@@ -698,6 +698,10 @@ function normalizeDashesShared(line) {
   return '-'.repeat(level) + ' ' + rest;
 }
 
+function isFinalLine(s) {
+  return /^(CODE\s+)?[A-Z]\d{2}(\.\d+)?/.test(s) || /^\d{2}\.\d/.test(s);
+}
+
 function normalizeLevelsShared(lines) {
   let prevLevel = 0;
   return lines.map(line => {
