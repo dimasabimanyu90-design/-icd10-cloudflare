@@ -6,6 +6,12 @@ export async function onRequestPost(context) {
     "Content-Type": "application/json"
   };
 
+  const MODELS = [
+    "llama-3.3-70b-versatile",
+    "llama-3.1-70b-versatile",
+    "llama-3.1-8b-instant",
+  ];
+
   try {
     const body = await context.request.json();
     const apiKey = context.env.GROQ_API_KEY;
@@ -17,65 +23,86 @@ export async function onRequestPost(context) {
       );
     }
 
-    // Read retry-after from 429 header, fallback to exponential
-    let data, response;
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      response = await fetch(
-        "https://api.groq.com/openai/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiKey}`
-          },
-          body: JSON.stringify({
-            model: "llama-3.3-70b-versatile",
-            temperature: 0.1,
-            // Dynamic max_tokens: short note=2048, long note=3072, cap at 3072
-            max_tokens: Math.min(3072, Math.max(2048, Math.ceil(body.prompt.length / 8))),
-            messages: [{ role: "user", content: body.prompt }]
-          })
-        }
-      );
+    let lastError = null;
 
-      data = await response.json();
+    for (const model of MODELS) {
+      let data, response;
 
-      if (response.status === 429) {
-        if (attempt < 3) {
-          // Use retry-after header if available, else 8s then 16s
-          const retryAfter = response.headers.get("retry-after");
-          const delay = retryAfter ? parseInt(retryAfter) * 1000 : attempt * 8000;
-          await new Promise(r => setTimeout(r, Math.min(delay, 20000)));
-          continue;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        response = await fetch(
+          "https://api.groq.com/openai/v1/chat/completions",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+              model: model,
+              temperature: 0.1,
+              max_tokens: Math.min(8000, Math.max(4096, Math.ceil(body.prompt.length / 6))),
+              messages: [{ role: "user", content: body.prompt }]
+            })
+          }
+        );
+
+        data = await response.json();
+
+        if (response.status === 429) {
+          if (attempt < 2) {
+            const retryAfter = response.headers.get("retry-after");
+            const delay = retryAfter ? parseInt(retryAfter) * 1000 : 8000;
+            await new Promise(r => setTimeout(r, Math.min(delay, 15000)));
+            continue;
+          }
+          lastError = `Rate limit pada model ${model}`;
+          break;
         }
+        break;
+      }
+
+      if (response.status === 429) continue;
+
+      if (data.error) {
         return new Response(
-          JSON.stringify({ error: "Rate limit Groq. Tunggu 1 menit lalu coba lagi." }),
-          { status: 429, headers: corsHeaders }
+          JSON.stringify({ error: `Groq (${model}): ${data.error.code} - ${data.error.message}` }),
+          { status: 500, headers: corsHeaders }
         );
       }
-      break;
-    }
 
-    if (data.error) {
+      if (!data.choices || data.choices.length === 0) {
+        return new Response(
+          JSON.stringify({ error: "Tidak ada respons dari Groq. Coba lagi." }),
+          { status: 500, headers: corsHeaders }
+        );
+      }
+
+      let text = data.choices[0].message.content || "";
+      text = text.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+
+      // Baca quota info dari response headers Groq
+      const quota = {
+        model: model,
+        rpm_limit:       response.headers.get("x-ratelimit-limit-requests")       || null,
+        rpm_remaining:   response.headers.get("x-ratelimit-remaining-requests")    || null,
+        rpm_reset:       response.headers.get("x-ratelimit-reset-requests")        || null,
+        tpm_limit:       response.headers.get("x-ratelimit-limit-tokens")          || null,
+        tpm_remaining:   response.headers.get("x-ratelimit-remaining-tokens")      || null,
+        tpm_reset:       response.headers.get("x-ratelimit-reset-tokens")          || null,
+        tokens_used:     data.usage ? data.usage.total_tokens                      : null,
+        prompt_tokens:   data.usage ? data.usage.prompt_tokens                     : null,
+        completion_tokens: data.usage ? data.usage.completion_tokens               : null,
+      };
+
       return new Response(
-        JSON.stringify({ error: `Groq: ${data.error.code} - ${data.error.message}` }),
-        { status: 500, headers: corsHeaders }
+        JSON.stringify({ text, model_used: model, quota }),
+        { status: 200, headers: corsHeaders }
       );
     }
-
-    if (!data.choices || data.choices.length === 0) {
-      return new Response(
-        JSON.stringify({ error: "Tidak ada respons dari Groq. Coba lagi." }),
-        { status: 500, headers: corsHeaders }
-      );
-    }
-
-    let text = data.choices[0].message.content || "";
-    text = text.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
 
     return new Response(
-      JSON.stringify({ text }),
-      { status: 200, headers: corsHeaders }
+      JSON.stringify({ error: "Semua model Groq sedang rate limit. Tunggu 1-2 menit lalu coba lagi." }),
+      { status: 429, headers: corsHeaders }
     );
 
   } catch (err) {
