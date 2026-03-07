@@ -103,9 +103,12 @@ textarea::placeholder { color: #b8b0a6; font-style: italic; }
 .copy-btn { font-size: 10px; font-family: 'IBM Plex Mono', monospace; font-weight: 500; color: var(--muted); background: #fff; border: 1px solid var(--rule); border-radius: 3px; padding: 2px 8px; cursor: pointer; transition: all .15s; display: flex; align-items: center; gap: 4px; }
 .copy-btn:hover { border-color: var(--ink); color: var(--ink); }
 .copy-btn.copied { background: var(--green-light); color: var(--green); border-color: #86efac; }
-.lead-path { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--ink); line-height: 2; white-space: pre-wrap; }
-.lp-section { color: #6b5e4e; font-weight: 600; font-size: 11px; letter-spacing: 0.5px; }
+.lead-path { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--ink); }
+.lp-line { display: block; line-height: 1.85; white-space: nowrap; }
+.lp-section { display: block; color: #6b5e4e; font-weight: 600; font-size: 11px; letter-spacing: 0.5px; }
 .lp-indent { color: var(--muted); }
+.lead-path br + span, .lead-path span { display: inline; }
+.lead-path br { display: block; content: ''; }
 .lp-code { color: var(--red); font-weight: 600; }
 .lp-final { display: block; margin-top: 4px; background: #fff; border: 1px solid var(--rule); border-left: 3px solid var(--red); padding: 6px 10px; border-radius: 2px; font-size: 12px; color: var(--ink); line-height: 1.5; }
 .reasoning-box { background: #f9f9f7; border-top: 1px solid var(--rule); padding: 10px 20px 10px 52px; font-size: 12.5px; color: var(--muted); line-height: 1.65; font-style: italic; }
@@ -739,7 +742,7 @@ function renderLeadPath(pathStr, code, description) {
     }
   }
 
-  return rendered.join('\n');
+  return rendered.map(line => `<div class="lp-line">${line}</div>`).join('');
 }
 
 function renderVol1Notes(notes) {
