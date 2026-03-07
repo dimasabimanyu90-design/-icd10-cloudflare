@@ -583,12 +583,30 @@ CLINICAL NOTE: ${input}
   - - pregnancy O99.0
   O99.0 Anaemia complicating pregnancy, childbirth and the puerperium
 
-  WAJIB: baris terakhir SELALU berupa CODE + spasi + deskripsi resmi lengkap.
-  CONTOH SALAH baris final: "O60" atau "O43" (kode tanpa deskripsi) ← DILARANG
-  CONTOH BENAR baris final: "O43.0 Placental transfusion syndromes" ← WAJIB
-  DILARANG: menulis arrow (→) sebagai pengganti hierarki subterm.
-  DILARANG: menghilangkan cross-reference (see also / see) jika ada di buku.
-  DILARANG: skip level subterm — jika buku tulis "- -" maka HARUS tulis "- -" bukan "-".
+  STRUKTUR WAJIB — 3 bagian, SEMUA harus ada:
+  [1] Lead term (kata pertama pencarian di index)
+  [2] Subterm bertingkat (- / - - / - - -) selengkap mungkin
+  [3] Baris kode final: CODE spasi deskripsi resmi lengkap ← WAJIB SELALU ADA
+
+  CONTOH BENAR (lengkap):
+  Labour
+  - premature
+  - - with delivery O60.1
+  O60.1 Preterm labour with preterm delivery
+
+  CONTOH SALAH — baris final HILANG (paling sering terjadi):
+  Labour
+  - premature
+  - - with delivery O60.1   ← STOP DI SINI DILARANG, harus lanjut ke baris kode final
+
+  CONTOH SALAH — kode tanpa deskripsi:
+  O60.1   ← DILARANG, harus "O60.1 Preterm labour with preterm delivery"
+
+  RULE: Setelah subterm terakhir, WAJIB tulis 1 baris kosong lalu baris kode final.
+  DILARANG: arrow (→) sebagai pengganti subterm.
+  DILARANG: skip level (jika buku "- -" maka tulis "- -" bukan "-").
+  DILARANG: menghilangkan cross-reference (see also / see) jika ada.
+- confidence: integer 1-99, estimasi keyakinan koding. WAJIB diisi, jangan kosong atau null.
 - dagger_asterisk: "dagger"|"asterisk"|"none". ONLY if OFFICIALLY marked †/* in Vol.1. Most="none".
 - volume1_notes: includes/excludes/notes per code.
 
@@ -737,11 +755,14 @@ Return ONLY valid JSON with these keys:
 
     // ── FIX: normalisasi confidence — AI kadang kirim 0.9 bukan 90 ──
     function fixConf(val) {
-      if (val === null || val === undefined || val === '') return null;
-      const n = parseFloat(String(val).replace('%',''));
-      if (isNaN(n)) return null;
-      // AI kadang kirim 0.85 (desimal) bukan 85 (persen)
-      return n <= 1 ? Math.round(n * 100) : Math.round(n);
+      // Kalau tidak ada nilai sama sekali, default 85
+      if (val === null || val === undefined || val === '' || val === '-') return 85;
+      const n = parseFloat(String(val).replace('%', '').trim());
+      if (isNaN(n) || n <= 0) return 85;
+      // AI kadang kirim desimal 0.85 bukan 85
+      const pct = n <= 1 ? Math.round(n * 100) : Math.round(n);
+      // Clamp antara 1-99
+      return Math.min(99, Math.max(1, pct));
     }
     result.diagnoses  = result.diagnoses.map(d => ({ ...d, confidence: fixConf(d.confidence) }));
     result.procedures = result.procedures.map(p => ({ ...p, confidence: fixConf(p.confidence) }));
@@ -765,41 +786,54 @@ function copyPath(btn, text) {
 function renderLeadPath(pathStr) {
   if (!pathStr) return '';
 
-  // Regex: kode ICD (huruf+2digit atau 2digit) dengan optional .digit
   const codeRe = /\b([A-Z]\d{2}(\.\d+)?|\d{2}(\.\d+)*)\b/g;
+  const isFinalLine = (s) => /^(CODE\s+)?[A-Z]\d{2}(\.\d+)?[\s\S]/.test(s) || /^[A-Z]\d{2}$/.test(s) || /^\d{2}(\.\d+)+/.test(s);
+  const highlightCodes = (s) => s.replace(codeRe, m => `<span class="lp-code">${m}</span>`);
 
-  // Baris final: dimulai dengan kode ICD (bukan dash), boleh diikuti deskripsi atau tidak
-  const isFinalLine = (s) => /^(CODE\s+)?[A-Z]\d{2}(\.\d+)?\b/.test(s) || /^\d{2}(\.\d+)+\b/.test(s);
+  const lines = pathStr.split('\n').map(l => l.trimEnd());
 
-  // Highlight semua kode ICD dalam string
-  const highlightCodes = (s) => s.replace(codeRe, (m) => `<span class="lp-code">${m}</span>`);
+  // Jika AI tidak tulis baris final terpisah, extract dari subterm terakhir yang ada kode
+  // misal: "- - with delivery O60.1" → otomatis tambah baris "O60.1 ..."
+  const lastSubterm = [...lines].reverse().find(l => l.trim().startsWith('-'));
+  const hasExplicitFinal = lines.some(l => {
+    const t = l.trim();
+    return !t.startsWith('-') && isFinalLine(t);
+  });
 
-  return pathStr.split('\n').map(line => {
+  let rendered = lines.map(line => {
     const trimmed = line.trim();
     if (!trimmed) return '';
 
-    // Baris final kode — dimulai dengan kode ICD
-    if (isFinalLine(trimmed) && !trimmed.startsWith('-')) {
+    // Baris final kode (dimulai dengan kode ICD, bukan dash)
+    if (!trimmed.startsWith('-') && isFinalLine(trimmed)) {
       const cl = trimmed.replace(/^CODE\s+/, '');
       return `<span class="lp-final">${highlightCodes(cl)}</span>`;
     }
 
-    // Baris subterm — dimulai dengan satu atau lebih dash
+    // Subterm dengan dash
     if (trimmed.startsWith('-')) {
-      // Hitung jumlah dash di awal (- atau - - atau - - -)
       const dashMatch = line.match(/^((?:-\s*)+)/);
       const rawDashes = dashMatch ? dashMatch[1] : '- ';
-      // Hitung level: jumlah '-' karakter
       const level = (rawDashes.match(/-/g) || []).length;
-      // Buat label indent visual: "- " / "- - " / "- - - "
       const dashLabel = Array(level).fill('-').join(' ') + ' ';
       const rest = line.slice(rawDashes.length).trim();
       return `<span class="lp-indent">${dashLabel}</span>${highlightCodes(rest)}`;
     }
 
-    // Section header / lead term
+    // Lead term / section header
     return `<span class="lp-section">${line}</span>`;
-  }).filter(Boolean).join('\n');
+  }).filter(Boolean);
+
+  // Auto-inject baris final jika tidak ada — ambil kode dari subterm terakhir
+  if (!hasExplicitFinal && lastSubterm) {
+    const codeMatch = lastSubterm.match(/\b([A-Z]\d{2}(\.\d+)?|\d{2}(\.\d+)*)\s*$/);
+    if (codeMatch) {
+      const code = codeMatch[1];
+      rendered.push(`<span class="lp-final"><span class="lp-code">${code}</span></span>`);
+    }
+  }
+
+  return rendered.join('\n');
 }
 
 function renderVol1Notes(notes) {
@@ -858,8 +892,8 @@ function renderResults(result) {
           <div class="diag-category">${d.category}</div>
         </div>
         <div class="conf-wrap">
-          <div class="conf-val">${d.confidence != null ? d.confidence+'%' : '–'}</div>
-          <div class="conf-bar"><div class="conf-fill" style="width:${d.confidence ?? 0}%"></div></div>
+          <div class="conf-val">${d.confidence}%</div>
+          <div class="conf-bar"><div class="conf-fill" style="width:${d.confidence}%"></div></div>
         </div>
       </div>
       ${d.lead_term_path ? `<div class="lead-term-box">
@@ -886,8 +920,8 @@ function renderResults(result) {
           <div class="diag-category">${p.category}</div>
         </div>
         <div class="conf-wrap">
-          <div class="conf-val">${p.confidence != null ? p.confidence+'%' : '–'}</div>
-          <div class="conf-bar"><div class="conf-fill" style="width:${p.confidence ?? 0}%"></div></div>
+          <div class="conf-val">${p.confidence}%</div>
+          <div class="conf-bar"><div class="conf-fill" style="width:${p.confidence}%"></div></div>
         </div>
       </div>
       ${p.lead_term_path ? `<div class="lead-term-box">
