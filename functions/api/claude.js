@@ -18,7 +18,7 @@ export async function onRequestPost(context) {
     }
 
     let data, response;
-    for (let attempt = 1; attempt <= 3; attempt++) {
+    for (let attempt = 1; attempt <= 4; attempt++) {
       response = await fetch(
         "https://api.groq.com/openai/v1/chat/completions",
         {
@@ -45,8 +45,8 @@ export async function onRequestPost(context) {
 
       // Retry on 429
       if (response.status === 429) {
-        if (attempt < 3) {
-          await new Promise(r => setTimeout(r, attempt * 3000));
+        if (attempt < 4) {
+          await new Promise(r => setTimeout(r, attempt * 5000));
           continue;
         } else {
           return new Response(
