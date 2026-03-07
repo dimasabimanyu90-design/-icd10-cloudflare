@@ -787,7 +787,8 @@ function renderLeadPath(pathStr) {
   if (!pathStr) return '';
 
   const codeRe = /\b([A-Z]\d{2}(\.\d+)?|\d{2}(\.\d+)*)\b/g;
-  const isFinalLine = (s) => /^(CODE\s+)?[A-Z]\d{2}(\.\d+)?[\s\S]/.test(s) || /^[A-Z]\d{2}$/.test(s) || /^\d{2}(\.\d+)+/.test(s);
+  // Final line: kode ICD di awal, boleh dengan atau tanpa deskripsi setelahnya
+  const isFinalLine = (s) => /^(CODE\s+)?([A-Z]\d{2}(\.\d+)?|\d{2}(\.\d+)*)/.test(s);
   const highlightCodes = (s) => s.replace(codeRe, m => `<span class="lp-code">${m}</span>`);
 
   const lines = pathStr.split('\n').map(l => l.trimEnd());
