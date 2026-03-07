@@ -890,10 +890,16 @@ function getCleanPath(pathStr, code, description) {
   const hasMultiLevel = subtermLinesM.some(l => l.trim().startsWith('--'));
   // isFlat: 2+ subterm tapi semua level 1 — kemungkinan AI kirim flat tanpa hierarki
   const isFlat = subtermLinesM.length >= 2 && !hasMultiLevel;
+  // Cek apakah baris final terpisah sudah ada (bukan di dalam subterm)
+  const hasStandaloneFinal = pathStr.split('\n').some(l => {
+    const t = l.trim();
+    return !t.startsWith('-') && /^[A-Z]\d{2}|^\d{2}\./.test(t);
+  });
   const looksMessy = !pathStr.includes('\n')
     || /[A-Z]\d{2}.*[A-Z]\d{2}/.test(pathStr)
     || pathStr.includes('/')
-    || isFlat;
+    || isFlat
+    || !hasStandaloneFinal; // tidak ada baris final terpisah → selalu override jika ada KNOWN_PATHS
   if (code && KNOWN_PATHS[code] && looksMessy) {
     pathStr = KNOWN_PATHS[code];
   } else if (!pathStr.includes('\n')) {
@@ -1022,10 +1028,16 @@ function renderLeadPath(pathStr, code, description) {
   const hasMultiLevel = subtermLinesM.some(l => l.trim().startsWith('--'));
   // isFlat: 2+ subterm tapi semua level 1 — kemungkinan AI kirim flat tanpa hierarki
   const isFlat = subtermLinesM.length >= 2 && !hasMultiLevel;
+  // Cek apakah baris final terpisah sudah ada (bukan di dalam subterm)
+  const hasStandaloneFinal = pathStr.split('\n').some(l => {
+    const t = l.trim();
+    return !t.startsWith('-') && /^[A-Z]\d{2}|^\d{2}\./.test(t);
+  });
   const looksMessy = !pathStr.includes('\n')
     || /[A-Z]\d{2}.*[A-Z]\d{2}/.test(pathStr)
     || pathStr.includes('/')
-    || isFlat;
+    || isFlat
+    || !hasStandaloneFinal; // tidak ada baris final terpisah → selalu override jika ada KNOWN_PATHS
   if (code && KNOWN_PATHS[code] && looksMessy) {
     pathStr = KNOWN_PATHS[code];
   } else if (!pathStr.includes('\n')) {
