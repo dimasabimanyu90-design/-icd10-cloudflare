@@ -698,6 +698,11 @@ function normalizeDashesShared(line) {
   return '-'.repeat(level) + ' ' + rest;
 }
 
+const codeRe = /\b([A-Z]\d{2}(\.\d+)?|\d{2}(\.\d+)*)\b/g;
+function highlightCodes(s) {
+  return s.replace(codeRe, m => `<span class="lp-code">${m}</span>`);
+}
+
 function isFinalLine(s) {
   return /^(CODE\s+)?[A-Z]\d{2}(\.\d+)?/.test(s) || /^\d{2}\.\d/.test(s);
 }
