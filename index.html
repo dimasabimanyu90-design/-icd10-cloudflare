@@ -682,6 +682,7 @@ function copyPath(btn, text) {
 
 function renderLeadPath(pathStr, code, description) {
   if (!pathStr) return '';
+  pathStr = String(pathStr); // guard: AI kadang kirim object/array
 
   const codeRe = /\b([A-Z]\d{2}(\.\d+)?|\d{2}(\.\d+)*)\b/g;
   const isFinalLine = (s) => /^(CODE\s+)?[A-Z]\d{2}(\.\d+)?/.test(s) || /^\d{2}\.\d/.test(s);
