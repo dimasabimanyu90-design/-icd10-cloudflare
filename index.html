@@ -408,9 +408,22 @@ O03-O07 ABORTION — shared 4th digit table ("See before O03 for subdivisions"):
     .0=+infection, .1=+haemorrhage, .2=+embolism, .3=+other complication, .4=no complication
   COMPLETE (.5-.9): seluruh jaringan keluar/komplit
     .5=+infection, .6=+haemorrhage, .7=+embolism, .8=+other complication, .9=no complication
+
+  4th DIGIT vs O08.x — CRITICAL DISTINCTION:
+  The 4th digit (.0/.1/.2 etc) and O08.x are NOT the same thing. Use this logic:
+  - 4th digit = describes the TYPE of abortion episode (complete/incomplete + complication type)
+  - O08.x = ALWAYS added as separate DS companion code regardless of 4th digit
+  - ALWAYS use 4th digit .4 (incomplete, no complication) or .9 (complete, no complication) as base
+  - THEN add O08.x as DS to specify complication detail separately
+  - NEVER use .1/.2/.3 or .6/.7/.8 as 4th digit — always use .4 or .9 as base code
+
   O08.x COMPANION — always add as DS:
-    O08.9=no specific complication, O08.1=haemorrhage, O08.0=infection
-  Examples: "abortus spontan lengkap tanpa komplikasi" → O03.9+O08.9 | "incomplete+perdarahan" → O03.1+O08.1 (not O03.4+O08.1)
+    O08.9=no/unspecified complication, O08.1=haemorrhage, O08.0=infection, O08.2=embolism
+
+  Examples:
+    "incomplete abortion + perdarahan banyak" → O03.4 (DU) + O08.1 (DS) ← NOT O03.1
+    "complete abortion tanpa komplikasi" → O03.9 (DU) + O08.9 (DS)
+    "incomplete abortion + infeksi" → O03.4 (DU) + O08.0 (DS) ← NOT O03.0
 
 ## MUSCULOSKELETAL RULES (Chapter XIII M00-M99)
 
