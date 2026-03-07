@@ -555,6 +555,16 @@ CLINICAL NOTE: ${input}
 - Excludes2 (can coexist): allowed if genuinely both present → WARNING.
 - Hierarchy: chapter>block>category; specific overrides general.
 
+## DAGGER-ASTERISK PAIRS — SELALU code keduanya
+Jika ada kondisi yang memiliki pasangan †/*, WAJIB coding KEDUA kode:
+- E11.3† + H36.0* (DM retinopathy)
+- E11.2† + N08.3* (DM nephropathy)
+- E11.4† + G63.2* (DM neuropathy)
+- G20† + F02.3* (Parkinson dementia)
+- I10† + I68.1* (HT cerebrovascular)
+- B20-B24† + kode manifestasi* (HIV)
+Aturan: dagger (†) = DU/etiologi, asterisk (*) = DS/manifestasi. Keduanya HARUS ada.
+
 ## VALIDATION
 ERROR: asterisk as DU, missing †/* pair, Excludes1 violated, R-code when definitive dx exists.
 WARNING: wrong DU, missing DS, Excludes2 needs confirmation, R-code as DU (provisional, verify after workup).
@@ -621,7 +631,9 @@ E10=DM type1, E11=DM type2. DM WAJIB pakai 4th digit komplikasi:
   Jika ada retinopati/katarak/glaukoma diabetik → E11.3 (bukan E11.9)
   Jika ada nefropati/gagal ginjal diabetik → E11.2
   Jika ada neuropati diabetik → E11.4
-H36.0=diabetic retinopathy (WAJIB .0, bukan H36 saja). H36†=dagger, pasangan E11.3*.
+H36.0=diabetic retinopathy (WAJIB .0, bukan H36 saja).
+Pasangan dagger-asterisk DM+retinopati: E11.3† DU + H36.0* DS — KEDUANYA WAJIB dikoding.
+E11.3=dagger (etiologi), H36.0=asterisk (manifestasi). JANGAN hanya coding E11.3 tanpa H36.0.
 I61=haemorrhagic stroke, I63=ischaemic+location. Fracture: bone+location+open/closed. 4th/5th digit always; .9 only if truly no detail.
 
 Return ONLY valid JSON with these keys:
