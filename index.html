@@ -501,6 +501,18 @@ CLINICAL NOTE: ${input}
   DILARANG: baris final hilang — SELALU tulis "CODE Deskripsi resmi" setelah subterm terakhir.
 
   ICD-10 diagnosis:
+  FORMAT WAJIB lead_term_path — DILARANG:
+  - Separator "/" (Myocardial infarction / Acute) → HARUS pakai newline + dash
+  - Subterm kosong "- -" atau "-- " tanpa teks → HAPUS, langsung ke subterm berikutnya
+  - Level loncat (langsung "--" tanpa "-" sebelumnya)
+  CONTOH SALAH: "Myocardial infarction / Acute / -- CODE desc"
+  CONTOH BENAR:
+  Infarction
+  - myocardial
+  -- acute
+  --- inferior I21.1
+  I21.1 Acute transmural myocardial infarction of inferior wall
+
   Section                                    Labour                          Abortion
   - cesarean (see also Delivery,cesarean) O82.9  - premature O60            - spontaneous O03
   - cesarean (for) O82.9                     - - with delivery O60.1        - - complicated by
@@ -704,8 +716,36 @@ function copyPath(btn, text) {
 
 // Shared helpers untuk path rendering
 function normalizeLine(line) {
-  return line.replace(/^(\s*)(--+)(\s*)/, (m, pre, dashes) =>
-    pre + '-'.repeat(dashes.length) + ' ');
+  // Handle consecutive dashes with optional spaces e.g. "- -" → "--"
+  line = line.replace(/^(\s*)((?:-\s*)+)(?=\S)/, (m, pre, dashes) => {
+    const level = (dashes.match(/-/g) || []).length;
+    return pre + '-'.repeat(level) + ' ';
+  });
+  return line;
+}
+
+function convertSlashPath(pathStr) {
+  // Handle "Lead / Sub / Sub / CODE desc" format (slash separator)
+  if (!pathStr.includes('/') || pathStr.includes('\n')) return pathStr;
+  const parts = pathStr.split('/').map(p => p.trim()).filter(Boolean);
+  if (parts.length < 2) return pathStr;
+  const lines = [];
+  parts.forEach((part, i) => {
+    if (i === 0) { lines.push(part); return; }
+    // Last part or part starting with code
+    if (isFinalLine(part) || i === parts.length - 1) {
+      // Attach code to previous subterm if it's just a code
+      const codeOnly = part.match(/^([A-Z]\d{2}(\.\d+)?)$/);
+      if (codeOnly && lines.length > 0) {
+        lines[lines.length - 1] += ' ' + part;
+      } else {
+        lines.push(part);
+      }
+    } else {
+      lines.push('-'.repeat(i) + ' ' + part);
+    }
+  });
+  return lines.join('\n');
 }
 
 function normalizeDashesShared(line) {
@@ -775,7 +815,25 @@ function getCleanPath(pathStr, code, description) {
     'Z37.3': 'Outcome of delivery\n- twins\n-- one liveborn one stillborn Z37.3\nZ37.3 Twins, one liveborn and one stillborn',
     'Z37.0': 'Outcome of delivery\n- single\n-- liveborn Z37.0\nZ37.0 Single liveborn infant',
     'N83.2': 'Cyst\n- ovary, ovarian N83.2\nN83.2 Other and unspecified ovarian cysts',
+    'I21.1': 'Infarction\n- myocardial\n-- acute\n--- inferior I21.1\nI21.1 Acute transmural myocardial infarction of inferior wall',
+    'I21.0': 'Infarction\n- myocardial\n-- acute\n--- anterior I21.0\nI21.0 Acute transmural myocardial infarction of anterior wall',
+    'I21.9': 'Infarction\n- myocardial\n-- acute I21.9\nI21.9 Acute myocardial infarction, unspecified',
+    'I21.4': 'Infarction\n- myocardial\n-- acute\n--- subendocardial I21.4\nI21.4 Acute subendocardial myocardial infarction',
+    'I63.9': 'Infarction\n- cerebral I63.9\nI63.9 Cerebral infarction, unspecified',
+    'I61.9': 'Haemorrhage\n- intracranial I61.9\nI61.9 Nontraumatic intracranial haemorrhage, unspecified',
+    'I10':   'Hypertension\n- essential I10\nI10 Essential (primary) hypertension',
+    'E11.9': 'Diabetes\n- type 2 E11.9\nE11.9 Type 2 diabetes mellitus without complications',
+    'E11.3': 'Diabetes\n- type 2\n-- with\n--- ophthalmic complication E11.3\nE11.3 Type 2 diabetes mellitus with ophthalmic complications',
   };
+
+  // Convert slash format first
+  pathStr = convertSlashPath(pathStr);
+
+  // Remove empty subterm lines like "- -" or "-- " with no text after
+  pathStr = pathStr.split('\n').filter(l => {
+    const t = l.trim();
+    return !(t.match(/^-+$/) || t.match(/^-+\s*$/));
+  }).join('\n');
 
   const looksMessy = !pathStr.includes('\n') || /[A-Z]\d{2}.*[A-Z]\d{2}/.test(pathStr);
   if (code && KNOWN_PATHS[code] && looksMessy) {
@@ -860,7 +918,25 @@ function renderLeadPath(pathStr, code, description) {
     'Z37.3': 'Outcome of delivery\n- twins\n-- one liveborn one stillborn Z37.3\nZ37.3 Twins, one liveborn and one stillborn',
     'Z37.0': 'Outcome of delivery\n- single\n-- liveborn Z37.0\nZ37.0 Single liveborn infant',
     'N83.2': 'Cyst\n- ovary, ovarian N83.2\nN83.2 Other and unspecified ovarian cysts',
+    'I21.1': 'Infarction\n- myocardial\n-- acute\n--- inferior I21.1\nI21.1 Acute transmural myocardial infarction of inferior wall',
+    'I21.0': 'Infarction\n- myocardial\n-- acute\n--- anterior I21.0\nI21.0 Acute transmural myocardial infarction of anterior wall',
+    'I21.9': 'Infarction\n- myocardial\n-- acute I21.9\nI21.9 Acute myocardial infarction, unspecified',
+    'I21.4': 'Infarction\n- myocardial\n-- acute\n--- subendocardial I21.4\nI21.4 Acute subendocardial myocardial infarction',
+    'I63.9': 'Infarction\n- cerebral I63.9\nI63.9 Cerebral infarction, unspecified',
+    'I61.9': 'Haemorrhage\n- intracranial I61.9\nI61.9 Nontraumatic intracranial haemorrhage, unspecified',
+    'I10':   'Hypertension\n- essential I10\nI10 Essential (primary) hypertension',
+    'E11.9': 'Diabetes\n- type 2 E11.9\nE11.9 Type 2 diabetes mellitus without complications',
+    'E11.3': 'Diabetes\n- type 2\n-- with\n--- ophthalmic complication E11.3\nE11.3 Type 2 diabetes mellitus with ophthalmic complications',
   };
+
+  // Convert slash format first
+  pathStr = convertSlashPath(pathStr);
+
+  // Remove empty subterm lines like "- -" or "-- " with no text after
+  pathStr = pathStr.split('\n').filter(l => {
+    const t = l.trim();
+    return !(t.match(/^-+$/) || t.match(/^-+\s*$/));
+  }).join('\n');
 
   const looksMessy = !pathStr.includes('\n') || /[A-Z]\d{2}.*[A-Z]\d{2}/.test(pathStr);
   if (code && KNOWN_PATHS[code] && looksMessy) {
