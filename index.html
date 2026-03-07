@@ -641,6 +641,27 @@ Jika nilai abnormal ditemukan, tambahkan kode yang sesuai meskipun dokter tidak 
 Site digit: 0=multi,1=shoulder,2=elbow,3=wrist,4=hand,5=hip,6=knee,7=ankle,8=other,9=unspec. NEVER omit.
 B95-B96 ONLY jika kuman disebut eksplisit DS: B95.6=S.aureus,B95.3=S.pneumoniae,B96.1=Klebsiella,B96.2=E.coli,B96.5=Pseudomonas.
 
+## PNEUMONIA RULES
+Pneumonia — WAJIB spesifik jika kuman disebutkan:
+  J13=S.pneumoniae | J14=H.influenzae | J15.0=Klebsiella | J15.1=Pseudomonas
+  J15.2=Staph | J15.3=Strep B | J15.4=other Strep | J15.7=Mycoplasma
+  J18.0=bronchopneumonia | J18.1=lobar | J18.9=unspecified
+  Jika kultur/BTA/PCR menyebutkan kuman → WAJIB pakai J13-J16, BUKAN J18.9
+  S.pneumoniae di kultur → J13 DU + B95.3 DS
+  J18.9 HANYA jika kuman benar-benar tidak diketahui
+
+## ICD-9-CM PROCEDURE RULES
+DILARANG coding terapi medis/obat sebagai prosedur ICD-9-CM:
+  - Antibiotik IV, nebulisasi obat, infus cairan = BUKAN prosedur ICD-9-CM
+  - ICD-9-CM Vol.3 hanya untuk tindakan/prosedur invasif atau diagnostik:
+    BOLEH: operasi, biopsi, intubasi, ventilator, kateter, bronkoskopi, drainage, dll
+    TIDAK BOLEH: "antibiotic therapy 80.1", "nebulization 93.91" — kode ini tidak valid
+  - Jika tidak ada prosedur invasif → procedures: [] (kosong)
+  Nebulisasi = tindakan medis rutin, TIDAK dikoding ICD-9-CM kecuali ada tindakan khusus
+  Ventilator mekanik → 96.70-96.72 (boleh dikoding)
+  Intubasi endotrakeal → 96.04
+  Bronkoskopi → 33.22-33.23
+
 ## EYE (H00-H59)
 Katarak — WAJIB spesifik, jangan langsung H26.9:
   H25.0=senile incipient | H25.1=senile nuclear | H25.2=morgagnian (hypermature)
@@ -909,6 +930,17 @@ function getCleanPath(pathStr, code, description) {
     'E11.4': 'Diabetes\n- type 2\n-- with\n--- neurological complication E11.4\nE11.4 Type 2 diabetes mellitus with neurological complications',
     'E11.5': 'Diabetes\n- type 2\n-- with\n--- peripheral circulatory complication E11.5\nE11.5 Type 2 diabetes mellitus with peripheral circulatory complications',
     'H36.0': 'Retinopathy\n- diabetic H36.0\nH36.0 Diabetic retinopathy',
+    'J13':   'Pneumonia\n- due to\n-- Streptococcus pneumoniae J13\nJ13 Pneumonia due to Streptococcus pneumoniae',
+    'J14':   'Pneumonia\n- due to\n-- Haemophilus influenzae J14\nJ14 Pneumonia due to Haemophilus influenzae',
+    'J15.0': 'Pneumonia\n- due to\n-- Klebsiella pneumoniae J15.0\nJ15.0 Pneumonia due to Klebsiella pneumoniae',
+    'J15.2': 'Pneumonia\n- due to\n-- Staphylococcus J15.2\nJ15.2 Pneumonia due to staphylococcus',
+    'J18.1': 'Pneumonia\n- lobar J18.1\nJ18.1 Lobar pneumonia, unspecified',
+    'J18.9': 'Pneumonia\n- unspecified J18.9\nJ18.9 Pneumonia, unspecified',
+    'J96.0': 'Failure\n- respiratory\n-- acute J96.0\nJ96.0 Acute respiratory failure',
+    'J96.1': 'Failure\n- respiratory\n-- chronic J96.1\nJ96.1 Chronic respiratory failure',
+    'B95.3': 'Streptococcus\n- pneumoniae\n-- as cause of disease classified elsewhere B95.3\nB95.3 Streptococcus pneumoniae as the cause of diseases classified elsewhere',
+    'B96.1': 'Klebsiella\n- pneumoniae\n-- as cause of disease classified elsewhere B96.1\nB96.1 Klebsiella pneumoniae as the cause of diseases classified elsewhere',
+    'B96.2': 'Escherichia\n- coli\n-- as cause of disease classified elsewhere B96.2\nB96.2 Escherichia coli as the cause of diseases classified elsewhere',
     'H25.1': 'Cataract\n- senile\n-- nuclear H25.1\nH25.1 Senile nuclear cataract',
     'H25.2': 'Cataract\n- senile\n-- morgagnian H25.2\nH25.2 Morgagnian cataract',
     'H25.9': 'Cataract\n- senile\n-- unspecified H25.9\nH25.9 Senile cataract, unspecified',
@@ -1057,6 +1089,17 @@ function renderLeadPath(pathStr, code, description) {
     'E11.4': 'Diabetes\n- type 2\n-- with\n--- neurological complication E11.4\nE11.4 Type 2 diabetes mellitus with neurological complications',
     'E11.5': 'Diabetes\n- type 2\n-- with\n--- peripheral circulatory complication E11.5\nE11.5 Type 2 diabetes mellitus with peripheral circulatory complications',
     'H36.0': 'Retinopathy\n- diabetic H36.0\nH36.0 Diabetic retinopathy',
+    'J13':   'Pneumonia\n- due to\n-- Streptococcus pneumoniae J13\nJ13 Pneumonia due to Streptococcus pneumoniae',
+    'J14':   'Pneumonia\n- due to\n-- Haemophilus influenzae J14\nJ14 Pneumonia due to Haemophilus influenzae',
+    'J15.0': 'Pneumonia\n- due to\n-- Klebsiella pneumoniae J15.0\nJ15.0 Pneumonia due to Klebsiella pneumoniae',
+    'J15.2': 'Pneumonia\n- due to\n-- Staphylococcus J15.2\nJ15.2 Pneumonia due to staphylococcus',
+    'J18.1': 'Pneumonia\n- lobar J18.1\nJ18.1 Lobar pneumonia, unspecified',
+    'J18.9': 'Pneumonia\n- unspecified J18.9\nJ18.9 Pneumonia, unspecified',
+    'J96.0': 'Failure\n- respiratory\n-- acute J96.0\nJ96.0 Acute respiratory failure',
+    'J96.1': 'Failure\n- respiratory\n-- chronic J96.1\nJ96.1 Chronic respiratory failure',
+    'B95.3': 'Streptococcus\n- pneumoniae\n-- as cause of disease classified elsewhere B95.3\nB95.3 Streptococcus pneumoniae as the cause of diseases classified elsewhere',
+    'B96.1': 'Klebsiella\n- pneumoniae\n-- as cause of disease classified elsewhere B96.1\nB96.1 Klebsiella pneumoniae as the cause of diseases classified elsewhere',
+    'B96.2': 'Escherichia\n- coli\n-- as cause of disease classified elsewhere B96.2\nB96.2 Escherichia coli as the cause of diseases classified elsewhere',
     'H25.1': 'Cataract\n- senile\n-- nuclear H25.1\nH25.1 Senile nuclear cataract',
     'H25.2': 'Cataract\n- senile\n-- morgagnian H25.2\nH25.2 Morgagnian cataract',
     'H25.9': 'Cataract\n- senile\n-- unspecified H25.9\nH25.9 Senile cataract, unspecified',
