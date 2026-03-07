@@ -680,6 +680,38 @@ function copyPath(btn, text) {
   });
 }
 
+// Shared helpers untuk path rendering
+function normalizeLine(line) {
+  return line.replace(/^(\s*)(--+)(\s*)/, (m, pre, dashes) =>
+    pre + '-'.repeat(dashes.length) + ' ');
+}
+
+function normalizeDashesShared(line) {
+  const trimmed = line.trimStart();
+  if (!trimmed.startsWith('-')) return line.trimEnd();
+  const spaces = line.length - trimmed.length;
+  const dashParts = trimmed.split(/\s+/);
+  let dashCount = 0;
+  for (const p of dashParts) { if (p === '-') dashCount++; else break; }
+  const level = Math.max(dashCount, Math.floor(spaces / 2) + 1);
+  const rest = trimmed.replace(/^[-\s]+/, '').trim();
+  return '-'.repeat(level) + ' ' + rest;
+}
+
+function normalizeLevelsShared(lines) {
+  let prevLevel = 0;
+  return lines.map(line => {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith('-')) { prevLevel = 0; return line; }
+    let level = 0;
+    while (level < trimmed.length && trimmed[level] === '-') level++;
+    const rest = trimmed.slice(level).trim();
+    const allowedLevel = Math.min(level, prevLevel + 1);
+    prevLevel = allowedLevel;
+    return '-'.repeat(allowedLevel) + ' ' + rest;
+  });
+}
+
 function getCleanPath(pathStr, code, description) {
   if (!pathStr) return '';
   if (Array.isArray(pathStr)) pathStr = pathStr.join('\n');
@@ -735,43 +767,12 @@ function getCleanPath(pathStr, code, description) {
     }
   }
   // Normalize semua format dash ke "---" style
-  const normalizeDashes = (line) => {
-    const trimmed = line.trimStart();
-    if (!trimmed.startsWith('-')) return line.trimEnd();
-    const spaces = line.length - trimmed.length;
-    const dashParts = trimmed.split(/\s+/);
-    let dashCount = 0;
-    for (const p of dashParts) {
-      if (p === '-') dashCount++;
-      else break;
-    }
-    const level = Math.max(dashCount, Math.floor(spaces / 2) + 1);
-    const rest = trimmed.replace(/^[-\s]+/, '').trim();
-    return '-'.repeat(level) + ' ' + rest;
-  };
-
-  // Normalize level agar runtut: tidak boleh loncat level
-  // misal: level 1 → level 3 diubah jadi level 1 → level 2
-  const normalizelevels = (lines) => {
-    let prevLevel = 0;
-    return lines.map(line => {
-      const trimmed = line.trim();
-      if (!trimmed.startsWith('-')) { prevLevel = 0; return line; }
-      // Hitung level dari jumlah '-' di awal
-      let level = 0;
-      while (level < trimmed.length && trimmed[level] === '-') level++;
-      const rest = trimmed.slice(level).trim();
-      // Pastikan tidak loncat lebih dari 1 level
-      const allowedLevel = Math.min(level, prevLevel + 1);
-      prevLevel = allowedLevel;
-      return '-'.repeat(allowedLevel) + ' ' + rest;
-    });
-  };
-
+  
+  
   const rawLines = pathStr.split('\n')
-    .map(l => normalizeDashes(normalizeLine(l)))
+    .map(l => normalizeDashesShared(normalizeLine(l)))
     .filter(l => l.trim());
-  const lines = normalizelevels(rawLines);
+  const lines = normalizeLevelsShared(rawLines);
 
   const hasExplicitFinal = lines.some(l => !l.trim().startsWith('-') && isFinalLine(l.trim()));
 
