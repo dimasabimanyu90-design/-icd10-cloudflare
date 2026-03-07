@@ -686,6 +686,40 @@ function renderLeadPath(pathStr, code, description) {
   if (Array.isArray(pathStr)) pathStr = pathStr.join('\n');
   else pathStr = String(pathStr);
 
+  // Detect format horizontal: "Abortion - spontaneous - complete - ..."
+  // AI kadang kirim semua dalam satu baris dengan " - " sebagai separator
+  // Konversi ke format vertikal dengan newline
+  if (!pathStr.includes('\n')) {
+    const parts = pathStr.split(' - ');
+    if (parts.length >= 2) {
+      // Cari index bagian final (dimulai kode ICD)
+      const finalIdx = parts.findIndex(p => /^[A-Z]\d{2}/.test(p.trim()) || /^\d{2}\./.test(p.trim()));
+      let lines = [];
+      parts.forEach((part, i) => {
+        const trimmed = part.trim();
+        if (i === 0) {
+          // Lead term
+          lines.push(trimmed);
+        } else if (finalIdx >= 0 && i === finalIdx) {
+          // Bagian final: taruh sebagai subterm terakhir DENGAN kode, lalu tambah baris final terpisah
+          const prevLevel = i - 1;
+          const dashLabel = Array(prevLevel).fill('-').join(' ') + ' ';
+          // Subterm sebelumnya (index i-1) tidak punya kode, kita gabungkan kode ke subterm sebelumnya
+          // Ambil subterm sebelumnya dan tambahkan kode
+          if (lines.length > 0 && lines[lines.length - 1].startsWith(Array(prevLevel).fill('-').join(' '))) {
+            lines[lines.length - 1] = lines[lines.length - 1] + ' ' + trimmed.split(' ')[0];
+          }
+          // Tambah baris final lengkap
+          lines.push(trimmed);
+        } else {
+          // Subterm biasa
+          lines.push(Array(i).fill('-').join(' ') + ' ' + trimmed);
+        }
+      });
+      pathStr = lines.join('\n');
+    }
+  }
+
   const codeRe = /\b([A-Z]\d{2}(\.\d+)?|\d{2}(\.\d+)*)\b/g;
   const isFinalLine = (s) => /^(CODE\s+)?[A-Z]\d{2}(\.\d+)?/.test(s) || /^\d{2}\.\d/.test(s);
   const highlightCodes = (s) => s.replace(codeRe, m => `<span class="lp-code">${m}</span>`);
