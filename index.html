@@ -355,174 +355,79 @@ async function analyze() {
     ? 'LANGUAGE RULES: (1) description and description_en fields MUST ALWAYS be in ENGLISH as per official ICD-10/ICD-9-CM nomenclature, never translate them. (2) summary, du_reasoning, reasoning, and validation message fields must be in BAHASA INDONESIA.'
     : 'LANGUAGE RULES: (1) description and description_en fields MUST ALWAYS be in ENGLISH as per official ICD-10/ICD-9-CM nomenclature, never translate them. (2) summary, du_reasoning, reasoning, and validation message fields must be in ENGLISH.';
 
-  const PROMPT = `You are an expert medical coder using STRICTLY:
-- ICD-10 2nd Edition 2005, WHO Geneva (3 volumes: Vol.1 Tabular, Vol.2 Instruction Manual, Vol.3 Alphabetical Index)
-- ICD-9-CM Volume 3 (procedures)
-DO NOT use ICD-10-CM (USA), ICD-10-AM (Australia), or any other national modification.
-All code titles, includes/excludes, and notes must be from WHO ICD-10 2nd Ed 2005 Geneva only.
-Return JSON only.
+  const PROMPT = `You are an expert medical coder. Use STRICTLY ICD-10 2nd Edition 2005 WHO Geneva + ICD-9-CM Vol.3. NOT ICD-10-CM/AM. Return JSON only.
 
 ${langInstruction}
 CLINICAL NOTE: ${input}
 
 ## EXTRACTION
-- Diagnoses: code ONLY explicitly stated. 1 DU + ALL DS. No explicit dx → diagnoses:[] unless strong objective evidence (EKG/lab/imaging).
-- Procedures: code ONLY explicitly mentioned. None → procedures:[]. Code ALL if multiple.
+- Diagnoses: ONLY explicitly stated. 1 DU + ALL DS. No dx → diagnoses:[] unless strong objective evidence.
+- Procedures: ONLY explicitly mentioned. None → procedures:[]. Code ALL if multiple.
 
 ## FIELDS
 - description: EXACT Vol.1 official code title verbatim. NOT patient diagnosis. NOT paraphrase.
   H72.1="Attic perforation of tympanic membrane" NOT "Chronic suppurative otitis media"
+  H90.3="Sensorineural hearing loss, unilateral with unrestricted hearing on the contralateral side"
   N83.2="Other and unspecified ovarian cysts", O34.2="Maternal care due to uterine scar from previous surgery"
   74.1="Low cervical caesarean section", 65.29="Other local excision or destruction of ovary"
 - description_id: Indonesian translation of official title.
-- lead_term_path: complete Vol.3 hierarchy, REAL code numbers never placeholder.
+- lead_term_path: complete Vol.3 hierarchy, REAL codes never placeholder.
   Format: Term\n- subterm\n- - subterm CODE\nCODE Full description
-
-  VOL.3 ALPHABETICAL INDEX RULES:
-  1. NEVER use anatomical site as lead term. Anatomy always says "- see condition".
-     WRONG: "Femur - fracture" | WRONG: "Uterus - rupture" | WRONG: "Kidney - failure"
-     CORRECT lead terms: "Fracture", "Rupture", "Failure", "Infection", "Inflammation", "Disorder", "Disease", "Syndrome", "Haemorrhage", "Pain", "Loss", "Obstruction" etc.
-     Always search by CONDITION/PATHOLOGY not by organ/body part.
-  2. SEE ALSO instruction: if Vol.3 index shows "see also [other term]" → follow it and search under that term too for a more specific code.
-     Example: "Otitis - see also Inflammation, ear" → check under Inflammation if Otitis path is incomplete.
-     Show the see-also path in lead_term_path if it was followed.
-  3. SEE instruction (cross-reference): "see [term]" means MUST go to that term instead.
-     Example: "Hearing loss - see Loss, hearing" → lead term is "Loss" subterm "hearing"
-     Correct path: Loss\n- hearing\n- - sensorineural\n- - - unilateral H90.3
-  4. Always go to the most specific subterm available before accepting a code.
-- dagger_asterisk: "dagger"|"asterisk"|"none". ONLY if code is OFFICIALLY marked †/* in Vol.1. Most codes="none".
+- dagger_asterisk: "dagger"|"asterisk"|"none". ONLY if OFFICIALLY marked †/* in Vol.1. Most="none".
 - volume1_notes: includes/excludes/notes per code.
 
+## VOL.3 INDEX RULES
+1. NEVER use anatomical site as lead term → always says "see condition".
+   WRONG: Femur-fracture, Uterus-rupture. RIGHT: Fracture→femur, Rupture→uterus.
+2. See also: follow cross-reference for more specific code. Show path if followed.
+3. See: MUST go to referenced term instead.
+4. Use most specific subterm before accepting code.
+
+## LATIN/GREEK → LEAD TERM
+Suffixes: -itis=Inflammation, -oma=Neoplasm, -ectomy=Excision, -otomy=Incision, -ostomy=procedure name, -plasty=Repair, -rraphy=Suture, -rrhage=Haemorrhage, -stenosis=Stenosis, -cele=Hernia, -plegia=Paralysis, -algia=Pain, -pathy=Disease/Disorder, -megaly=Enlargement, -ptosis=Prolapse, -emia=condition name, -uria=condition name.
+Organs: cardi=heart, hepat=liver, nephr=kidney, gastr=stomach, enter=intestine, col=colon, cholecyst=gallbladder, pneum=lung, bronch=bronchus, ophthalm=eye, derm=skin, oste=bone, arthr=joint, my=muscle, neur=nerve, angi=vessel, ren=kidney, uter=uterus, oophor=ovary, mast=breast.
+Latin: sinistra=left, dextra=right, acuta=acute, chronica=chronic, ante/post/intra partum, status post=condition after, ai/ex=due to.
+
 ## INCLUDES/EXCLUDES
-- Includes: condition already covered → do NOT code separately.
+- Includes: already covered → do NOT code separately.
 - Excludes1 (mutually exclusive): NEVER code both → ERROR.
-- Excludes2 (can coexist): allowed if patient genuinely has both → WARNING.
+- Excludes2 (can coexist): allowed if genuinely both present → WARNING.
 - Hierarchy: chapter>block>category; specific overrides general.
 
 ## VALIDATION
 ERROR: asterisk as DU, missing †/* pair, Excludes1 violated, R-code when definitive dx exists.
-WARNING: wrong DU, missing DS, Excludes2 needs confirmation, R-code as DU (provisional).
-
-## MEDICAL LATIN/GREEK TERMINOLOGY
-Understanding Latin/Greek roots improves lead term selection in Vol.3:
-
-PREFIXES (location/direction):
-  brady=slow, tachy=fast, hyper=excess/above, hypo=deficient/below
-  hemi=half, uni=one, bi/di=two, poly=many, multi=multiple
-  endo=within, exo=outside, peri=around, para=beside/abnormal
-  ante=before, post=after, pre=before, retro=behind
-  macro=large, micro=small, mega/megalo=enlarged
-
-SUFFIXES (condition type — key for lead term):
-  -itis = inflammation → lead term: "Inflammation" or condition name e.g. "Gastritis"
-  -osis = condition/process (often non-inflammatory) → lead term: condition name
-  -oma = tumour/swelling → lead term: "Neoplasm" or tumour name
-  -ectomy = surgical removal → ICD-9-CM lead term: procedure name e.g. "Excision", "Removal"
-  -otomy/-tomy = incision → lead term: "Incision"
-  -ostomy/-stomy = surgical opening/stoma → lead term: "Colostomy", "Ileostomy" etc.
-  -plasty = repair/reconstruction → lead term: "Repair" or "Reconstruction"
-  -rraphy = suture → lead term: "Suture"
-  -scopy = visual examination → lead term: procedure e.g. "Laparoscopy", "Endoscopy"
-  -graphy = imaging/recording → lead term: imaging type
-  -pathy = disease of → lead term: "Disease" or "Disorder"
-  -plegia = paralysis → lead term: "Paralysis" or "Plegia"
-  -paresis = partial paralysis → lead term: "Paresis"
-  -algia/-dynia = pain → lead term: "Pain" or specific pain term
-  -rrhagia/-rrhage = bleeding/haemorrhage → lead term: "Haemorrhage"
-  -rrhea/-rrhoea = flow/discharge → lead term: "Discharge" or condition name
-  -stenosis = narrowing → lead term: "Stenosis"
-  -megaly = enlargement → lead term: "Enlargement" or "Hypertrophy" or organ+megaly
-  -trophy = nourishment/growth → lead term: "Atrophy" or "Hypertrophy"
-  -lysis = destruction/loosening → lead term: "Lysis" or procedure context
-  -cele = hernia/swelling → lead term: "Hernia" or "Hydrocele" etc.
-  -ptosis = drooping/prolapse → lead term: "Prolapse" or "Ptosis"
-  -emia/-aemia = blood condition → lead term: condition name e.g. "Anaemia", "Septicaemia"
-  -uria = urine condition → lead term: condition name e.g. "Haematuria", "Proteinuria"
-
-COMMON LATIN/GREEK ORGAN ROOTS (map to English for lead term):
-  cardi/o=heart, hepat/o=liver, nephr/o=kidney, gastr/o=stomach
-  enter/o=intestine, col/o=colon, cholecyst/o=gallbladder
-  pneum/o=lung/air, bronch/o=bronchus, rhin/o=nose, otia=ear
-  ophthalm/o=eye, derm/o=skin, oste/o=bone, arthr/o=joint
-  my/o=muscle, neur/o=nerve, angi/o=vessel, haem/o=blood
-  ren/o=kidney, vesic/o=bladder, uter/o=uterus, oophor/o=ovary
-  orchid/o=testis, prostat/o=prostate, mast/o=breast
-
-COMMON LATIN TERMS IN CLINICAL NOTES:
-  sinistra/sinister=left, dextra/dexter=right, bilateral=both sides
-  acuta=acute, chronica=chronic, gravis=severe, benigna=benign
-  maligna=malignant, primaria=primary, secundaria=secondary
-  ante partum=before delivery, post partum=after delivery, intra partum=during delivery
-  per vaginam=through vagina, per abdomen=through abdomen
-  status post=condition after, ex=due to/from
+WARNING: wrong DU, missing DS, Excludes2 needs confirmation, R-code as DU (provisional, verify after workup).
 
 ## ABBREVIATIONS
 SC/SCTP=sectio caesarea, TTTS=twin-twin transfusion, IUFD=intrauterine fetal death, gemelli=twins, partus prematurus=preterm labour, kista ovarium=ovarian cyst, kistektomi=cystectomy, bekas SC=previous caesarean scar, HT=hypertension, DM=diabetes mellitus, ORIF=open reduction internal fixation, ai=atas indikasi.
 
 ## OBSTETRIC RULES
-O00: O00.0=abdominal, O00.1=tubal, O00.2=ovarian. Ruptur→always +O08.1 DS. Other: O08.0=infection, O08.3=shock, O08.9=unspecified complication.
-
-O02: O02.1=missed abortion (fetal death + NO expulsion/retained). Always +O08.9 DS. "janin mati+tidak ada pengeluaran"→O02.1. NOT O03.x.
-
+O00: O00.1=tubal, O00.2=ovarian, O00.0=abdominal. Ruptur→+O08.1 DS. O08.0=infection, O08.3=shock, O08.9=unspecified.
+O02.1=missed abortion (fetal death+NO expulsion). +O08.9 DS. "janin mati+tidak ada pengeluaran"→O02.1 NOT O03.x.
 O03-O07 (shared 4th digit "See before O03"):
-  Incomplete (.4=no complication base): "serviks terbuka/sisa jaringan"
-  Complete (.9=no complication base): "seluruh jaringan keluar"
-  4th digit ALWAYS .4 or .9. NEVER use .0/.1/.2/.3/.6/.7/.8 as 4th digit.
-  O08.x ALWAYS added as DS: O08.9=no specific complication, O08.1=haemorrhage, O08.0=infection.
+  Incomplete base=.4 | Complete base=.9. ALWAYS .4 or .9. NEVER .0/.1/.2/.3/.6/.7/.8.
+  +O08.x always as DS: O08.9=no specific complication, O08.1=haemorrhage, O08.0=infection.
   "incomplete+perdarahan"→O03.4+O08.1 | "complete tanpa komplikasi"→O03.9+O08.9
 
 ## R CODES
-- Do NOT code R if definitive dx explains symptom (integral).
-- R as DU: valid if no definitive dx → WARNING "provisional, verify after workup".
-- DM+hyperglycaemia→no R73 | fever unknown origin→R50.9 DU+WARNING | post-op fever→R50.9 DS
+- Do NOT code R if definitive dx explains symptom.
+- R as DU: valid if no definitive dx → WARNING provisional.
+- DM→no R73 | fever unknown→R50.9 DU+WARNING | post-op fever→R50.9 DS.
 
 ## MUSCULOSKELETAL (M00-M99)
-Site digit (last char, when "See site code at beginning of chapter"):
-  0=multiple,1=shoulder,2=upper arm/elbow,3=forearm/wrist,4=hand,5=pelvis/thigh/hip,6=lower leg/knee,7=ankle/foot,8=other,9=unspecified
-  Never omit. Knee→6, hip→5, ankle→7.
-
-B95-B96: add ONLY if organism explicitly named. Always DS.
-  B95.6=S.aureus, B95.3=S.pneumoniae, B96.1=Klebsiella, B96.2=E.coli, B96.5=Pseudomonas, B96.8=other.
+Site digit (last char): 0=multiple,1=shoulder,2=upper arm/elbow,3=forearm/wrist,4=hand,5=pelvis/thigh/hip,6=lower leg/knee,7=ankle/foot,8=other,9=unspecified. Never omit.
+B95-B96: ONLY if organism explicitly named. Always DS. B95.6=S.aureus, B95.3=S.pneumoniae, B96.1=Klebsiella, B96.2=E.coli, B96.5=Pseudomonas, B96.8=other.
 
 ## EAR (H60-H95)
-CSOM: H66.3=Other chronic suppurative otitis media (use when CSOM stated without detail).
-H72.x=tympanic membrane perforation — code separately ONLY if perforation explicitly stated as separate finding.
-"CSOM/cairan telinga bernanah kronik"→H66.3 NOT H72.x.
-
-HEARING LOSS H90.x — use FULL official description verbatim:
-  H90.0="Conductive hearing loss, bilateral"
-  H90.1="Conductive hearing loss, unilateral with unrestricted hearing on the contralateral side"
-  H90.2="Conductive hearing loss, unspecified"
-  H90.3="Sensorineural hearing loss, unilateral with unrestricted hearing on the contralateral side"
-  H90.4="Sensorineural hearing loss, bilateral"
-  H90.5="Sensorineural hearing loss, unspecified"
-  H90.6="Mixed conductive and sensorineural hearing loss, bilateral"
-  H90.7="Mixed conductive and sensorineural hearing loss, unilateral with unrestricted hearing on the contralateral side"
-  H90.8="Mixed conductive and sensorineural hearing loss, unspecified"
-  Key: "unilateral" without specifying contralateral → H90.3 (sensorineural) or H90.1 (conductive)
-  Key: "bilateral" → H90.4 (sensorineural) or H90.0 (conductive)
-  Key: no laterality stated → H90.5 (sensorineural) or H90.2 (conductive)
-CSOM: H66.3=Other chronic suppurative otitis media (use when CSOM stated without detail).
-H72.x=tympanic membrane perforation — code separately ONLY if perforation explicitly stated as separate finding.
-"CSOM/cairan telinga bernanah kronik"→H66.3 NOT H72.x.
+H66.3=Other chronic suppurative otitis media. "CSOM"→H66.3 NOT H72.x (perforation only if separately stated).
+H90: H90.3="Sensorineural hearing loss, unilateral with unrestricted hearing on the contralateral side" | H90.4="Sensorineural hearing loss, bilateral" | H90.5="Sensorineural hearing loss, unspecified" | H90.1="Conductive hearing loss, unilateral with unrestricted hearing on the contralateral side" | H90.0="Conductive hearing loss, bilateral" | H90.2="Conductive hearing loss, unspecified".
 
 ## EXTERNAL CAUSE (Chapter XX)
-Injury/trauma → ALWAYS add external cause DS alongside injury code (S/T):
-  V20-V29=motorcycle, V40-V49=car, W00-W19=falls, X00-X09=fire, X40-X49=accidental poisoning
-  X60-X84=intentional self-harm, X85-Y09=assault, Y10-Y34=undetermined
-  Y92=place (Y92.0=home,Y92.4=street,Y92.9=unspecified) — add if place mentioned
-  Y93=activity — add if activity mentioned
-  External cause always DS never DU.
-  "fraktur KLL motor"→S72.3+V29.9 | "jatuh tangga"→injury+W11
-
-Drug-induced (Y40-Y59): add ONLY if specific drug explicitly named.
-  Y42=hormones/corticosteroids, Y43=antineoplastics, Y44=anticoagulants, Y45=NSAIDs/analgesics, Y57=other drugs.
-  "glaukoma akibat kortikosteroid"→H40.x+Y42.0 | drug not named→no Y code.
+Injury/trauma → ALWAYS add external cause DS: V20-V29=motorcycle, V40-V49=car, W00-W19=falls, X00-X09=fire, X60-X84=self-harm, X85-Y09=assault. Y92=place (Y92.4=street, Y92.0=home) if mentioned. Always DS.
+Drug-induced (Y40-Y59): ONLY if drug explicitly named. Y42=corticosteroids, Y44=anticoagulants, Y45=NSAIDs, Y57=other. Always DS.
 
 ## SPECIFICITY
-- Diabetes: E10=type1, E11=type2 + complication subcategory.
-- Fracture: bone+location+open/closed. Stroke: I61=haemorrhagic, I63=ischaemic+location.
-- Use 4th/5th digit; .9 only when truly no detail.
+E10=DM type1, E11=DM type2 + complication. I61=haemorrhagic stroke, I63=ischaemic+location. Fracture: bone+location+open/closed. 4th/5th digit always; .9 only if truly no detail.
 
 Return ONLY valid JSON:
 {"summary":"...","du_reasoning":"...","validations":[{"type":"ERROR|WARNING|INFO","message":"..."}],"diagnoses":[{"role":"DU","code":"O34.2","dagger_asterisk":"none","description":"Maternal care due to uterine scar from previous surgery","description_id":"...","category":"Chapter XV...","confidence":92,"lead_term_path":"Delivery\n- caesarean (for)\n- - previous\n- - - caesarean section O34.2\nO34.2 Maternal care due to uterine scar from previous surgery","volume1_notes":[{"type":"includes|excludes|note|use_additional|code_first","text":"..."}],"paired_with":"","reasoning":"..."}],"procedures":[{"code":"74.1","description":"Low cervical caesarean section","description_id":"...","category":"ICD-9-CM Vol.3...","confidence":95,"lead_term_path":"...","volume1_notes":[],"reasoning":"..."}]}`;
