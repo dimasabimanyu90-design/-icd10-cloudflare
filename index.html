@@ -443,8 +443,8 @@ Drug-induced (Y40-Y59): ONLY if drug explicitly named. Y42=corticosteroids, Y44=
 ## SPECIFICITY
 E10=DM type1, E11=DM type2 + complication. I61=haemorrhagic stroke, I63=ischaemic+location. Fracture: bone+location+open/closed. 4th/5th digit always; .9 only if truly no detail.
 
-Return ONLY valid JSON:
-{"summary":"...","du_reasoning":"...","validations":[{"type":"ERROR|WARNING|INFO","message":"..."}],"diagnoses":[{"role":"DU","code":"O34.2","dagger_asterisk":"none","description":"Maternal care due to uterine scar from previous surgery","description_id":"...","category":"Chapter XV...","confidence":92,"lead_term_path":"Delivery\n- caesarean (for)\n- - previous\n- - - caesarean section O34.2\nO34.2 Maternal care due to uterine scar from previous surgery","volume1_notes":[{"type":"includes|excludes|note|use_additional|code_first","text":"..."}],"paired_with":"","reasoning":"..."}],"procedures":[{"code":"74.1","description":"Low cervical caesarean section","description_id":"...","category":"ICD-9-CM Vol.3...","confidence":95,"lead_term_path":"...","volume1_notes":[],"reasoning":"..."}]}`;
+Return ONLY valid JSON with these keys:
+{"summary","du_reasoning","validations":[{"type","message"}],"diagnoses":[{"role","code","dagger_asterisk","description","description_id","category","confidence","lead_term_path","volume1_notes":[{"type","text"}],"paired_with","reasoning"}],"procedures":[{"code","description","description_id","category","confidence","lead_term_path","volume1_notes","reasoning"}]}`;
 
   try {
     const resp = await fetch("/api/claude", {
