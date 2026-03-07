@@ -495,7 +495,7 @@ CLINICAL NOTE: ${input}
   N83.2="Other and unspecified ovarian cysts", O34.2="Maternal care due to uterine scar from previous surgery"
   74.1="Low cervical caesarean section", 65.29="Other local excision or destruction of ovary"
 - description_id: Indonesian translation of official title.
-- lead_term_path: Tampilkan hierarki Vol.3 lengkap. WAJIB 3 bagian:
+- lead_term_path: STRING (bukan array). Tampilkan hierarki Vol.3 lengkap. WAJIB 3 bagian:
   [1] Lead term  [2] Subterm (- / - - / - - -)  [3] Baris final: CODE deskripsi resmi
   DILARANG: arrow(→), skip level, lead term langsung ke final tanpa subterm, kode tanpa deskripsi.
   DILARANG: baris final hilang — SELALU tulis "CODE Deskripsi resmi" setelah subterm terakhir.
@@ -682,7 +682,9 @@ function copyPath(btn, text) {
 
 function renderLeadPath(pathStr, code, description) {
   if (!pathStr) return '';
-  pathStr = String(pathStr); // guard: AI kadang kirim object/array
+  // Guard: AI kadang kirim array atau object bukan string
+  if (Array.isArray(pathStr)) pathStr = pathStr.join('\n');
+  else pathStr = String(pathStr);
 
   const codeRe = /\b([A-Z]\d{2}(\.\d+)?|\d{2}(\.\d+)*)\b/g;
   const isFinalLine = (s) => /^(CODE\s+)?[A-Z]\d{2}(\.\d+)?/.test(s) || /^\d{2}\.\d/.test(s);
