@@ -732,8 +732,26 @@ function renderLeadPath(pathStr, code, description) {
     });
   };
 
+  // Normalize semua format dash ke "---" style sebelum diproses
+  const normalizeDashes = (line) => {
+    const trimmed = line.trimStart();
+    if (!trimmed.startsWith('-')) return line.trimEnd();
+    const spaces = line.length - trimmed.length;
+    // Hitung '-' di awal (handle "- -" dan "---" dan "-")
+    const dashParts = trimmed.split(/\s+/);
+    let dashCount = 0;
+    for (const p of dashParts) {
+      if (p === '-') dashCount++;
+      else break;
+    }
+    // Level = max(dash count, spasi/2 + 1)
+    const level = Math.max(dashCount, Math.floor(spaces / 2) + 1);
+    const rest = trimmed.replace(/^[-\s]+/, '').trim();
+    return '-'.repeat(level) + ' ' + rest;
+  };
+
   const lines = pathStr.split('\n')
-    .map(l => normalizeLine(l.trimEnd()))
+    .map(l => normalizeDashes(normalizeLine(l)))
     .filter(l => l.trim());
 
   const hasExplicitFinal = lines.some(l => !l.trim().startsWith('-') && isFinalLine(l.trim()));
