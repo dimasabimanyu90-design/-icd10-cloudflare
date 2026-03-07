@@ -1,5 +1,6 @@
 // known-paths.js — ICD-10 & ICD-9-CM Vol.3 Index Paths
 // Auto-generated — edit here, bukan di index.html
+// Last updated: tambah trauma, external cause, luka lecet
 // Total: 271 entries
 
 const KNOWN_PATHS = {
@@ -274,4 +275,38 @@ const KNOWN_PATHS = {
     '13.41': 'Extraction\n- lens\n-- phacoemulsification\n--- without IOL 13.41\n13.41 Phacoemulsification and aspiration of cataract',
     '13.71': 'Extraction\n- lens\n-- extracapsular\n--- by temporal inferior route 13.71\n13.71 Extracapsular extraction of lens by temporal inferior route',
     '13.72': 'Extraction\n- lens\n-- phacoemulsification\n--- with insertion of intraocular lens prosthesis 13.72\n13.72 Phacoemulsification and insertion of intraocular lens prosthesis',
+    // ── TRAUMA & EXTERNAL CAUSE ──────────────────────────────────
+    'S00.0': 'Injury\n- superficial\n-- scalp S00.0\nS00.0 Superficial injury of scalp',
+    'S00.1': 'Contusion\n- eyelid S00.1\nS00.1 Contusion of eyelid and periocular area',
+    'S09.9': 'Injury\n- head\n-- unspecified S09.9\nS09.9 Unspecified injury of head',
+    'S06.0': 'Concussion\n- S06.0\nS06.0 Concussion',
+    'S06.1': 'Injury\n- intracranial\n-- oedema S06.1\nS06.1 Traumatic cerebral oedema',
+    'S06.4': 'Injury\n- intracranial\n-- epidural haemorrhage S06.4\nS06.4 Epidural haemorrhage',
+    'S06.5': 'Haemorrhage\n- subdural\n-- traumatic S06.5\nS06.5 Traumatic subdural haemorrhage',
+    'S06.6': 'Haemorrhage\n- subarachnoid\n-- traumatic S06.6\nS06.6 Traumatic subarachnoid haemorrhage',
+    'S10.9': 'Injury\n- superficial\n-- neck\n--- unspecified S10.9\nS10.9 Superficial injury of neck, unspecified',
+    'S20.0': 'Contusion\n- breast S20.0\nS20.0 Contusion of breast',
+    'S20.2': 'Contusion\n- thorax S20.2\nS20.2 Contusion of thorax',
+    'S30.1': 'Contusion\n- abdominal wall S30.1\nS30.1 Contusion of abdominal wall',
+    'S40.0': 'Contusion\n- shoulder S40.0\nS40.0 Contusion of shoulder and upper arm',
+    'S50.0': 'Contusion\n- elbow S50.0\nS50.0 Contusion of elbow',
+    'S60.0': 'Contusion\n- finger\n-- without nail damage S60.0\nS60.0 Contusion of finger without damage to nail',
+    'S70.0': 'Contusion\n- hip S70.0\nS70.0 Contusion of hip',
+    'S70.1': 'Contusion\n- thigh S70.1\nS70.1 Contusion of thigh',
+    'S80.0': 'Contusion\n- knee S80.0\nS80.0 Contusion of knee',
+    'S80.1': 'Contusion\n- lower leg S80.1\nS80.1 Contusion of other and unspecified parts of lower leg',
+    'S90.3': 'Contusion\n- toe S90.3\nS90.3 Contusion of toe',
+    'T07':   'Injury\n- multiple\n-- unspecified T07\nT07 Unspecified multiple injuries',
+    'T14.0': 'Injury\n- superficial\n-- unspecified body region T14.0\nT14.0 Superficial injury of unspecified body region',
+    'T14.1': 'Wound\n- open\n-- unspecified body region T14.1\nT14.1 Open wound of unspecified body region',
+
+    // External cause
+    'V29.9': 'Accident\n- motor vehicle\n-- motorcycle\n--- unspecified V29.9\nV29.9 Motorcycle rider injured in unspecified transport accident',
+    'V49.9': 'Accident\n- motor vehicle\n-- car occupant\n--- unspecified V49.9\nV49.9 Car occupant injured in unspecified traffic accident',
+    'V19.9': 'Accident\n- pedal cycle\n-- unspecified V19.9\nV19.9 Pedal cyclist injured in unspecified transport accident',
+    'W19':   'Fall\n- unspecified W19\nW19 Unspecified fall',
+    'W18':   'Fall\n- same level\n-- other W18\nW18 Other fall on same level',
+    'X59.9': 'Exposure\n- unspecified factors\n-- unspecified X59.9\nX59.9 Exposure to unspecified factor',
+    'Y92.4': 'Place\n- occurrence\n-- street and highway Y92.4\nY92.4 Street and highway as the place of occurrence',
+
 };
