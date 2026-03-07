@@ -680,6 +680,77 @@ function copyPath(btn, text) {
   });
 }
 
+function getCleanPath(pathStr, code, description) {
+  if (!pathStr) return '';
+  if (Array.isArray(pathStr)) pathStr = pathStr.join('\n');
+  else pathStr = String(pathStr);
+
+  // Sama dengan renderLeadPath tapi return plain text
+  if (!pathStr.includes('\n')) {
+    const parts = pathStr.split(' - ');
+    if (parts.length >= 2) {
+      const finalIdx = parts.findIndex(p => /^[A-Z]\d{2}/.test(p.trim()) || /^\d{2}\./.test(p.trim()));
+      let lines = [];
+      parts.forEach((part, i) => {
+        const trimmed = part.trim();
+        if (i === 0) lines.push(trimmed);
+        else if (finalIdx >= 0 && i === finalIdx) {
+          if (lines.length > 0) lines[lines.length - 1] += ' ' + trimmed.split(' ')[0];
+          lines.push(trimmed);
+        } else lines.push('-'.repeat(i) + ' ' + trimmed);
+      });
+      pathStr = lines.join('\n');
+    } else {
+      const hasCode = /\b[A-Z]\d{2}(\.\d+)?\b/.test(pathStr) || /\b\d{2}\.\d+\b/.test(pathStr);
+      if (!hasCode && (code || description)) {
+        pathStr = pathStr + '\n' + (description ? code + ' ' + description : code);
+      }
+    }
+  }
+
+  const normalizeLine = (line) => line.replace(/^(\s*)(--+)(\s*)/, (m, pre, dashes) =>
+    pre + '-'.repeat(dashes.length) + ' ');
+  const normalizeDashes = (line) => {
+    const trimmed = line.trimStart();
+    if (!trimmed.startsWith('-')) return line.trimEnd();
+    const spaces = line.length - trimmed.length;
+    const dashParts = trimmed.split(/\s+/);
+    let dashCount = 0;
+    for (const p of dashParts) { if (p === '-') dashCount++; else break; }
+    const level = Math.max(dashCount, Math.floor(spaces / 2) + 1);
+    const rest = trimmed.replace(/^[-\s]+/, '').trim();
+    return '-'.repeat(level) + ' ' + rest;
+  };
+
+  const isFinalLine = (s) => /^(CODE\s+)?[A-Z]\d{2}(\.|\b)/.test(s) || /^\d{2}\.\d/.test(s);
+  const lines = pathStr.split('\n').map(l => normalizeDashes(normalizeLine(l))).filter(l => l.trim());
+  const hasExplicitFinal = lines.some(l => !l.trim().startsWith('-') && isFinalLine(l.trim()));
+  const subtermLines = lines.filter(l => l.trim().startsWith('-'));
+  const lastSubterm = subtermLines[subtermLines.length - 1] || '';
+  const autoCodeMatch = lastSubterm.match(/\b([A-Z]\d{2}(\.\d+)?)\s*$/) || lastSubterm.match(/\b(\d{2}\.\d+)\s*$/);
+  const autoCode = autoCodeMatch ? autoCodeMatch[1] : null;
+
+  const result = lines.map(line => {
+    const trimmed = line.trim();
+    if (!trimmed) return '';
+    if (!trimmed.startsWith('-') && isFinalLine(trimmed)) return trimmed.replace(/^CODE\s+/, '');
+    if (trimmed.startsWith('-')) {
+      const parts = trimmed.split(/\s+/);
+      let level = 0;
+      while (level < parts.length && parts[level] === '-') level++;
+      return '-'.repeat(level) + ' ' + parts.slice(level).join(' ');
+    }
+    return line;
+  }).filter(Boolean);
+
+  if (!hasExplicitFinal) {
+    const finalCode = autoCode || code || '';
+    const finalDesc = description || '';
+    if (finalCode) result.push(finalDesc ? finalCode + ' ' + finalDesc : finalCode);
+  }
+  return result.join('\n');
+}
+
 function renderLeadPath(pathStr, code, description) {
   if (!pathStr) return '';
   // Guard: AI kadang kirim array atau object bukan string
@@ -861,7 +932,7 @@ function renderResults(result) {
       </div>
       ${d.lead_term_path ? `<div class="lead-term-box">
         <div class="lead-label"><span>${t.labelVol3}</span>
-        <button class="copy-btn" onclick="copyPath(this,\`${String(d.lead_term_path||'').replace(/`/g,"'")}\`)">📋 Copy</button></div>
+        <button class="copy-btn" onclick="copyPath(this,\`${getCleanPath(d.lead_term_path,d.code,d.description).replace(/`/g,"'")}\`)">📋 Copy</button></div>
         <div class="lead-path">${renderLeadPath(d.lead_term_path, d.code, d.description)}</div>
       </div>` : ''}
       ${renderVol1Notes(d.volume1_notes)}
@@ -889,7 +960,7 @@ function renderResults(result) {
       </div>
       ${p.lead_term_path ? `<div class="lead-term-box">
         <div class="lead-label"><span>${t.labelVol3proc}</span>
-        <button class="copy-btn" onclick="copyPath(this,\`${String(p.lead_term_path||'').replace(/`/g,"'")}\`)">📋 Copy</button></div>
+        <button class="copy-btn" onclick="copyPath(this,\`${getCleanPath(p.lead_term_path,p.code,p.description).replace(/`/g,"'")}\`)">📋 Copy</button></div>
         <div class="lead-path">${renderLeadPath(p.lead_term_path, p.code, p.description)}</div>
       </div>` : ''}
       ${renderVol1Notes(p.volume1_notes)}
