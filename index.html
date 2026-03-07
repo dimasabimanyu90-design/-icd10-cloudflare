@@ -615,7 +615,14 @@ Trauma → ALWAYS DS: V20-V29=motor, V40-V49=car, W00-W19=jatuh, X00-X09=api, X6
 Drug-induced (Y40-Y59) ONLY jika obat disebut eksplisit: Y42=steroid,Y44=antikoagulan,Y45=NSAID,Y57=lain.
 
 ## SPECIFICITY
-E10=DM type1, E11=DM type2 + complication. I61=haemorrhagic stroke, I63=ischaemic+location. Fracture: bone+location+open/closed. 4th/5th digit always; .9 only if truly no detail.
+E10=DM type1, E11=DM type2. DM WAJIB pakai 4th digit komplikasi:
+  E11.0=coma | E11.1=ketoacidosis | E11.2=renal | E11.3=ophthalmic | E11.4=neurological
+  E11.5=peripheral circulatory | E11.6=other specified | E11.7=multiple | E11.9=without complication
+  Jika ada retinopati/katarak/glaukoma diabetik → E11.3 (bukan E11.9)
+  Jika ada nefropati/gagal ginjal diabetik → E11.2
+  Jika ada neuropati diabetik → E11.4
+H36.0=diabetic retinopathy (WAJIB .0, bukan H36 saja). H36†=dagger, pasangan E11.3*.
+I61=haemorrhagic stroke, I63=ischaemic+location. Fracture: bone+location+open/closed. 4th/5th digit always; .9 only if truly no detail.
 
 Return ONLY valid JSON with these keys:
 {"summary","du_reasoning","validations":[{"type","message"}],"diagnoses":[{"role","code","dagger_asterisk","description","description_id","category","confidence","lead_term_path","volume1_notes":[{"type","text"}],"paired_with","reasoning"}],"procedures":[{"code","description","description_id","category","confidence","lead_term_path","volume1_notes","reasoning"}]}`
@@ -835,6 +842,10 @@ function getCleanPath(pathStr, code, description) {
     'I10':   'Hypertension\n- essential I10\nI10 Essential (primary) hypertension',
     'E11.9': 'Diabetes\n- type 2 E11.9\nE11.9 Type 2 diabetes mellitus without complications',
     'E11.3': 'Diabetes\n- type 2\n-- with\n--- ophthalmic complication E11.3\nE11.3 Type 2 diabetes mellitus with ophthalmic complications',
+    'E11.2': 'Diabetes\n- type 2\n-- with\n--- renal complication E11.2\nE11.2 Type 2 diabetes mellitus with renal complications',
+    'E11.4': 'Diabetes\n- type 2\n-- with\n--- neurological complication E11.4\nE11.4 Type 2 diabetes mellitus with neurological complications',
+    'E11.5': 'Diabetes\n- type 2\n-- with\n--- peripheral circulatory complication E11.5\nE11.5 Type 2 diabetes mellitus with peripheral circulatory complications',
+    'H36.0': 'Retinopathy\n- diabetic H36.0\nH36.0 Diabetic retinopathy',
   };
 
   // Convert slash format first
@@ -957,6 +968,10 @@ function renderLeadPath(pathStr, code, description) {
     'I10':   'Hypertension\n- essential I10\nI10 Essential (primary) hypertension',
     'E11.9': 'Diabetes\n- type 2 E11.9\nE11.9 Type 2 diabetes mellitus without complications',
     'E11.3': 'Diabetes\n- type 2\n-- with\n--- ophthalmic complication E11.3\nE11.3 Type 2 diabetes mellitus with ophthalmic complications',
+    'E11.2': 'Diabetes\n- type 2\n-- with\n--- renal complication E11.2\nE11.2 Type 2 diabetes mellitus with renal complications',
+    'E11.4': 'Diabetes\n- type 2\n-- with\n--- neurological complication E11.4\nE11.4 Type 2 diabetes mellitus with neurological complications',
+    'E11.5': 'Diabetes\n- type 2\n-- with\n--- peripheral circulatory complication E11.5\nE11.5 Type 2 diabetes mellitus with peripheral circulatory complications',
+    'H36.0': 'Retinopathy\n- diabetic H36.0\nH36.0 Diabetic retinopathy',
   };
 
   // Convert slash format first
