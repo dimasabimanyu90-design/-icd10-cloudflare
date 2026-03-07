@@ -582,6 +582,9 @@ CONTOH: pasien di ICU dengan sepsis + DM + HT → sepsis=DU
 - reasoning: WAJIB berisi data klinis spesifik dari teks input (nilai lab, gejala, tindakan) yang menjadi dasar pemilihan kode. DILARANG hanya mengulang nama kode atau deskripsi kode. Contoh SALAH: "Dikategorikan sebagai O99.0 karena anemia kehamilan." Contoh BENAR: "Hb 9,1 g/dL (di bawah normal <10), pasien sedang hamil."
 - dagger_asterisk: "dagger"|"asterisk"|"none". ONLY if OFFICIALLY marked †/* in Vol.1. Most="none".
 - volume1_notes: includes/excludes/notes per code.
+  PERINGATAN: HANYA tulis volume1_notes yang BENAR-BENAR ada di Vol.1 ICD-10.
+  DILARANG mengarang/mengasumsikan includes/excludes yang tidak ada.
+  Jika tidak yakin → kosongkan volume1_notes: []
 
 ## VOL.3 INDEX RULES
 1. NEVER use anatomical site as lead term → always says "see condition".
@@ -661,7 +664,11 @@ Jika nilai abnormal ditemukan, tambahkan kode yang sesuai meskipun dokter tidak 
 
 ## MUSCULOSKELETAL (M00-M99)
 Site digit: 0=multi,1=shoulder,2=elbow,3=wrist,4=hand,5=hip,6=knee,7=ankle,8=other,9=unspec. NEVER omit.
-B95-B96 ONLY jika kuman disebut eksplisit DS: B95.6=S.aureus,B95.3=S.pneumoniae,B96.1=Klebsiella,B96.2=E.coli,B96.5=Pseudomonas.
+B95-B96: kode TAMBAHAN (additional code) — BUKAN dagger/asterisk, BUKAN pasangan †/*
+  PENTING: dagger_asterisk="none" dan paired_with=null untuk SEMUA kode B95.x/B96.x
+  J13/J14/J15.x juga BUKAN dagger → dagger_asterisk="none", paired_with=null
+  B95.3=S.pneumoniae | B95.6=S.aureus | B96.1=Klebsiella | B96.2=E.coli | B96.5=Pseudomonas
+  HANYA dikoding jika kuman disebut EKSPLISIT dari kultur/pemeriksaan mikrobiologi
 
 ## RESPIRATORY FAILURE RULES
 J96.0 WAJIB dikoding DS jika ditemukan SALAH SATU kondisi berikut di teks:
@@ -723,7 +730,10 @@ ICD-9-CM Vol.3 mencakup TIGA kategori — semua wajib dikoding jika disebutkan:
 ### CONTOH kasus pneumonia dengan lab + foto:
   Foto thorax → 87.44 | Kultur sputum → 90.41 | Lab darah (leukosit/CRP/troponin/HbA1c) → 90.59
   AGD → 89.65 | EKG → 89.52 | Nebulisasi → 93.94
-  WAJIB: jika teks menyebut "lab darah", "hasil laboratorium", "leukosit", "CRP", "Hb" → koding 90.59
+  WAJIB: jika teks menyebut "lab darah", "hasil laboratorium", "leukosit", "CRP", "Hb",
+  "troponin", "HbA1c", "kreatinin", "GDS", "GDP", "natrium", "kalium" → koding 90.59
+  90.59 = semua pemeriksaan kimia darah/hematologi rutin
+  JANGAN lewatkan 90.59 hanya karena tidak ada prosedur lab eksplisit — nilai lab di teks = bukti lab dilakukan
   WAJIB: jika teks menyebut "foto thorax", "rontgen dada", "chest x-ray" → koding 87.44
 
 ## EYE (H00-H59)
