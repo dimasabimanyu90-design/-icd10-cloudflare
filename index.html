@@ -783,54 +783,65 @@ function copyPath(btn, text) {
   });
 }
 
-function renderLeadPath(pathStr) {
+function renderLeadPath(pathStr, code, description) {
   if (!pathStr) return '';
 
   const codeRe = /\b([A-Z]\d{2}(\.\d+)?|\d{2}(\.\d+)*)\b/g;
-  // Final line: kode ICD di awal, boleh dengan atau tanpa deskripsi setelahnya
-  const isFinalLine = (s) => /^(CODE\s+)?([A-Z]\d{2}(\.\d+)?|\d{2}(\.\d+)*)/.test(s);
+  const isFinalLine = (s) => /^(CODE\s+)?[A-Z]\d{2}(\.\d+)?/.test(s) || /^\d{2}\.\d/.test(s);
   const highlightCodes = (s) => s.replace(codeRe, m => `<span class="lp-code">${m}</span>`);
 
-  const lines = pathStr.split('\n').map(l => l.trimEnd());
+  // Normalise dash format: "--tubal" → "- - tubal", "---x" → "- - - x"
+  const normalizeLine = (line) => {
+    // Ganti --+ di awal dengan spasi-separated dashes
+    return line.replace(/^(\s*)(--+)(\s*)/, (m, pre, dashes, post) => {
+      const level = dashes.length;
+      return pre + Array(level).fill('-').join(' ') + ' ';
+    });
+  };
 
-  // Jika AI tidak tulis baris final terpisah, extract dari subterm terakhir yang ada kode
-  // misal: "- - with delivery O60.1" → otomatis tambah baris "O60.1 ..."
-  const lastSubterm = [...lines].reverse().find(l => l.trim().startsWith('-'));
-  const hasExplicitFinal = lines.some(l => {
-    const t = l.trim();
-    return !t.startsWith('-') && isFinalLine(t);
-  });
+  const lines = pathStr.split('\n')
+    .map(l => normalizeLine(l.trimEnd()))
+    .filter(l => l.trim());
 
-  let rendered = lines.map(line => {
+  const hasExplicitFinal = lines.some(l => !l.trim().startsWith('-') && isFinalLine(l.trim()));
+
+  // Kode dari subterm terakhir
+  const subtermLines = lines.filter(l => l.trim().startsWith('-'));
+  const lastSubterm = subtermLines[subtermLines.length - 1] || '';
+  const autoCodeMatch = lastSubterm.match(/\b([A-Z]\d{2}(\.\d+)?)\s*$/) ||
+                        lastSubterm.match(/\b(\d{2}\.\d+)\s*$/);
+  const autoCode = autoCodeMatch ? autoCodeMatch[1] : null;
+
+  const rendered = lines.map(line => {
     const trimmed = line.trim();
     if (!trimmed) return '';
 
-    // Baris final kode (dimulai dengan kode ICD, bukan dash)
+    // Baris final kode (tidak dimulai dash)
     if (!trimmed.startsWith('-') && isFinalLine(trimmed)) {
       const cl = trimmed.replace(/^CODE\s+/, '');
       return `<span class="lp-final">${highlightCodes(cl)}</span>`;
     }
 
-    // Subterm dengan dash
+    // Subterm: split by space, hitung '-' berturut-turut di awal
     if (trimmed.startsWith('-')) {
-      const dashMatch = line.match(/^((?:-\s*)+)/);
-      const rawDashes = dashMatch ? dashMatch[1] : '- ';
-      const level = (rawDashes.match(/-/g) || []).length;
+      const parts = trimmed.split(/\s+/);
+      let level = 0;
+      while (level < parts.length && parts[level] === '-') level++;
       const dashLabel = Array(level).fill('-').join(' ') + ' ';
-      const rest = line.slice(rawDashes.length).trim();
+      const rest = parts.slice(level).join(' ');
       return `<span class="lp-indent">${dashLabel}</span>${highlightCodes(rest)}`;
     }
 
-    // Lead term / section header
     return `<span class="lp-section">${line}</span>`;
   }).filter(Boolean);
 
-  // Auto-inject baris final jika tidak ada — ambil kode dari subterm terakhir
-  if (!hasExplicitFinal && lastSubterm) {
-    const codeMatch = lastSubterm.match(/\b([A-Z]\d{2}(\.\d+)?|\d{2}(\.\d+)*)\s*$/);
-    if (codeMatch) {
-      const code = codeMatch[1];
-      rendered.push(`<span class="lp-final"><span class="lp-code">${code}</span></span>`);
+  // Auto-inject final line pakai kode+deskripsi dari field jika AI tidak tulis
+  if (!hasExplicitFinal) {
+    const finalCode = autoCode || code || '';
+    const finalDesc = description || '';
+    if (finalCode) {
+      const finalText = finalDesc ? `${finalCode} ${finalDesc}` : finalCode;
+      rendered.push(`<span class="lp-final">${highlightCodes(finalText)}</span>`);
     }
   }
 
@@ -900,7 +911,7 @@ function renderResults(result) {
       ${d.lead_term_path ? `<div class="lead-term-box">
         <div class="lead-label"><span>${t.labelVol3}</span>
         <button class="copy-btn" onclick="copyPath(this,\`${d.lead_term_path.replace(/`/g,"'")}\`)">📋 Copy</button></div>
-        <div class="lead-path">${renderLeadPath(d.lead_term_path)}</div>
+        <div class="lead-path">${renderLeadPath(d.lead_term_path, d.code, d.description)}</div>
       </div>` : ''}
       ${renderVol1Notes(d.volume1_notes)}
       ${d.reasoning ? `<div class="reasoning-box">${t.labelReasoning}${d.reasoning}</div>` : ''}
@@ -928,7 +939,7 @@ function renderResults(result) {
       ${p.lead_term_path ? `<div class="lead-term-box">
         <div class="lead-label"><span>${t.labelVol3proc}</span>
         <button class="copy-btn" onclick="copyPath(this,\`${p.lead_term_path.replace(/`/g,"'")}\`)">📋 Copy</button></div>
-        <div class="lead-path">${renderLeadPath(p.lead_term_path)}</div>
+        <div class="lead-path">${renderLeadPath(p.lead_term_path, p.code, p.description)}</div>
       </div>` : ''}
       ${renderVol1Notes(p.volume1_notes)}
       ${p.reasoning ? `<div class="reasoning-box">${t.labelReasoning}${p.reasoning}</div>` : ''}
