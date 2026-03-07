@@ -807,7 +807,7 @@ function renderResults(result) {
       </div>
       ${d.lead_term_path ? `<div class="lead-term-box">
         <div class="lead-label"><span>${t.labelVol3}</span>
-        <button class="copy-btn" onclick="copyPath(this,\`${d.lead_term_path.replace(/`/g,"'")}\`)">📋 Copy</button></div>
+        <button class="copy-btn" onclick="copyPath(this,\`${String(d.lead_term_path||'').replace(/`/g,"'")}\`)">📋 Copy</button></div>
         <div class="lead-path">${renderLeadPath(d.lead_term_path, d.code, d.description)}</div>
       </div>` : ''}
       ${renderVol1Notes(d.volume1_notes)}
@@ -835,7 +835,7 @@ function renderResults(result) {
       </div>
       ${p.lead_term_path ? `<div class="lead-term-box">
         <div class="lead-label"><span>${t.labelVol3proc}</span>
-        <button class="copy-btn" onclick="copyPath(this,\`${p.lead_term_path.replace(/`/g,"'")}\`)">📋 Copy</button></div>
+        <button class="copy-btn" onclick="copyPath(this,\`${String(p.lead_term_path||'').replace(/`/g,"'")}\`)">📋 Copy</button></div>
         <div class="lead-path">${renderLeadPath(p.lead_term_path, p.code, p.description)}</div>
       </div>` : ''}
       ${renderVol1Notes(p.volume1_notes)}
