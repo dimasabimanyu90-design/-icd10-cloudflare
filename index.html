@@ -684,13 +684,15 @@ ICD-9-CM Vol.3 mencakup TIGA kategori — semua wajib dikoding jika disebutkan:
   Histopatologi/PA → 91.49
 
 ### DILARANG:
-  Antibiotik IV, nebulisasi obat, infus cairan = BUKAN prosedur ICD-9-CM
-  "antibiotic therapy 80.1", "nebulization 93.91" — kode ini TIDAK VALID
-  Nebulisasi = tindakan medis rutin, TIDAK dikoding
+  Antibiotik IV, infus cairan/obat = BUKAN prosedur ICD-9-CM
+  "antibiotic therapy 80.1" — kode TIDAK VALID
+  "nebulization 93.91" — SALAH KODE! 93.91=IPPB bukan nebulisasi
+  Nebulisasi BOLEH dikoding → 93.94 "Respiratory medication administered by nebulizer"
+  IPPB → 93.91 | Oksigen tambahan → 93.96 | Ventilator → 96.70-96.72
 
 ### CONTOH kasus pneumonia dengan lab + foto:
   Foto thorax → 87.44 | Kultur sputum → 90.41 | Lab darah (leukosit/CRP) → 90.59
-  AGD → 89.65 | EKG → 89.52
+  AGD → 89.65 | EKG → 89.52 | Nebulisasi → 93.94
 
 ## EYE (H00-H59)
 Katarak — WAJIB spesifik, jangan langsung H26.9:
@@ -982,6 +984,11 @@ function getCleanPath(pathStr, code, description) {
     '88.72': 'Echocardiography\n- cardiac 88.72\n88.72 Diagnostic ultrasound of heart',
     '89.52': 'Electrocardiogram\n- routine ECG 89.52\n89.52 Electrocardiogram',
     '89.65': 'Measurement\n- arterial blood gases 89.65\n89.65 Measurement of arterial blood gases',
+    '93.94': 'Therapy\n- nebulizer 93.94\n93.94 Respiratory medication administered by nebulizer',
+    '93.96': 'Oxygenation\n- supplemental oxygen 93.96\n93.96 Other oxygen enrichment',
+    '93.91': 'Breathing\n- intermittent positive pressure (IPPB) 93.91\n93.91 Intermittent positive pressure breathing',
+    '96.04': 'Intubation\n- endotracheal 96.04\n96.04 Insertion of endotracheal tube',
+    '96.70': 'Ventilation\n- mechanical\n-- continuous 96.70\n96.70 Continuous invasive mechanical ventilation',
     '90.59': 'Examination\n- blood\n-- chemical 90.59\n90.59 Other blood chemistry',
     '90.41': 'Examination\n- sputum\n-- culture 90.41\n90.41 Bacteriological examination of sputum',
     '90.54': 'Examination\n- blood\n-- culture 90.54\n90.54 Blood culture',
@@ -1157,6 +1164,11 @@ function renderLeadPath(pathStr, code, description) {
     '88.72': 'Echocardiography\n- cardiac 88.72\n88.72 Diagnostic ultrasound of heart',
     '89.52': 'Electrocardiogram\n- routine ECG 89.52\n89.52 Electrocardiogram',
     '89.65': 'Measurement\n- arterial blood gases 89.65\n89.65 Measurement of arterial blood gases',
+    '93.94': 'Therapy\n- nebulizer 93.94\n93.94 Respiratory medication administered by nebulizer',
+    '93.96': 'Oxygenation\n- supplemental oxygen 93.96\n93.96 Other oxygen enrichment',
+    '93.91': 'Breathing\n- intermittent positive pressure (IPPB) 93.91\n93.91 Intermittent positive pressure breathing',
+    '96.04': 'Intubation\n- endotracheal 96.04\n96.04 Insertion of endotracheal tube',
+    '96.70': 'Ventilation\n- mechanical\n-- continuous 96.70\n96.70 Continuous invasive mechanical ventilation',
     '90.59': 'Examination\n- blood\n-- chemical 90.59\n90.59 Other blood chemistry',
     '90.41': 'Examination\n- sputum\n-- culture 90.41\n90.41 Bacteriological examination of sputum',
     '90.54': 'Examination\n- blood\n-- culture 90.54\n90.54 Blood culture',
