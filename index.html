@@ -679,7 +679,10 @@ Pneumonia — WAJIB spesifik jika kuman disebutkan:
   J15.2=Staph | J15.3=Strep B | J15.4=other Strep | J15.7=Mycoplasma
   J18.0=bronchopneumonia | J18.1=lobar | J18.9=unspecified
   Jika kultur/BTA/PCR menyebutkan kuman → WAJIB pakai J13-J16, BUKAN J18.9
-  S.pneumoniae di kultur → J13 DU + B95.3 DS
+  S.pneumoniae di kultur → J13 DU + B95.3 DS (KEDUANYA WAJIB, B95.3 JANGAN DILEWAT)
+  Setiap kali J13 muncul → B95.3 WAJIB ada sebagai DS
+  Setiap kali J15.0 muncul → B96.1 WAJIB ada sebagai DS
+  Setiap kali J15.2 muncul → B95.6 WAJIB ada sebagai DS
   J18.9 HANYA jika kuman benar-benar tidak diketahui
 
 ## ICD-9-CM PROCEDURE RULES
@@ -718,8 +721,10 @@ ICD-9-CM Vol.3 mencakup TIGA kategori — semua wajib dikoding jika disebutkan:
   IPPB → 93.91 | Oksigen tambahan → 93.96 | Ventilator → 96.70-96.72
 
 ### CONTOH kasus pneumonia dengan lab + foto:
-  Foto thorax → 87.44 | Kultur sputum → 90.41 | Lab darah (leukosit/CRP) → 90.59
+  Foto thorax → 87.44 | Kultur sputum → 90.41 | Lab darah (leukosit/CRP/troponin/HbA1c) → 90.59
   AGD → 89.65 | EKG → 89.52 | Nebulisasi → 93.94
+  WAJIB: jika teks menyebut "lab darah", "hasil laboratorium", "leukosit", "CRP", "Hb" → koding 90.59
+  WAJIB: jika teks menyebut "foto thorax", "rontgen dada", "chest x-ray" → koding 87.44
 
 ## EYE (H00-H59)
 Katarak — WAJIB spesifik, jangan langsung H26.9:
@@ -997,6 +1002,7 @@ function getCleanPath(pathStr, code, description) {
     'J18.9': 'Pneumonia\n- unspecified J18.9\nJ18.9 Pneumonia, unspecified',
     'J96.0': 'Failure\n- respiratory\n-- acute J96.0\nJ96.0 Acute respiratory failure',
     'J96.1': 'Failure\n- respiratory\n-- chronic J96.1\nJ96.1 Chronic respiratory failure',
+    'J96.1': 'Failure\n- respiratory\n-- chronic J96.1\nJ96.1 Chronic respiratory failure',
     'B95.3': 'Streptococcus\n- pneumoniae\n-- as cause of disease classified elsewhere B95.3\nB95.3 Streptococcus pneumoniae as the cause of diseases classified elsewhere',
     'B96.1': 'Klebsiella\n- pneumoniae\n-- as cause of disease classified elsewhere B96.1\nB96.1 Klebsiella pneumoniae as the cause of diseases classified elsewhere',
     'B96.2': 'Escherichia\n- coli\n-- as cause of disease classified elsewhere B96.2\nB96.2 Escherichia coli as the cause of diseases classified elsewhere',
@@ -1176,6 +1182,7 @@ function renderLeadPath(pathStr, code, description) {
     'J18.1': 'Pneumonia\n- lobar J18.1\nJ18.1 Lobar pneumonia, unspecified',
     'J18.9': 'Pneumonia\n- unspecified J18.9\nJ18.9 Pneumonia, unspecified',
     'J96.0': 'Failure\n- respiratory\n-- acute J96.0\nJ96.0 Acute respiratory failure',
+    'J96.1': 'Failure\n- respiratory\n-- chronic J96.1\nJ96.1 Chronic respiratory failure',
     'J96.1': 'Failure\n- respiratory\n-- chronic J96.1\nJ96.1 Chronic respiratory failure',
     'B95.3': 'Streptococcus\n- pneumoniae\n-- as cause of disease classified elsewhere B95.3\nB95.3 Streptococcus pneumoniae as the cause of diseases classified elsewhere',
     'B96.1': 'Klebsiella\n- pneumoniae\n-- as cause of disease classified elsewhere B96.1\nB96.1 Klebsiella pneumoniae as the cause of diseases classified elsewhere',
