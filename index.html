@@ -565,6 +565,20 @@ Kaidah EXCLUDES: Jika suatu kondisi tercantum sebagai "Excludes" di Vol.1 suatu 
 Urutan DS gemelli+TTTS+IUFD: O36.4 DU → O43.0† DS → O34.2 DS(jika bekas SC) → Z37.x DS terakhir.
 Z37 WAJIB DS terakhir: Z37.0=single live | Z37.1=single still | Z37.2=twins both live | Z37.3=twins one live one still | Z37.4=twins both still
 O99.0=anaemia in pregnancy (Hb<10) DS. O34.2=bekas SC DS (ALWAYS).
+WAJIB scan semua nilai pemeriksaan fisik, lab, dan penunjang dalam teks input.
+Jika nilai abnormal ditemukan, tambahkan kode yang sesuai meskipun dokter tidak menulisnya di diagnosis:
+- Hb <10 + hamil → O99.0 DS | Hb <10 non-hamil → D64.9
+- Hb <10 + non-hamil + kronik → D63.8† (anemia in chronic disease)
+- TD ≥140/90 + hamil → O13/O14 | TD ≥140/90 non-hamil → I10
+- GDS >200 atau GDP >126 → pertimbangkan E11/E14 atau O24 (jika hamil)
+- GDS/GDP rendah (<70) → E16.0 hipoglikemia
+- Natrium rendah (<135) → E87.1 hiponatremia
+- Kalium rendah (<3.5) → E87.6 hipokalemia | Kalium tinggi (>5.5) → E87.5 hiperkalemia
+- Kreatinin tinggi → N19 gagal ginjal / N17/N18 sesuai konteks
+- Leukosit tinggi (>11.000) tanpa dx infeksi eksplisit → pertimbangkan sebagai supporting dx
+- Saturasi O2 rendah (<95%) → pertimbangkan J96 / R09.0
+- Nilai lain yang jelas abnormal: tetap kode sesuai konteks klinis
+- JANGAN abaikan nilai abnormal hanya karena dokter tidak menyebutnya di diagnosis.
 
 ## R CODES
 - Do NOT code R if definitive dx explains symptom.
