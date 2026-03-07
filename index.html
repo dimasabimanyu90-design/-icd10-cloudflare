@@ -525,6 +525,7 @@ CLINICAL NOTE: ${input}
   - coronary (balloon) 00.66
   00.66 Percutaneous transluminal coronary angioplasty
 - confidence: integer 1-99, estimasi keyakinan koding. WAJIB diisi, jangan kosong atau null.
+- reasoning: WAJIB berisi data klinis spesifik dari teks input (nilai lab, gejala, tindakan) yang menjadi dasar pemilihan kode. DILARANG hanya mengulang nama kode atau deskripsi kode. Contoh SALAH: "Dikategorikan sebagai O99.0 karena anemia kehamilan." Contoh BENAR: "Hb 9,1 g/dL (di bawah normal <10), pasien sedang hamil."
 - dagger_asterisk: "dagger"|"asterisk"|"none". ONLY if OFFICIALLY marked †/* in Vol.1. Most="none".
 - volume1_notes: includes/excludes/notes per code.
 
@@ -557,14 +558,18 @@ O03-O07 4th digit (COMPLETE vs INCOMPLETE — tentukan dulu sebelum digit kompli
   INCOMPLETE (belum tindakan):     .0=infeksi | .1=perdarahan | .2=emboli | .4=tanpa komplikasi
   +O08.x selalu DS: O08.0=infection | O08.1=haemorrhage | O08.3=shock | O08.9=unspecified
   "infeksi setelah kuretase"→O03.5+O08.0 | "infeksi belum kuret"→O03.0+O08.0 | "perdarahan belum kuret"→O03.1+O08.1 | "incomplete tanpa komplikasi"→O03.4+O08.9 | "complete tanpa komplikasi"→O03.9+O08.9
-O60: .0=tanpa delivery | .1=preterm delivery (SC prematurus→O60.1 DU) | .2=term delivery
-O30.0=twin pregnancy DS. ALWAYS jika gemelli.
-TTTS→O43.0† DS. IUFD→O36.4 DS. TTTS+IUFD: O36.4 DU+O43.0 DS.
-Kaidah INCLUDES: Jika suatu kondisi sudah tercantum sebagai "Includes" di Vol.1 suatu kode, kondisi tersebut TIDAK dicoding terpisah — cukup tambahkan volume1_notes: {type:"includes", text:"..."} pada kode tersebut. Berlaku untuk semua kode, contoh: Twin pregnancy sudah Includes di O43.0/O36.4, jadi O30.0 tidak perlu dicoding.
+O60: .0=tanpa delivery | .1=preterm delivery (partus prematurus+SC→O60.1 DU) | .2=term delivery
+O34.2=bekas SC/previous caesarean scar → WAJIB DS di SEMUA kasus, bukan hanya TTTS/IUFD.
+TTTS→O43.0† DS. IUFD→O36.4 DS.
+TTTS+IUFD dengan partus prematurus: O60.1 DU → O43.0† DS → O36.4 DS → O34.2 DS → Z37.x DS terakhir.
+TTTS+IUFD tanpa partus prematurus: O36.4 DU → O43.0† DS → O34.2 DS(jika ada) → Z37.x DS terakhir.
+Kaidah INCLUDES: Jika suatu kondisi sudah tercantum sebagai "Includes" di Vol.1 suatu kode, kondisi tersebut TIDAK dicoding terpisah — cukup tambahkan volume1_notes: {type:"includes", text:"..."} pada kode tersebut. Berlaku untuk semua kode.
+CONTOH Includes: O30.0 (Twin pregnancy) sudah tercantum sebagai Includes di bawah O43.0 dan O36.4 → O30.0 TIDAK dicoding terpisah, cukup note Includes saja.
+CONTOH Includes: jangan coding kondisi lain yang sudah jelas tercakup Includes di kode utama.
 Kaidah EXCLUDES: Jika suatu kondisi tercantum sebagai "Excludes" di Vol.1 suatu kode, kondisi tersebut WAJIB dikoding terpisah dengan kode yang sesuai. Tambahkan volume1_notes: {type:"excludes", text:"..."} sebagai pengingat, lalu pastikan kode excluded tersebut muncul sebagai diagnosa/prosedur tersendiri.
-Urutan DS gemelli+TTTS+IUFD: O36.4 DU → O43.0† DS → O34.2 DS(jika bekas SC) → Z37.x DS terakhir.
+Urutan koding kasus Ny.X (partus prematurus+SC+gemelli+TTTS+IUFD+bekas SC): O60.1 DU → O43.0† DS → O36.4 DS → O34.2 DS → O99.0 DS(jika Hb<10) → Z37.x DS terakhir.
 Z37 WAJIB DS terakhir: Z37.0=single live | Z37.1=single still | Z37.2=twins both live | Z37.3=twins one live one still | Z37.4=twins both still
-O99.0=anaemia in pregnancy (Hb<10) DS. O34.2=bekas SC DS (ALWAYS).
+O99.0=anaemia in pregnancy: HANYA jika nilai Hb <10 ditemukan di teks (bukan hanya kata "anemia"). Reasoning JANGAN hanya ulang nama kode atau diagnosis — jelaskan data klinis yang jadi dasar, contoh: "Hb 9,1 g/dL (normal ≥10), pasien hamil".
 WAJIB scan semua nilai pemeriksaan fisik, lab, dan penunjang dalam teks input.
 Jika nilai abnormal ditemukan, tambahkan kode yang sesuai meskipun dokter tidak menulisnya di diagnosis:
 - Hb <10 + hamil → O99.0 DS | Hb <10 non-hamil → D64.9
