@@ -397,7 +397,7 @@ FIELD RULES:
   Rules: use real code numbers (S72.3, O34.2, 74.1 etc), never write "CODE". Last line = real code + full official description.
 - Dagger†=etiology code, Asterisk*=manifestation code (always DS, never DU), always pair together.
 - Vol.1: report includes/excludes/notes per code.
-- Validate: asterisk as DU=ERROR, missing pair=ERROR, excludes violated=ERROR, wrong DU=WARNING, missing DS=WARNING.
+- Validate: asterisk as DU=ERROR, missing pair=ERROR, excludes violated=ERROR, wrong DU=WARNING, missing DS=WARNING, R-code as DU=WARNING (add message that diagnosis is provisional and must be verified after complete workup), R-code used when definitive diagnosis exists=ERROR.
 - Abbreviations: SC/SCTP=sectio caesarea transperitonealis, TTTS=twin-to-twin transfusion syndrome, IUFD=intrauterine fetal death, gemelli=twins, partus prematurus=preterm labour, kista ovarium=ovarian cyst, kistektomi=cystectomy, bekas SC=previous caesarean scar, HT=hypertension, DM=diabetes mellitus, ORIF=open reduction internal fixation, ai=atas indikasi.
 
 SPECIFICITY RULES - always choose the most specific code available:
@@ -412,6 +412,17 @@ SPECIFICITY RULES - always choose the most specific code available:
 - For hypertension: specify primary (I10) vs secondary, with/without heart disease
 - For stroke: specify haemorrhagic (I61.x) vs ischaemic (I63.x) vs unspecified (I64), and location
 - General rule: if clinical note gives enough detail → use specific 4th/5th digit. Only use .9 (unspecified) when truly no further detail available.
+
+CHAPTER XVIII - SYMPTOMS & SIGNS (R CODES) RULES:
+- Do NOT code R codes if a definitive diagnosis already explains the symptom (e.g. stroke + headache → do not add R51, headache is integral to stroke).
+- DO code R codes as DS if the symptom/sign is NOT integral to the main diagnosis and adds clinical information.
+- DO use R codes as DU if no definitive diagnosis was established after study — this is valid temporary/provisional coding. Add validation WARNING: "Kode R digunakan karena diagnosis definitif belum ditegakkan. Verifikasi setelah hasil pemeriksaan lengkap." 
+- DO use R codes when abnormal lab/investigation results are clinically significant and not explained by existing diagnosis.
+- Examples:
+  * Fever unknown origin, no diagnosis → R50.9 as DU (valid, add WARNING)
+  * DM + hyperglycaemia → do NOT add R73, already covered by E11
+  * Post-op unexplained fever → R50.9 as DS (valid)
+  * Stroke + aphasia → do NOT add R47, integral to stroke
 
 Return ONLY valid JSON, no markdown:
 {"summary":"...","du_reasoning":"...","validations":[{"type":"ERROR|WARNING|INFO","message":"..."}],"diagnoses":[{"role":"DU","code":"O60.1","dagger_asterisk":"none|dagger|asterisk","description":"ENGLISH official ICD name","description_id":"Nama resmi Bahasa Indonesia","category":"Chapter XV - Pregnancy childbirth...","confidence":92,"lead_term_path":"Injury\n- fracture\n- - lower limb\n- - - femur\n- - - - shaft S72.3\nS72.3 Fracture of shaft of femur","volume1_notes":[{"type":"includes|excludes|note|use_additional|code_first","text":"..."}],"paired_with":"","reasoning":"..."}],"procedures":[{"code":"74.1","description":"ENGLISH official ICD-9-CM name","description_id":"Nama resmi Bahasa Indonesia","category":"ICD-9-CM Vol.3 - ...","confidence":95,"lead_term_path":"...complete path...","volume1_notes":[],"reasoning":"..."}]}`;
