@@ -495,7 +495,7 @@ CLINICAL NOTE: ${input}
   N83.2="Other and unspecified ovarian cysts", O34.2="Maternal care due to uterine scar from previous surgery"
   74.1="Low cervical caesarean section", 65.29="Other local excision or destruction of ovary"
 - description_id: Indonesian translation of official title.
-- lead_term_path: STRING (bukan array). Tampilkan hierarki Vol.3 lengkap. WAJIB 3 bagian:
+- lead_term_path: STRING dengan \n (newline) antar baris. BUKAN array, BUKAN satu baris. Tampilkan hierarki Vol.3 lengkap. WAJIB 3 bagian:
   [1] Lead term  [2] Subterm (- / - - / - - -)  [3] Baris final: CODE deskripsi resmi
   DILARANG: arrow(→), skip level, lead term langsung ke final tanpa subterm, kode tanpa deskripsi.
   DILARANG: baris final hilang — SELALU tulis "CODE Deskripsi resmi" setelah subterm terakhir.
@@ -690,36 +690,35 @@ function renderLeadPath(pathStr, code, description) {
   // AI kadang kirim semua dalam satu baris dengan " - " sebagai separator
   // Konversi ke format vertikal dengan newline
   if (!pathStr.includes('\n')) {
+    // Format 1: "LeadTerm - subterm - subterm - CODE desc" (separator " - ")
     const parts = pathStr.split(' - ');
     if (parts.length >= 2) {
-      // Cari index bagian final (dimulai kode ICD)
       const finalIdx = parts.findIndex(p => /^[A-Z]\d{2}/.test(p.trim()) || /^\d{2}\./.test(p.trim()));
       let lines = [];
       parts.forEach((part, i) => {
         const trimmed = part.trim();
         if (i === 0) {
-          // Lead term
           lines.push(trimmed);
         } else if (finalIdx >= 0 && i === finalIdx) {
-          // Bagian final: taruh sebagai subterm terakhir DENGAN kode, lalu tambah baris final terpisah
-          const prevLevel = i - 1;
-          const dashLabel = Array(prevLevel).fill('-').join(' ') + ' ';
-          // Subterm sebelumnya (index i-1) tidak punya kode, kita gabungkan kode ke subterm sebelumnya
-          // Ambil subterm sebelumnya dan tambahkan kode
-          if (lines.length > 0 && lines[lines.length - 1].startsWith(Array(prevLevel).fill('-').join(' '))) {
+          if (lines.length > 0) {
             lines[lines.length - 1] = lines[lines.length - 1] + ' ' + trimmed.split(' ')[0];
           }
-          // Tambah baris final lengkap
           lines.push(trimmed);
         } else {
-          // Subterm biasa
           lines.push(Array(i).fill('-').join(' ') + ' ' + trimmed);
         }
       });
       pathStr = lines.join('\n');
+    } else {
+      // Format 2: satu kalimat panjang tanpa separator (mis. "Infection following abortion, ectopic...")
+      // Jadikan lead term di baris 1, lalu inject baris final dari code+description
+      const hasCode = /\b[A-Z]\d{2}(\.\d+)?\b/.test(pathStr) || /\b\d{2}\.\d+\b/.test(pathStr);
+      if (!hasCode && (code || description)) {
+        const finalLine = description ? (code + ' ' + description) : code;
+        pathStr = pathStr + '\n' + finalLine;
+      }
     }
   }
-
   const codeRe = /\b([A-Z]\d{2}(\.\d+)?|\d{2}(\.\d+)*)\b/g;
   const isFinalLine = (s) => /^(CODE\s+)?[A-Z]\d{2}(\.\d+)?/.test(s) || /^\d{2}\.\d/.test(s);
   const highlightCodes = (s) => s.replace(codeRe, m => `<span class="lp-code">${m}</span>`);
