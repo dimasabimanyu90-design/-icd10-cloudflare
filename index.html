@@ -488,6 +488,20 @@ CLINICAL NOTE: ${input}
 - Diagnoses: ONLY explicitly stated. 1 DU + ALL DS. No dx → diagnoses:[] unless strong objective evidence.
 - Procedures: ONLY explicitly mentioned. None → procedures:[]. Code ALL if multiple.
 
+## DU SELECTION RULES (WHO ICD-10 Vol.2)
+DU = kondisi yang menjadi alasan UTAMA pasien dirawat/diterapi pada episode ini.
+1. Kondisi yang ditangani/dioperasi = DU. Komorbid = DS.
+   CONTOH: pasien operasi katarak + riwayat DM → DU=katarak (H26.x), DS=DM (E11.x)
+   CONTOH: STEMI + riwayat DM → DU=STEMI (I21.x), DS=DM (E11.x)
+2. Jika ada dua kondisi yang sama-sama ditangani → pilih yang paling banyak menggunakan sumber daya.
+3. Gejala/keluhan TIDAK boleh jadi DU jika diagnosis definitif sudah ada.
+4. Komorbid (DM, HT, dll) = DS, KECUALI komorbid itu yang menjadi tujuan utama perawatan.
+5. Jika DM + komplikasi mata (katarak/retinopati): 
+   - Katarak senilis (H25/H26) → DU jika operasi katarak adalah alasan utama rawat
+   - E11.3† = DS (DM dengan komplikasi oftalmik)
+   - H36.0* = DS (diabetic retinopathy) — HANYA jika retinopati ditemukan/disebutkan
+   - Katarak saja tanpa retinopati → TIDAK perlu H36.0*
+
 ## FIELDS
 - description: EXACT Vol.1 official code title verbatim. NOT patient diagnosis. NOT paraphrase.
   H72.1="Attic perforation of tympanic membrane" NOT "Chronic suppurative otitis media"
@@ -637,10 +651,15 @@ Drug-induced (Y40-Y59) ONLY jika obat disebut eksplisit: Y42=steroid,Y44=antikoa
 E10=DM type1, E11=DM type2. DM WAJIB pakai 4th digit komplikasi:
   E11.0=coma | E11.1=ketoacidosis | E11.2=renal | E11.3=ophthalmic | E11.4=neurological
   E11.5=peripheral circulatory | E11.6=other specified | E11.7=multiple | E11.9=without complication
-  Jika ada retinopati/katarak/glaukoma diabetik → E11.3 (bukan E11.9)
-  Jika ada nefropati/proteinuria/gagal ginjal diabetik TERSEBUT EKSPLISIT → E11.2
-  Jika ada neuropati diabetik TERSEBUT EKSPLISIT → E11.4
-  DILARANG asumsi komplikasi tanpa bukti eksplisit di teks — "riwayat DM" saja → E11.9
+  Jika ada retinopati diabetik eksplisit → E11.3† + H36.0* (keduanya wajib)
+  Jika ada katarak + DM → E11.3† DS (katarak = komplikasi oftalmik DM)
+    CATATAN: katarak senilis pada pasien DM tetap E11.3 karena DM memperburuk katarak
+    H36.0* HANYA jika retinopati ditemukan/disebutkan — TIDAK otomatis muncul hanya karena DM
+  Jika ada glaukoma diabetik eksplisit → E11.3† DS
+  Jika ada nefropati/proteinuria/gagal ginjal diabetik EKSPLISIT → E11.2
+  Jika ada neuropati diabetik EKSPLISIT → E11.4
+  DILARANG asumsi komplikasi tanpa bukti eksplisit di teks — "riwayat DM" saja tanpa komplikasi → E11.9
+  GDS tinggi saja tanpa komplikasi organ → E11.9 (bukan E11.3/E11.2)
 H36.0=diabetic retinopathy (WAJIB .0, bukan H36 saja).
 Pasangan dagger-asterisk DM+retinopati: E11.3† DU + H36.0* DS — KEDUANYA WAJIB dikoding.
 Laser fotokoagulasi retina → ICD-9-CM 14.24 "Destruction of chorioretinal lesion by laser photocoagulation" (BUKAN Z51.4, BUKAN 14.25). 14.25=unspecified type (hindari jika laser disebut eksplisit).
@@ -875,6 +894,15 @@ function getCleanPath(pathStr, code, description) {
     'E11.4': 'Diabetes\n- type 2\n-- with\n--- neurological complication E11.4\nE11.4 Type 2 diabetes mellitus with neurological complications',
     'E11.5': 'Diabetes\n- type 2\n-- with\n--- peripheral circulatory complication E11.5\nE11.5 Type 2 diabetes mellitus with peripheral circulatory complications',
     'H36.0': 'Retinopathy\n- diabetic H36.0\nH36.0 Diabetic retinopathy',
+    'H25.1': 'Cataract\n- senile\n-- nuclear H25.1\nH25.1 Senile nuclear cataract',
+    'H25.2': 'Cataract\n- senile\n-- morgagnian H25.2\nH25.2 Morgagnian cataract',
+    'H25.9': 'Cataract\n- senile\n-- unspecified H25.9\nH25.9 Senile cataract, unspecified',
+    'H26.0': 'Cataract\n- infantile\n-- and juvenile H26.0\nH26.0 Infantile and juvenile cataract',
+    'H26.1': 'Cataract\n- senile\n-- immature H26.1\nH26.1 Cataract, senile, immature',
+    'H26.9': 'Cataract\n- unspecified H26.9\nH26.9 Cataract, unspecified',
+    '13.41': 'Extraction\n- lens\n-- phacoemulsification\n--- without IOL 13.41\n13.41 Phacoemulsification and aspiration of cataract',
+    '13.71': 'Extraction\n- lens\n-- extracapsular\n--- by temporal inferior route 13.71\n13.71 Extracapsular extraction of lens by temporal inferior route',
+    '13.72': 'Extraction\n- lens\n-- phacoemulsification\n--- with insertion of intraocular lens prosthesis 13.72\n13.72 Phacoemulsification and insertion of intraocular lens prosthesis',
   };
 
   // Convert slash format first
@@ -1014,6 +1042,15 @@ function renderLeadPath(pathStr, code, description) {
     'E11.4': 'Diabetes\n- type 2\n-- with\n--- neurological complication E11.4\nE11.4 Type 2 diabetes mellitus with neurological complications',
     'E11.5': 'Diabetes\n- type 2\n-- with\n--- peripheral circulatory complication E11.5\nE11.5 Type 2 diabetes mellitus with peripheral circulatory complications',
     'H36.0': 'Retinopathy\n- diabetic H36.0\nH36.0 Diabetic retinopathy',
+    'H25.1': 'Cataract\n- senile\n-- nuclear H25.1\nH25.1 Senile nuclear cataract',
+    'H25.2': 'Cataract\n- senile\n-- morgagnian H25.2\nH25.2 Morgagnian cataract',
+    'H25.9': 'Cataract\n- senile\n-- unspecified H25.9\nH25.9 Senile cataract, unspecified',
+    'H26.0': 'Cataract\n- infantile\n-- and juvenile H26.0\nH26.0 Infantile and juvenile cataract',
+    'H26.1': 'Cataract\n- senile\n-- immature H26.1\nH26.1 Cataract, senile, immature',
+    'H26.9': 'Cataract\n- unspecified H26.9\nH26.9 Cataract, unspecified',
+    '13.41': 'Extraction\n- lens\n-- phacoemulsification\n--- without IOL 13.41\n13.41 Phacoemulsification and aspiration of cataract',
+    '13.71': 'Extraction\n- lens\n-- extracapsular\n--- by temporal inferior route 13.71\n13.71 Extracapsular extraction of lens by temporal inferior route',
+    '13.72': 'Extraction\n- lens\n-- phacoemulsification\n--- with insertion of intraocular lens prosthesis 13.72\n13.72 Phacoemulsification and insertion of intraocular lens prosthesis',
   };
 
   // Convert slash format first
