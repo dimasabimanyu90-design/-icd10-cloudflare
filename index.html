@@ -373,7 +373,7 @@ PROCEDURES: Code ONLY explicitly mentioned procedures. None mentioned → proced
 - description_id: Indonesian translation of official title.
 - lead_term_path: Complete Vol.3 hierarchy all levels, REAL code numbers (never placeholder "CODE").
   Format: Term\n- subterm\n- - subterm CODE\nCODE Full description
-- Dagger†=etiology (DU if primary), Asterisk*=manifestation (always DS, never DU), always paired.
+- dagger_asterisk field: ONLY set "dagger" or "asterisk" if the code is OFFICIALLY marked with † or * in ICD-10 Vol.1 tabular list. Most codes are "none". Do NOT set dagger/asterisk just because two codes are paired or related. Dagger†=official etiology code in Vol.1, Asterisk*=official manifestation code in Vol.1, always coded as a pair when both exist.
 - volume1_notes: report includes/excludes/notes per code.
 
 ## INCLUDES / EXCLUDES
