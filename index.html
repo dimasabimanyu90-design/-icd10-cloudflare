@@ -646,6 +646,16 @@ Jika nilai abnormal ditemukan, tambahkan kode yang sesuai meskipun dokter tidak 
 Site digit: 0=multi,1=shoulder,2=elbow,3=wrist,4=hand,5=hip,6=knee,7=ankle,8=other,9=unspec. NEVER omit.
 B95-B96 ONLY jika kuman disebut eksplisit DS: B95.6=S.aureus,B95.3=S.pneumoniae,B96.1=Klebsiella,B96.2=E.coli,B96.5=Pseudomonas.
 
+## RESPIRATORY FAILURE RULES
+J96.0 WAJIB dikoding DS jika ditemukan SALAH SATU kondisi berikut di teks:
+  - SpO2 / saturasi O2 < 95% (contoh: "SpO2 91%", "saturasi 88%")
+  - RR / laju napas > 24x/menit
+  - Sesak napas berat + pneumonia/infeksi paru
+  - Kebutuhan oksigen tambahan / O2 nasal kanul / masker
+  CONTOH: SpO2 91% + RR 28x/menit pada pneumonia → WAJIB J96.0 DS
+  J96.0=acute | J96.1=chronic | J96.9=unspecified
+  JANGAN lewatkan nilai SpO2/RR di teks input!
+
 ## PNEUMONIA RULES
 Pneumonia — WAJIB spesifik jika kuman disebutkan:
   J13=S.pneumoniae | J14=H.influenzae | J15.0=Klebsiella | J15.1=Pseudomonas
