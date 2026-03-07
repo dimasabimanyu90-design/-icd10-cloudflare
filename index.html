@@ -145,6 +145,7 @@ textarea::placeholder { color: #b8b0a6; font-style: italic; }
   .quota-strip{padding:6px 12px; gap:10px;} .quota-model-wrap{display:none;} .quota-reset{display:none;}
 }
 </style>
+<script src="known-paths.js"></script>
 </head>
 <body>
 
@@ -714,6 +715,18 @@ Pneumonia — WAJIB spesifik jika kuman disebutkan:
     J15.1 → B96.5 DS wajib
     J15.4 → B96.2 DS wajib (E.coli) atau sesuai kuman
 
+## APPENDIX RULES
+Appendektomi:
+  47.01 = Laparoscopic appendectomy (laparoskopik)
+  47.09 = Other appendectomy (open/konvensional)
+  54.84 = Laparoscopic lysis of peritoneal adhesions — BUKAN appendektomi
+  JANGAN gunakan 54.84 untuk appendektomi laparoskopik
+Appendisitis:
+  K35.2 = dengan generalized peritonitis
+  K35.3 = dengan peritoneal abscess
+  K35.8 = tanpa peritonitis (appendisitis akut biasa)
+  K37 = unspecified (hindari jika ada info akut/kronik)
+
 ## ICD-9-CM PROCEDURE RULES
 ICD-9-CM Vol.3 mencakup TIGA kategori — semua wajib dikoding jika disebutkan:
 
@@ -982,101 +995,7 @@ function getCleanPath(pathStr, code, description) {
   if (Array.isArray(pathStr)) pathStr = pathStr.join('\n');
   else pathStr = String(pathStr);
 
-  const KNOWN_PATHS = {
-    'O36.4': 'Death\n- fetus, fetal\n-- (near term) O36.4\nO36.4 Maternal care for intrauterine death',
-    'O43.0': 'Syndrome\n- transfusion\n-- feto-fetal O43.0\nO43.0 Placental transfusion syndromes',
-    'O30.0': 'Pregnancy\n- complicated by\n-- multiple gestation\n--- twin O30.0\nO30.0 Twin pregnancy',
-    'O60.1': 'Labour\n- premature\n-- with delivery O60.1\nO60.1 Preterm labour with preterm delivery',
-    'O60.0': 'Labour\n- premature O60.0\nO60.0 Preterm labour without delivery',
-    'O34.2': 'Section\n- cesarean (for)\n-- previous\n--- cesarean section O34.2\nO34.2 Maternal care due to uterine scar from previous surgery',
-    'O03.5': 'Abortion\n- spontaneous\n-- complicated by\n--- genital tract and pelvic infection O03.5\nO03.5 Spontaneous abortion, complete, complicated by genital tract and pelvic infection',
-    'O03.0': 'Abortion\n- spontaneous\n-- complicated by\n--- genital tract and pelvic infection O03.0\nO03.0 Spontaneous abortion, incomplete, complicated by genital tract and pelvic infection',
-    'O03.9': 'Abortion\n- spontaneous\n-- unspecified O03.9\nO03.9 Spontaneous abortion, unspecified',
-    'O03.4': 'Abortion\n- spontaneous\n-- incomplete, without complication O03.4\nO03.4 Spontaneous abortion, incomplete, without complication',
-    'O08.0': 'Complications\n- following\n-- abortion and ectopic and molar pregnancy\n--- infection O08.0\nO08.0 Genital tract and pelvic infection following abortion and ectopic and molar pregnancy',
-    'O00.1': 'Pregnancy\n- ectopic\n-- tubal\n--- ruptured O00.1\nO00.1 Tubal pregnancy',
-    'Z37.3': 'Outcome of delivery\n- twins\n-- one liveborn one stillborn Z37.3\nZ37.3 Twins, one liveborn and one stillborn',
-    'Z37.0': 'Outcome of delivery\n- single\n-- liveborn Z37.0\nZ37.0 Single liveborn infant',
-    'N83.2': 'Cyst\n- ovary, ovarian N83.2\nN83.2 Other and unspecified ovarian cysts',
-    'S72.3': 'Fracture\n- femur\n-- shaft S72.3\nS72.3 Fracture of shaft of femur',
-    'S72.0': 'Fracture\n- femur\n-- neck S72.0\nS72.0 Fracture of neck of femur',
-    'S72.1': 'Fracture\n- femur\n-- pertrochanteric S72.1\nS72.1 Pertrochanteric fracture',
-    'S72.9': 'Fracture\n- femur S72.9\nS72.9 Fracture of femur, unspecified',
-    '79.05': 'Reduction\n- fracture\n-- femur\n--- closed 79.05\n79.05 Closed reduction of fracture without internal fixation, femur',
-    '79.15': 'Reduction\n- fracture\n-- femur\n--- open\n---- with internal fixation 79.15\n79.15 Open reduction of fracture with internal fixation, femur',
-    '79.35': 'Nailing\n- intramedullary\n-- femur 79.35\n79.35 Open reduction of fracture with internal fixation, femur',
-    '79.36': 'Nailing\n- intramedullary\n-- tibia 79.36\n79.36 Open reduction of fracture with internal fixation, tibia and fibula',
-    '00.66': 'Angioplasty\n- coronary (balloon) 00.66\n00.66 Percutaneous transluminal coronary angioplasty',
-    '36.06': 'Insertion\n- stent\n-- coronary artery 36.06\n36.06 Insertion of coronary artery stent',
-    '36.01': 'Bypass\n- coronary artery 36.01\n36.01 Single coronary artery bypass using saphenous vein graft',
-    '14.24': 'Photocoagulation\n- retina\n-- for\n--- destruction of lesion\n---- laser 14.24\n14.24 Destruction of chorioretinal lesion by laser photocoagulation',
-    '14.25': 'Photocoagulation\n- retina\n-- for\n--- destruction of lesion\n---- unspecified type 14.25\n14.25 Destruction of chorioretinal lesion by photocoagulation of unspecified type',
-    '14.23': 'Photocoagulation\n- retina\n-- for\n--- destruction of lesion\n---- xenon arc 14.23\n14.23 Destruction of chorioretinal lesion by xenon arc photocoagulation',
-    '14.26': 'Photocoagulation\n- retina\n-- for\n--- destruction of lesion\n---- cryotherapy 14.26\n14.26 Destruction of chorioretinal lesion by cryotherapy',
-    '16.49': 'Enucleation\n- eyeball 16.49\n16.49 Enucleation of eyeball',
-    '08.36': 'Repair\n- eyelid\n-- blepharoplasty 08.36\n08.36 Eyelid reconstruction',
-    'I21.1': 'Infarction\n- myocardial\n-- acute\n--- inferior I21.1\nI21.1 Acute transmural myocardial infarction of inferior wall',
-    'I21.0': 'Infarction\n- myocardial\n-- acute\n--- anterior I21.0\nI21.0 Acute transmural myocardial infarction of anterior wall',
-    'I21.9': 'Infarction\n- myocardial\n-- acute I21.9\nI21.9 Acute myocardial infarction, unspecified',
-    'I21.4': 'Infarction\n- myocardial\n-- acute\n--- subendocardial I21.4\nI21.4 Acute subendocardial myocardial infarction',
-    'I63.9': 'Infarction\n- cerebral I63.9\nI63.9 Cerebral infarction, unspecified',
-    'I61.9': 'Haemorrhage\n- intracranial I61.9\nI61.9 Nontraumatic intracranial haemorrhage, unspecified',
-    'I10':   'Hypertension\n- essential I10\nI10 Essential (primary) hypertension',
-    'E11.9': 'Diabetes\n- type 2 E11.9\nE11.9 Type 2 diabetes mellitus without complications',
-    'E11.3': 'Diabetes\n- type 2\n-- with\n--- ophthalmic complication E11.3\nE11.3 Type 2 diabetes mellitus with ophthalmic complications',
-    'E11.2': 'Diabetes\n- type 2\n-- with\n--- renal complication E11.2\nE11.2 Type 2 diabetes mellitus with renal complications',
-    'E11.4': 'Diabetes\n- type 2\n-- with\n--- neurological complication E11.4\nE11.4 Type 2 diabetes mellitus with neurological complications',
-    'E11.5': 'Diabetes\n- type 2\n-- with\n--- peripheral circulatory complication E11.5\nE11.5 Type 2 diabetes mellitus with peripheral circulatory complications',
-    'H36.0': 'Retinopathy\n- diabetic H36.0\nH36.0 Diabetic retinopathy',
-    'J13':   'Pneumonia\n- due to\n-- Streptococcus pneumoniae J13\nJ13 Pneumonia due to Streptococcus pneumoniae',
-    'J14':   'Pneumonia\n- due to\n-- Haemophilus influenzae J14\nJ14 Pneumonia due to Haemophilus influenzae',
-    'J15.0': 'Pneumonia\n- due to\n-- Klebsiella pneumoniae J15.0\nJ15.0 Pneumonia due to Klebsiella pneumoniae',
-    'J15.2': 'Pneumonia\n- due to\n-- Staphylococcus J15.2\nJ15.2 Pneumonia due to staphylococcus',
-    'J18.1': 'Pneumonia\n- lobar J18.1\nJ18.1 Lobar pneumonia, unspecified',
-    'J18.9': 'Pneumonia\n- unspecified J18.9\nJ18.9 Pneumonia, unspecified',
-    'J44.0': 'Disease\n- pulmonary\n-- chronic obstructive\n--- with acute lower respiratory infection J44.0\nJ44.0 Chronic obstructive pulmonary disease with acute lower respiratory infection',
-    'J44.1': 'Disease\n- pulmonary\n-- chronic obstructive\n--- with acute exacerbation J44.1\nJ44.1 Chronic obstructive pulmonary disease with acute exacerbation',
-    'J44.9': 'Disease\n- pulmonary\n-- chronic obstructive\n--- unspecified J44.9\nJ44.9 Chronic obstructive pulmonary disease, unspecified',
-    'J96.0': 'Failure\n- respiratory\n-- acute J96.0\nJ96.0 Acute respiratory failure',
-    'J96.1': 'Failure\n- respiratory\n-- chronic J96.1\nJ96.1 Chronic respiratory failure',
-    'J96.1': 'Failure\n- respiratory\n-- chronic J96.1\nJ96.1 Chronic respiratory failure',
-    'B95.3': 'Streptococcus\n- pneumoniae\n-- as cause of disease classified elsewhere B95.3\nB95.3 Streptococcus pneumoniae as the cause of diseases classified elsewhere',
-    'B96.1': 'Klebsiella\n- pneumoniae\n-- as cause of disease classified elsewhere B96.1\nB96.1 Klebsiella pneumoniae as the cause of diseases classified elsewhere',
-    'B96.2': 'Escherichia\n- coli\n-- as cause of disease classified elsewhere B96.2\nB96.2 Escherichia coli as the cause of diseases classified elsewhere',
-    '87.44': 'X-ray\n- chest\n-- routine 87.44\n87.44 Routine chest x-ray',
-    '87.49': 'X-ray\n- chest\n-- other 87.49\n87.49 Other x-ray of chest',
-    '87.03': 'Scan\n- CT\n-- head 87.03\n87.03 Computerized axial tomography of head',
-    '87.41': 'Scan\n- CT\n-- thorax 87.41\n87.41 Computerized axial tomography of thorax',
-    '88.01': 'Scan\n- CT\n-- abdomen 88.01\n88.01 Computerized axial tomography of abdomen',
-    '88.91': 'Imaging\n- magnetic resonance\n-- brain 88.91\n88.91 Magnetic resonance imaging of brain',
-    '88.76': 'Ultrasonography\n- abdominal 88.76\n88.76 Abdominal ultrasonography',
-    '88.78': 'Ultrasonography\n- gravid uterus 88.78\n88.78 Diagnostic ultrasound of gravid uterus',
-    '88.72': 'Echocardiography\n- cardiac 88.72\n88.72 Diagnostic ultrasound of heart',
-    '89.52': 'Electrocardiogram\n- routine ECG 89.52\n89.52 Electrocardiogram',
-    '89.65': 'Measurement\n- arterial blood gases 89.65\n89.65 Measurement of arterial blood gases',
-    '93.94': 'Therapy\n- nebulizer 93.94\n93.94 Respiratory medication administered by nebulizer',
-    '93.96': 'Oxygenation\n- other oxygen enrichment 93.96\n93.96 Other oxygen enrichment',
-    '33.22': 'Bronchoscopy\n- diagnostic 33.22\n33.22 Fiber-optic bronchoscopy',
-    '33.23': 'Bronchoscopy\n- therapeutic 33.23\n33.23 Other bronchoscopy',
-    '93.96': 'Oxygenation\n- supplemental oxygen 93.96\n93.96 Other oxygen enrichment',
-    '93.91': 'Breathing\n- intermittent positive pressure (IPPB) 93.91\n93.91 Intermittent positive pressure breathing',
-    '96.04': 'Intubation\n- endotracheal 96.04\n96.04 Insertion of endotracheal tube',
-    '96.70': 'Ventilation\n- mechanical\n-- continuous 96.70\n96.70 Continuous invasive mechanical ventilation',
-    '90.59': 'Examination\n- blood\n-- chemical 90.59\n90.59 Other blood chemistry',
-    '90.41': 'Examination\n- sputum\n-- culture 90.41\n90.41 Bacteriological examination of sputum',
-    '90.54': 'Examination\n- blood\n-- culture 90.54\n90.54 Blood culture',
-    '91.31': 'Examination\n- urine\n-- routine 91.31\n91.31 Urinalysis',
-    '91.49': 'Examination\n- histological\n-- other 91.49\n91.49 Other histological examination',
-    'H25.1': 'Cataract\n- senile\n-- nuclear H25.1\nH25.1 Senile nuclear cataract',
-    'H25.2': 'Cataract\n- senile\n-- morgagnian H25.2\nH25.2 Morgagnian cataract',
-    'H25.9': 'Cataract\n- senile\n-- unspecified H25.9\nH25.9 Senile cataract, unspecified',
-    'H26.0': 'Cataract\n- infantile\n-- and juvenile H26.0\nH26.0 Infantile and juvenile cataract',
-    'H26.1': 'Cataract\n- senile\n-- immature H26.1\nH26.1 Cataract, senile, immature',
-    'H26.9': 'Cataract\n- unspecified H26.9\nH26.9 Cataract, unspecified',
-    '13.41': 'Extraction\n- lens\n-- phacoemulsification\n--- without IOL 13.41\n13.41 Phacoemulsification and aspiration of cataract',
-    '13.71': 'Extraction\n- lens\n-- extracapsular\n--- by temporal inferior route 13.71\n13.71 Extracapsular extraction of lens by temporal inferior route',
-    '13.72': 'Extraction\n- lens\n-- phacoemulsification\n--- with insertion of intraocular lens prosthesis 13.72\n13.72 Phacoemulsification and insertion of intraocular lens prosthesis',
-  };
+  // KNOWN_PATHS loaded from known-paths.js
 
   // Convert slash format first
   pathStr = convertSlashPath(pathStr);
@@ -1170,101 +1089,7 @@ function renderLeadPath(pathStr, code, description) {
   else pathStr = String(pathStr);
 
   // Lookup table untuk kode yang sering dikirim AI dengan format rusak
-  const KNOWN_PATHS = {
-    'O36.4': 'Death\n- fetus, fetal\n-- (near term) O36.4\nO36.4 Maternal care for intrauterine death',
-    'O43.0': 'Syndrome\n- transfusion\n-- feto-fetal O43.0\nO43.0 Placental transfusion syndromes',
-    'O30.0': 'Pregnancy\n- complicated by\n-- multiple gestation\n--- twin O30.0\nO30.0 Twin pregnancy',
-    'O60.1': 'Labour\n- premature\n-- with delivery O60.1\nO60.1 Preterm labour with preterm delivery',
-    'O60.0': 'Labour\n- premature O60.0\nO60.0 Preterm labour without delivery',
-    'O34.2': 'Section\n- cesarean (for)\n-- previous\n--- cesarean section O34.2\nO34.2 Maternal care due to uterine scar from previous surgery',
-    'O03.5': 'Abortion\n- spontaneous\n-- complicated by\n--- genital tract and pelvic infection O03.5\nO03.5 Spontaneous abortion, complete, complicated by genital tract and pelvic infection',
-    'O03.0': 'Abortion\n- spontaneous\n-- complicated by\n--- genital tract and pelvic infection O03.0\nO03.0 Spontaneous abortion, incomplete, complicated by genital tract and pelvic infection',
-    'O03.9': 'Abortion\n- spontaneous\n-- unspecified O03.9\nO03.9 Spontaneous abortion, unspecified',
-    'O03.4': 'Abortion\n- spontaneous\n-- incomplete, without complication O03.4\nO03.4 Spontaneous abortion, incomplete, without complication',
-    'O08.0': 'Complications\n- following\n-- abortion and ectopic and molar pregnancy\n--- infection O08.0\nO08.0 Genital tract and pelvic infection following abortion and ectopic and molar pregnancy',
-    'O00.1': 'Pregnancy\n- ectopic\n-- tubal\n--- ruptured O00.1\nO00.1 Tubal pregnancy',
-    'Z37.3': 'Outcome of delivery\n- twins\n-- one liveborn one stillborn Z37.3\nZ37.3 Twins, one liveborn and one stillborn',
-    'Z37.0': 'Outcome of delivery\n- single\n-- liveborn Z37.0\nZ37.0 Single liveborn infant',
-    'N83.2': 'Cyst\n- ovary, ovarian N83.2\nN83.2 Other and unspecified ovarian cysts',
-    'S72.3': 'Fracture\n- femur\n-- shaft S72.3\nS72.3 Fracture of shaft of femur',
-    'S72.0': 'Fracture\n- femur\n-- neck S72.0\nS72.0 Fracture of neck of femur',
-    'S72.1': 'Fracture\n- femur\n-- pertrochanteric S72.1\nS72.1 Pertrochanteric fracture',
-    'S72.9': 'Fracture\n- femur S72.9\nS72.9 Fracture of femur, unspecified',
-    '79.05': 'Reduction\n- fracture\n-- femur\n--- closed 79.05\n79.05 Closed reduction of fracture without internal fixation, femur',
-    '79.15': 'Reduction\n- fracture\n-- femur\n--- open\n---- with internal fixation 79.15\n79.15 Open reduction of fracture with internal fixation, femur',
-    '79.35': 'Nailing\n- intramedullary\n-- femur 79.35\n79.35 Open reduction of fracture with internal fixation, femur',
-    '79.36': 'Nailing\n- intramedullary\n-- tibia 79.36\n79.36 Open reduction of fracture with internal fixation, tibia and fibula',
-    '00.66': 'Angioplasty\n- coronary (balloon) 00.66\n00.66 Percutaneous transluminal coronary angioplasty',
-    '36.06': 'Insertion\n- stent\n-- coronary artery 36.06\n36.06 Insertion of coronary artery stent',
-    '36.01': 'Bypass\n- coronary artery 36.01\n36.01 Single coronary artery bypass using saphenous vein graft',
-    '14.24': 'Photocoagulation\n- retina\n-- for\n--- destruction of lesion\n---- laser 14.24\n14.24 Destruction of chorioretinal lesion by laser photocoagulation',
-    '14.25': 'Photocoagulation\n- retina\n-- for\n--- destruction of lesion\n---- unspecified type 14.25\n14.25 Destruction of chorioretinal lesion by photocoagulation of unspecified type',
-    '14.23': 'Photocoagulation\n- retina\n-- for\n--- destruction of lesion\n---- xenon arc 14.23\n14.23 Destruction of chorioretinal lesion by xenon arc photocoagulation',
-    '14.26': 'Photocoagulation\n- retina\n-- for\n--- destruction of lesion\n---- cryotherapy 14.26\n14.26 Destruction of chorioretinal lesion by cryotherapy',
-    '16.49': 'Enucleation\n- eyeball 16.49\n16.49 Enucleation of eyeball',
-    '08.36': 'Repair\n- eyelid\n-- blepharoplasty 08.36\n08.36 Eyelid reconstruction',
-    'I21.1': 'Infarction\n- myocardial\n-- acute\n--- inferior I21.1\nI21.1 Acute transmural myocardial infarction of inferior wall',
-    'I21.0': 'Infarction\n- myocardial\n-- acute\n--- anterior I21.0\nI21.0 Acute transmural myocardial infarction of anterior wall',
-    'I21.9': 'Infarction\n- myocardial\n-- acute I21.9\nI21.9 Acute myocardial infarction, unspecified',
-    'I21.4': 'Infarction\n- myocardial\n-- acute\n--- subendocardial I21.4\nI21.4 Acute subendocardial myocardial infarction',
-    'I63.9': 'Infarction\n- cerebral I63.9\nI63.9 Cerebral infarction, unspecified',
-    'I61.9': 'Haemorrhage\n- intracranial I61.9\nI61.9 Nontraumatic intracranial haemorrhage, unspecified',
-    'I10':   'Hypertension\n- essential I10\nI10 Essential (primary) hypertension',
-    'E11.9': 'Diabetes\n- type 2 E11.9\nE11.9 Type 2 diabetes mellitus without complications',
-    'E11.3': 'Diabetes\n- type 2\n-- with\n--- ophthalmic complication E11.3\nE11.3 Type 2 diabetes mellitus with ophthalmic complications',
-    'E11.2': 'Diabetes\n- type 2\n-- with\n--- renal complication E11.2\nE11.2 Type 2 diabetes mellitus with renal complications',
-    'E11.4': 'Diabetes\n- type 2\n-- with\n--- neurological complication E11.4\nE11.4 Type 2 diabetes mellitus with neurological complications',
-    'E11.5': 'Diabetes\n- type 2\n-- with\n--- peripheral circulatory complication E11.5\nE11.5 Type 2 diabetes mellitus with peripheral circulatory complications',
-    'H36.0': 'Retinopathy\n- diabetic H36.0\nH36.0 Diabetic retinopathy',
-    'J13':   'Pneumonia\n- due to\n-- Streptococcus pneumoniae J13\nJ13 Pneumonia due to Streptococcus pneumoniae',
-    'J14':   'Pneumonia\n- due to\n-- Haemophilus influenzae J14\nJ14 Pneumonia due to Haemophilus influenzae',
-    'J15.0': 'Pneumonia\n- due to\n-- Klebsiella pneumoniae J15.0\nJ15.0 Pneumonia due to Klebsiella pneumoniae',
-    'J15.2': 'Pneumonia\n- due to\n-- Staphylococcus J15.2\nJ15.2 Pneumonia due to staphylococcus',
-    'J18.1': 'Pneumonia\n- lobar J18.1\nJ18.1 Lobar pneumonia, unspecified',
-    'J18.9': 'Pneumonia\n- unspecified J18.9\nJ18.9 Pneumonia, unspecified',
-    'J44.0': 'Disease\n- pulmonary\n-- chronic obstructive\n--- with acute lower respiratory infection J44.0\nJ44.0 Chronic obstructive pulmonary disease with acute lower respiratory infection',
-    'J44.1': 'Disease\n- pulmonary\n-- chronic obstructive\n--- with acute exacerbation J44.1\nJ44.1 Chronic obstructive pulmonary disease with acute exacerbation',
-    'J44.9': 'Disease\n- pulmonary\n-- chronic obstructive\n--- unspecified J44.9\nJ44.9 Chronic obstructive pulmonary disease, unspecified',
-    'J96.0': 'Failure\n- respiratory\n-- acute J96.0\nJ96.0 Acute respiratory failure',
-    'J96.1': 'Failure\n- respiratory\n-- chronic J96.1\nJ96.1 Chronic respiratory failure',
-    'J96.1': 'Failure\n- respiratory\n-- chronic J96.1\nJ96.1 Chronic respiratory failure',
-    'B95.3': 'Streptococcus\n- pneumoniae\n-- as cause of disease classified elsewhere B95.3\nB95.3 Streptococcus pneumoniae as the cause of diseases classified elsewhere',
-    'B96.1': 'Klebsiella\n- pneumoniae\n-- as cause of disease classified elsewhere B96.1\nB96.1 Klebsiella pneumoniae as the cause of diseases classified elsewhere',
-    'B96.2': 'Escherichia\n- coli\n-- as cause of disease classified elsewhere B96.2\nB96.2 Escherichia coli as the cause of diseases classified elsewhere',
-    '87.44': 'X-ray\n- chest\n-- routine 87.44\n87.44 Routine chest x-ray',
-    '87.49': 'X-ray\n- chest\n-- other 87.49\n87.49 Other x-ray of chest',
-    '87.03': 'Scan\n- CT\n-- head 87.03\n87.03 Computerized axial tomography of head',
-    '87.41': 'Scan\n- CT\n-- thorax 87.41\n87.41 Computerized axial tomography of thorax',
-    '88.01': 'Scan\n- CT\n-- abdomen 88.01\n88.01 Computerized axial tomography of abdomen',
-    '88.91': 'Imaging\n- magnetic resonance\n-- brain 88.91\n88.91 Magnetic resonance imaging of brain',
-    '88.76': 'Ultrasonography\n- abdominal 88.76\n88.76 Abdominal ultrasonography',
-    '88.78': 'Ultrasonography\n- gravid uterus 88.78\n88.78 Diagnostic ultrasound of gravid uterus',
-    '88.72': 'Echocardiography\n- cardiac 88.72\n88.72 Diagnostic ultrasound of heart',
-    '89.52': 'Electrocardiogram\n- routine ECG 89.52\n89.52 Electrocardiogram',
-    '89.65': 'Measurement\n- arterial blood gases 89.65\n89.65 Measurement of arterial blood gases',
-    '93.94': 'Therapy\n- nebulizer 93.94\n93.94 Respiratory medication administered by nebulizer',
-    '93.96': 'Oxygenation\n- other oxygen enrichment 93.96\n93.96 Other oxygen enrichment',
-    '33.22': 'Bronchoscopy\n- diagnostic 33.22\n33.22 Fiber-optic bronchoscopy',
-    '33.23': 'Bronchoscopy\n- therapeutic 33.23\n33.23 Other bronchoscopy',
-    '93.96': 'Oxygenation\n- supplemental oxygen 93.96\n93.96 Other oxygen enrichment',
-    '93.91': 'Breathing\n- intermittent positive pressure (IPPB) 93.91\n93.91 Intermittent positive pressure breathing',
-    '96.04': 'Intubation\n- endotracheal 96.04\n96.04 Insertion of endotracheal tube',
-    '96.70': 'Ventilation\n- mechanical\n-- continuous 96.70\n96.70 Continuous invasive mechanical ventilation',
-    '90.59': 'Examination\n- blood\n-- chemical 90.59\n90.59 Other blood chemistry',
-    '90.41': 'Examination\n- sputum\n-- culture 90.41\n90.41 Bacteriological examination of sputum',
-    '90.54': 'Examination\n- blood\n-- culture 90.54\n90.54 Blood culture',
-    '91.31': 'Examination\n- urine\n-- routine 91.31\n91.31 Urinalysis',
-    '91.49': 'Examination\n- histological\n-- other 91.49\n91.49 Other histological examination',
-    'H25.1': 'Cataract\n- senile\n-- nuclear H25.1\nH25.1 Senile nuclear cataract',
-    'H25.2': 'Cataract\n- senile\n-- morgagnian H25.2\nH25.2 Morgagnian cataract',
-    'H25.9': 'Cataract\n- senile\n-- unspecified H25.9\nH25.9 Senile cataract, unspecified',
-    'H26.0': 'Cataract\n- infantile\n-- and juvenile H26.0\nH26.0 Infantile and juvenile cataract',
-    'H26.1': 'Cataract\n- senile\n-- immature H26.1\nH26.1 Cataract, senile, immature',
-    'H26.9': 'Cataract\n- unspecified H26.9\nH26.9 Cataract, unspecified',
-    '13.41': 'Extraction\n- lens\n-- phacoemulsification\n--- without IOL 13.41\n13.41 Phacoemulsification and aspiration of cataract',
-    '13.71': 'Extraction\n- lens\n-- extracapsular\n--- by temporal inferior route 13.71\n13.71 Extracapsular extraction of lens by temporal inferior route',
-    '13.72': 'Extraction\n- lens\n-- phacoemulsification\n--- with insertion of intraocular lens prosthesis 13.72\n13.72 Phacoemulsification and insertion of intraocular lens prosthesis',
-  };
+  // KNOWN_PATHS loaded from known-paths.js
 
   // Convert slash format first
   pathStr = convertSlashPath(pathStr);
