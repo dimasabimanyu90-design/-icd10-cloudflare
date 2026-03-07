@@ -355,192 +355,89 @@ async function analyze() {
     ? 'LANGUAGE RULES: (1) description and description_en fields MUST ALWAYS be in ENGLISH as per official ICD-10/ICD-9-CM nomenclature, never translate them. (2) summary, du_reasoning, reasoning, and validation message fields must be in BAHASA INDONESIA.'
     : 'LANGUAGE RULES: (1) description and description_en fields MUST ALWAYS be in ENGLISH as per official ICD-10/ICD-9-CM nomenclature, never translate them. (2) summary, du_reasoning, reasoning, and validation message fields must be in ENGLISH.';
 
-  const PROMPT = `You are an expert ICD-10 2nd Edition 2005 (WHO) and ICD-9-CM Vol.3 medical coder. Analyze the clinical note and return JSON only.
+  const PROMPT = `You are an expert ICD-10 2nd Ed 2005 (WHO) and ICD-9-CM Vol.3 coder. Return JSON only.
 
 ${langInstruction}
-
 CLINICAL NOTE: ${input}
 
-## EXTRACTION RULES
-DIAGNOSES: Code ONLY explicitly stated diagnoses. 1 DU + ALL DS separately — never omit any.
-- No explicit diagnosis but strong objective evidence (EKG/lab/imaging) → may infer; vague symptoms alone → diagnoses:[]
-PROCEDURES: Code ONLY explicitly mentioned procedures. None mentioned → procedures:[]. Code ALL if multiple.
+## EXTRACTION
+- Diagnoses: code ONLY explicitly stated. 1 DU + ALL DS. No explicit dx → diagnoses:[] unless strong objective evidence (EKG/lab/imaging).
+- Procedures: code ONLY explicitly mentioned. None → procedures:[]. Code ALL if multiple.
 
-## FIELD RULES
-- description: EXACT official title as printed in ICD-10 Vol.1 for that code — NOT the patient diagnosis, NOT a paraphrase. The code title, not the clinical condition.
-  CORRECT: H72.1="Attic perforation of tympanic membrane" (title of H72.1), NOT "Chronic suppurative otitis media" (that is the patient diagnosis, not the code title)
-  CORRECT: N83.2="Other and unspecified ovarian cysts", O60.1="Preterm labour with preterm delivery", O34.2="Maternal care due to uterine scar from previous surgery"
-  ICD-9-CM: 74.1="Low cervical caesarean section", 65.29="Other local excision or destruction of ovary"
-  WRONG: filling description with patient clinical diagnosis instead of the code official Vol.1 title.
+## FIELDS
+- description: EXACT Vol.1 official code title verbatim. NOT patient diagnosis. NOT paraphrase.
+  H72.1="Attic perforation of tympanic membrane" NOT "Chronic suppurative otitis media"
+  N83.2="Other and unspecified ovarian cysts", O34.2="Maternal care due to uterine scar from previous surgery"
+  74.1="Low cervical caesarean section", 65.29="Other local excision or destruction of ovary"
 - description_id: Indonesian translation of official title.
-- lead_term_path: Complete Vol.3 hierarchy all levels, REAL code numbers (never placeholder "CODE").
+- lead_term_path: complete Vol.3 hierarchy, REAL code numbers never placeholder.
   Format: Term\n- subterm\n- - subterm CODE\nCODE Full description
-- dagger_asterisk field: ONLY set "dagger" or "asterisk" if the code is OFFICIALLY marked with † or * in ICD-10 Vol.1 tabular list. Most codes are "none". Do NOT set dagger/asterisk just because two codes are paired or related. Dagger†=official etiology code in Vol.1, Asterisk*=official manifestation code in Vol.1, always coded as a pair when both exist.
-- volume1_notes: report includes/excludes/notes per code.
+- dagger_asterisk: "dagger"|"asterisk"|"none". ONLY if code is OFFICIALLY marked †/* in Vol.1. Most codes="none".
+- volume1_notes: includes/excludes/notes per code.
 
-## INCLUDES / EXCLUDES
+## INCLUDES/EXCLUDES
 - Includes: condition already covered → do NOT code separately.
-- Excludes1 (mutually exclusive): NEVER code both → ERROR if violated.
-- Excludes2 (can coexist): allowed together if patient genuinely has both → WARNING to confirm.
-- Hierarchy: chapter > block > category; more specific overrides higher level.
+- Excludes1 (mutually exclusive): NEVER code both → ERROR.
+- Excludes2 (can coexist): allowed if patient genuinely has both → WARNING.
+- Hierarchy: chapter>block>category; specific overrides general.
 
 ## VALIDATION
-ERROR: asterisk as DU, missing dagger-asterisk pair, Excludes1 violated, R-code when definitive dx exists.
-WARNING: wrong DU selection, missing DS, Excludes2 pair needs confirmation, R-code as DU (provisional).
-INFO: reminders, BPJS/INA-CBGs flags.
+ERROR: asterisk as DU, missing †/* pair, Excludes1 violated, R-code when definitive dx exists.
+WARNING: wrong DU, missing DS, Excludes2 needs confirmation, R-code as DU (provisional).
 
 ## ABBREVIATIONS
-SC/SCTP=sectio caesarea, TTTS=twin-twin transfusion syndrome, IUFD=intrauterine fetal death, gemelli=twins, partus prematurus=preterm labour, kista ovarium=ovarian cyst, kistektomi=cystectomy, bekas SC=previous caesarean scar, HT=hypertension, DM=diabetes mellitus, ORIF=open reduction internal fixation, ai=atas indikasi.
+SC/SCTP=sectio caesarea, TTTS=twin-twin transfusion, IUFD=intrauterine fetal death, gemelli=twins, partus prematurus=preterm labour, kista ovarium=ovarian cyst, kistektomi=cystectomy, bekas SC=previous caesarean scar, HT=hypertension, DM=diabetes mellitus, ORIF=open reduction internal fixation, ai=atas indikasi.
 
-## OBSTETRIC CODING RULES
+## OBSTETRIC RULES
+O00: O00.0=abdominal, O00.1=tubal, O00.2=ovarian. Ruptur→always +O08.1 DS. Other: O08.0=infection, O08.3=shock, O08.9=unspecified complication.
 
-O00 ECTOPIC PREGNANCY:
-- O00.0=abdominal, O00.1=tubal, O00.2=ovarian, O00.9=unspecified
-- RUPTURE → always add O08.1 (haemorrhage) as DS. Other O08.x: O08.0=infection, O08.2=embolism, O08.3=shock, O08.4=renal failure, O08.9=unspecified complication
-- Example: tuba kanan ruptur → O00.1 + O08.1
+O02: O02.1=missed abortion (fetal death + NO expulsion/retained). Always +O08.9 DS. "janin mati+tidak ada pengeluaran"→O02.1. NOT O03.x.
 
-O02 ABNORMAL PRODUCTS OF CONCEPTION:
-- O02.0=blighted ovum/nonhydatidiform mole (no embryo formed)
-- O02.1=missed abortion: fetal death <22wk + NO expulsion/retained. Always add O08.9 as DS.
-  Key: "janin mati + tidak ada pengeluaran/retained" → O02.1. Do NOT use O03.x.
-- Example: "USG janin mati 10 minggu, tidak ada pengeluaran" → O02.1 + O08.9
+O03-O07 (shared 4th digit "See before O03"):
+  Incomplete (.4=no complication base): "serviks terbuka/sisa jaringan"
+  Complete (.9=no complication base): "seluruh jaringan keluar"
+  4th digit ALWAYS .4 or .9. NEVER use .0/.1/.2/.3/.6/.7/.8 as 4th digit.
+  O08.x ALWAYS added as DS: O08.9=no specific complication, O08.1=haemorrhage, O08.0=infection.
+  "incomplete+perdarahan"→O03.4+O08.1 | "complete tanpa komplikasi"→O03.9+O08.9
 
-O03-O07 ABORTION — shared 4th digit table ("See before O03 for subdivisions"):
-  INCOMPLETE (.0-.4): serviks terbuka/sisa jaringan/retained products
-    .0=+infection, .1=+haemorrhage, .2=+embolism, .3=+other complication, .4=no complication
-  COMPLETE (.5-.9): seluruh jaringan keluar/komplit
-    .5=+infection, .6=+haemorrhage, .7=+embolism, .8=+other complication, .9=no complication
+## R CODES
+- Do NOT code R if definitive dx explains symptom (integral).
+- R as DU: valid if no definitive dx → WARNING "provisional, verify after workup".
+- DM+hyperglycaemia→no R73 | fever unknown origin→R50.9 DU+WARNING | post-op fever→R50.9 DS
 
-  4th DIGIT vs O08.x — CRITICAL DISTINCTION:
-  The 4th digit (.0/.1/.2 etc) and O08.x are NOT the same thing. Use this logic:
-  - 4th digit = describes the TYPE of abortion episode (complete/incomplete + complication type)
-  - O08.x = ALWAYS added as separate DS companion code regardless of 4th digit
-  - ALWAYS use 4th digit .4 (incomplete, no complication) or .9 (complete, no complication) as base
-  - THEN add O08.x as DS to specify complication detail separately
-  - NEVER use .1/.2/.3 or .6/.7/.8 as 4th digit — always use .4 or .9 as base code
+## MUSCULOSKELETAL (M00-M99)
+Site digit (last char, when "See site code at beginning of chapter"):
+  0=multiple,1=shoulder,2=upper arm/elbow,3=forearm/wrist,4=hand,5=pelvis/thigh/hip,6=lower leg/knee,7=ankle/foot,8=other,9=unspecified
+  Never omit. Knee→6, hip→5, ankle→7.
 
-  O08.x COMPANION — always add as DS:
-    O08.9=no/unspecified complication, O08.1=haemorrhage, O08.0=infection, O08.2=embolism
+B95-B96: add ONLY if organism explicitly named. Always DS.
+  B95.6=S.aureus, B95.3=S.pneumoniae, B96.1=Klebsiella, B96.2=E.coli, B96.5=Pseudomonas, B96.8=other.
 
-  Examples:
-    "incomplete abortion + perdarahan banyak" → O03.4 (DU) + O08.1 (DS) ← NOT O03.1
-    "complete abortion tanpa komplikasi" → O03.9 (DU) + O08.9 (DS)
-    "incomplete abortion + infeksi" → O03.4 (DU) + O08.0 (DS) ← NOT O03.0
+## EAR (H60-H95)
+CSOM: H66.3=Other chronic suppurative otitis media (use when CSOM stated without detail).
+H72.x=tympanic membrane perforation — code separately ONLY if perforation explicitly stated as separate finding.
+"CSOM/cairan telinga bernanah kronik"→H66.3 NOT H72.x.
 
-## EXTERNAL CAUSE CODE RULES (Chapter XX Y40-Y84)
-When a condition has note "Use additional external cause code (Chapter XX), if desired, to identify drug/external cause" → optionally add Y40-Y84 as DS IF the causative drug/agent is EXPLICITLY mentioned in the clinical note.
+## EXTERNAL CAUSE (Chapter XX)
+Injury/trauma → ALWAYS add external cause DS alongside injury code (S/T):
+  V20-V29=motorcycle, V40-V49=car, W00-W19=falls, X00-X09=fire, X40-X49=accidental poisoning
+  X60-X84=intentional self-harm, X85-Y09=assault, Y10-Y34=undetermined
+  Y92=place (Y92.0=home,Y92.4=street,Y92.9=unspecified) — add if place mentioned
+  Y93=activity — add if activity mentioned
+  External cause always DS never DU.
+  "fraktur KLL motor"→S72.3+V29.9 | "jatuh tangga"→injury+W11
 
-DRUG-INDUCED CONDITIONS — Y40-Y59 (drugs causing adverse effects in therapeutic use):
-  Y40 = Systemic antibiotics
-  Y41 = Other systemic anti-infectives
-  Y42 = Hormones and synthetic substitutes (incl. corticosteroids, oral contraceptives)
-  Y43 = Primarily systemic agents (incl. antineoplastics, immunosuppressants)
-  Y44 = Agents affecting blood constituents (anticoagulants, antiplatelets)
-  Y45 = Analgesics, antipyretics, anti-inflammatory drugs (NSAIDs, opioids)
-  Y46 = Antiepileptics and antiparkinson drugs
-  Y47 = Sedatives, hypnotics, anxiolytics
-  Y48 = Anaesthetics and therapeutic gases
-  Y49 = Psychotropic drugs
-  Y50 = CNS stimulants
-  Y51 = Autonomic nervous system drugs
-  Y57 = Other and unspecified drugs and medicaments
+Drug-induced (Y40-Y59): add ONLY if specific drug explicitly named.
+  Y42=hormones/corticosteroids, Y43=antineoplastics, Y44=anticoagulants, Y45=NSAIDs/analgesics, Y57=other drugs.
+  "glaukoma akibat kortikosteroid"→H40.x+Y42.0 | drug not named→no Y code.
 
-4th digit for Y40-Y59 (route/circumstance):
-  .0 = used in therapeutic doses (adverse effect) ← most common
-  .1 = accidental poisoning
-  .2 = intentional self-poisoning
-  .9 = unspecified
+## SPECIFICITY
+- Diabetes: E10=type1, E11=type2 + complication subcategory.
+- Fracture: bone+location+open/closed. Stroke: I61=haemorrhagic, I63=ischaemic+location.
+- Use 4th/5th digit; .9 only when truly no detail.
 
-Rules:
-  - ONLY add Y40-Y59 if specific drug/class is EXPLICITLY mentioned in the clinical note
-  - These are always DS, never DU
-  - Applies to eye conditions (H), skin (L), and any chapter with same note
-  - Example: "glaukoma akibat pemakaian kortikosteroid jangka panjang" → H40.x (DU) + Y42.0 (DS)
-  - Example: "drug-induced cataract, steroid use" → H26.3 (DU) + Y42.0 (DS)
-  - Example: "kondisi mata, tidak disebutkan obat penyebab" → kode mata saja, jangan tambah Y40-Y59
-
-## MUSCULOSKELETAL RULES (Chapter XIII M00-M99)
-
-SITE CODE (last digit, when noted "See site code at beginning of chapter"):
-  0=multiple, 1=shoulder, 2=upper arm/elbow, 3=forearm/wrist, 4=hand/fingers
-  5=pelvis/thigh/hip, 6=lower leg/knee, 7=ankle/foot, 8=other(head/neck/spine), 9=unspecified
-  Never omit site digit. Example: arthritis knee → M05.x6
-
-B95-B96 BACTERIAL AGENT: Add only if organism EXPLICITLY named in note. Always DS.
-  B95: B95.0=Strep A, B95.1=Strep B, B95.3=S.pneumoniae, B95.6=S.aureus, B95.8=unspec staph
-  B96: B96.1=Klebsiella, B96.2=E.coli, B96.3=H.influenzae, B96.5=Pseudomonas, B96.8=other
-  Example: septic arthritis+S.aureus → M00.x6+B95.6 | no organism named → no B95-B96
-
-## EXTERNAL CAUSE OF MORBIDITY (Chapter XX V01-Y98)
-When coding injuries, poisoning, or conditions caused by external events → ALWAYS add external cause code as DS alongside the injury code (Chapter XIX S00-T98).
-
-MAIN CATEGORIES:
-  V01-V99 = Transport accidents (kecelakaan lalu lintas/kendaraan)
-    V01-V09 = Pedestrian (pejalan kaki)
-    V10-V19 = Pedal cyclist (sepeda)
-    V20-V29 = Motorcycle rider (motor) ← most common in Indonesia
-    V40-V49 = Car occupant (mobil)
-    V80-V89 = Other land transport
-  W00-X59 = Other external causes of accidental injury
-    W00-W19 = Falls (jatuh) ← W19=unspecified fall
-    W20-W49 = Exposure to inanimate forces (benda mati)
-    W50-W64 = Exposure to animate forces (makhluk hidup/digigit)
-    W65-W74 = Accidental drowning
-    X00-X09 = Exposure to smoke/fire/flames
-    X10-X19 = Contact with heat/hot substances
-    X40-X49 = Accidental poisoning by drugs/substances
-  X60-X84 = Intentional self-harm (menyakiti diri sendiri/bunuh diri)
-  X85-Y09 = Assault (penganiayaan/kekerasan orang lain)
-  Y10-Y34 = Undetermined intent
-  Y40-Y84 = Complications of medical/surgical care
-  Y85-Y89 = Sequelae of external causes
-
-PLACE OF OCCURRENCE (Y92) — add as DS if place mentioned:
-  Y92.0 = Home, Y92.1 = Residential institution, Y92.2 = School
-  Y92.3 = Sports area, Y92.4 = Street/highway, Y92.5 = Trade/service area
-  Y92.6 = Industrial area, Y92.8 = Other, Y92.9 = Unspecified
-
-ACTIVITY CODE (Y93) — add as DS if activity mentioned:
-  Y93.0 = Sports, Y93.1 = Leisure, Y93.2 = Working, Y93.9 = Unspecified
-
-RULES:
-  - Injury/trauma case → ALWAYS add V/W/X/Y external cause code as DS
-  - Add Y92 (place) if location of injury mentioned
-  - Add Y93 (activity) if activity at time of injury mentioned
-  - External cause codes are ALWAYS DS, never DU
-  - If mechanism unclear → use most specific available; truly unknown → Y59.9
-  - Example: "fraktur femur akibat KLL motor" → S72.3x (DU) + V29.9 (DS) + Y92.4 (DS jika di jalan)
-  - Example: "luka bakar tangan akibat api kompor di rumah" → T23.x (DU) + X10.x (DS) + Y92.0 (DS)
-  - Example: "jatuh dari tangga" → injury code (DU) + W11 (DS fall on/from ladder)
-
-## EAR CODING RULES (Chapter VIII H60-H95)
-OTITIS MEDIA — distinguish carefully, do NOT code H72.x (tympanic membrane perforation) as substitute for otitis media:
-  H65.x = Nonsuppurative otitis media (serous, mucoid, allergic — no pus)
-  H66.0 = Acute suppurative otitis media
-  H66.1 = Chronic tubotympanic suppurative otitis media (benign CSOM)
-  H66.2 = Chronic atticoantral suppurative otitis media (dangerous CSOM)
-  H66.3 = Other chronic suppurative otitis media ← use when CSOM stated without further specification
-  H66.4 = Suppurative otitis media, unspecified
-  H72.x = Perforation of tympanic membrane ← ONLY code separately if perforation is the focus, NOT as replacement for otitis media diagnosis
-  Rule: "chronic suppurative otitis media" without further detail → H66.3, NOT H72.x
-  Rule: if BOTH otitis media AND perforation explicitly stated as separate findings → code both H66.x + H72.x
-  Example: "cairan telinga bernanah >3 bulan, CSOM" → H66.3 only
-
-## OTHER SPECIFICITY RULES
-- Diabetes: E10=type1, E11=type2 + complication subcategory
-- Fracture: specify bone+location+open/closed
-- Hypertension: I10=primary; specify secondary if stated
-- Stroke: I61.x=haemorrhagic, I63.x=ischaemic, I64=unspecified + location
-- Use 4th/5th digit specificity; .9 only when truly no detail available
-
-## R CODES (Chapter XVIII)
-- Do NOT code R if definitive dx explains the symptom (integral symptom).
-- DO code R as DS if symptom NOT integral to main dx.
-- R as DU: valid if no definitive dx established → add WARNING "diagnosis provisional, verify after workup".
-- Example: DM+hyperglycaemia → no R73 | fever unknown origin → R50.9 as DU+WARNING | post-op unexplained fever → R50.9 as DS
-
-Return ONLY valid JSON, no markdown:
-{"summary":"...","du_reasoning":"...","validations":[{"type":"ERROR|WARNING|INFO","message":"..."}],"diagnoses":[{"role":"DU","code":"O60.1","dagger_asterisk":"none|dagger|asterisk","description":"ENGLISH official ICD name","description_id":"Nama resmi Bahasa Indonesia","category":"Chapter XV...","confidence":92,"lead_term_path":"Delivery\n- caesarean (for)\n- - previous\n- - - caesarean section O34.2\nO34.2 Maternal care due to uterine scar from previous surgery","volume1_notes":[{"type":"includes|excludes|note|use_additional|code_first","text":"..."}],"paired_with":"","reasoning":"..."}],"procedures":[{"code":"74.1","description":"ENGLISH official ICD-9-CM name","description_id":"Nama resmi Bahasa Indonesia","category":"ICD-9-CM Vol.3...","confidence":95,"lead_term_path":"...","volume1_notes":[],"reasoning":"..."}]}`;
+Return ONLY valid JSON:
+{"summary":"...","du_reasoning":"...","validations":[{"type":"ERROR|WARNING|INFO","message":"..."}],"diagnoses":[{"role":"DU","code":"O34.2","dagger_asterisk":"none","description":"Maternal care due to uterine scar from previous surgery","description_id":"...","category":"Chapter XV...","confidence":92,"lead_term_path":"Delivery\n- caesarean (for)\n- - previous\n- - - caesarean section O34.2\nO34.2 Maternal care due to uterine scar from previous surgery","volume1_notes":[{"type":"includes|excludes|note|use_additional|code_first","text":"..."}],"paired_with":"","reasoning":"..."}],"procedures":[{"code":"74.1","description":"Low cervical caesarean section","description_id":"...","category":"ICD-9-CM Vol.3...","confidence":95,"lead_term_path":"...","volume1_notes":[],"reasoning":"..."}]}`;
 
   try {
     const resp = await fetch("/api/claude", {
