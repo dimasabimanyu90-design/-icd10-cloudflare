@@ -7,9 +7,9 @@ export async function onRequestPost(context) {
   };
 
   const MODELS = [
-    "llama-3.3-70b-versatile",   // Terbaik untuk ICD-10
-    "llama-3.3-8b-instant",      // Fallback — limit lebih longgar
-    "llama-3.1-8b-instant",      // Fallback terakhir
+    "llama-3.3-70b-versatile",                    // Terbaik untuk ICD-10, 70B
+    "meta-llama/llama-4-scout-17b-16e-instruct",  // Fallback: Llama 4 Scout, cepat & limit longgar
+    "llama-3.1-8b-instant",                       // Fallback terakhir
   ];
 
   try {
