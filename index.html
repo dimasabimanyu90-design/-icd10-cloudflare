@@ -492,42 +492,70 @@ CLINICAL NOTE: ${input}
   N83.2="Other and unspecified ovarian cysts", O34.2="Maternal care due to uterine scar from previous surgery"
   74.1="Low cervical caesarean section", 65.29="Other local excision or destruction of ovary"
 - description_id: Indonesian translation of official title.
-- lead_term_path: complete Vol.3 hierarchy, REAL codes never placeholder.
-  Format: Term\n- subterm\n- - subterm CODE\nCODE Full description
-- dagger_asterisk: "dagger"|"asterisk"|"none". ONLY if OFFICIALLY marked in Vol.1. Most="none".
+- lead_term_path: WAJIB tampilkan SEMUA level hierarki Vol.3 sampai kode final. Format:
+  LeadTerm
+  - subterm1
+  - - subterm2 CODE
+  CODE Full official description
+  CONTOH BENAR:
+  Labour
+  - premature NEC O60.0
+  O60.0 Preterm labour without delivery
+  CONTOH SALAH: "Pregnancy→complication→fetal" (terlalu pendek, tidak ada kode final)
+- dagger_asterisk: "dagger"|"asterisk"|"none". ONLY if OFFICIALLY marked †/* in Vol.1. Most="none".
 - volume1_notes: includes/excludes/notes per code.
 
 ## VOL.3 INDEX RULES
-1. NEVER use anatomical site as lead term.
-   WRONG: Femur-fracture. RIGHT: Fracture→femur.
-2. See also: follow cross-reference. Show path if followed.
-3. See: MUST go to referenced term.
+1. NEVER use anatomical site as lead term → always says "see condition".
+   WRONG: Femur-fracture, Uterus-rupture. RIGHT: Fracture→femur, Rupture→uterus.
+2. See also: follow cross-reference for more specific code. Show path if followed.
+3. See: MUST go to referenced term instead.
 4. Use most specific subterm before accepting code.
+5. Tampilkan SEMUA subterm level sampai kode. Baris terakhir HARUS: CODE Deskripsi resmi.
 
 ## INCLUDES/EXCLUDES
 - Includes: already covered → do NOT code separately.
 - Excludes1 (mutually exclusive): NEVER code both → ERROR.
 - Excludes2 (can coexist): allowed if genuinely both present → WARNING.
+- Hierarchy: chapter>block>category; specific overrides general.
 
 ## VALIDATION
-ERROR: asterisk as DU, missing pair, Excludes1 violated, R-code when definitive dx exists.
-WARNING: wrong DU, missing DS, Excludes2 needs confirmation, R-code as DU.
+ERROR: asterisk as DU, missing †/* pair, Excludes1 violated, R-code when definitive dx exists.
+WARNING: wrong DU, missing DS, Excludes2 needs confirmation, R-code as DU (provisional, verify after workup).
 
 ## ABBREVIATIONS
 SC/SCTP=sectio caesarea, TTTS=twin-twin transfusion, IUFD=intrauterine fetal death, gemelli=twins, partus prematurus=preterm labour, kista ovarium=ovarian cyst, kistektomi=cystectomy, bekas SC=previous caesarean scar, HT=hypertension, DM=diabetes mellitus, ORIF=open reduction internal fixation, ai=atas indikasi.
 
 ## OBSTETRIC RULES
-O03-O07: Incomplete=.4 | Complete=.9. ALWAYS .4 or .9. +O08.x as DS always.
-O02.1=missed abortion (fetal death+NO expulsion).
+O00: O00.1=tubal, O00.2=ovarian, O00.0=abdominal. Ruptur→+O08.1 DS. O08.0=infection, O08.3=shock, O08.9=unspecified.
+O02.1=missed abortion (fetal death+NO expulsion). +O08.9 DS. "janin mati+tidak ada pengeluaran"→O02.1 NOT O03.x.
+O03-O07 (shared 4th digit "See before O03"):
+  Incomplete base=.4 | Complete base=.9. ALWAYS .4 or .9. NEVER .0/.1/.2/.3/.6/.7/.8.
+  +O08.x always as DS: O08.9=no specific complication, O08.1=haemorrhage, O08.0=infection.
+  "incomplete+perdarahan"→O03.4+O08.1 | "complete tanpa komplikasi"→O03.9+O08.9
+
+## R CODES
+- Do NOT code R if definitive dx explains symptom.
+- R as DU: valid if no definitive dx → WARNING provisional.
+- DM→no R73 | fever unknown→R50.9 DU+WARNING | post-op fever→R50.9 DS.
+
+## MUSCULOSKELETAL (M00-M99)
+Site digit (last char): 0=multiple,1=shoulder,2=upper arm/elbow,3=forearm/wrist,4=hand,5=pelvis/thigh/hip,6=lower leg/knee,7=ankle/foot,8=other,9=unspecified. Never omit.
+B95-B96: ONLY if organism explicitly named. Always DS. B95.6=S.aureus, B95.3=S.pneumoniae, B96.1=Klebsiella, B96.2=E.coli, B96.5=Pseudomonas, B96.8=other.
+
+## EAR (H60-H95)
+H66.3=Other chronic suppurative otitis media. "CSOM"→H66.3 NOT H72.x (perforation only if separately stated).
+H90: H90.3="Sensorineural hearing loss, unilateral with unrestricted hearing on the contralateral side" | H90.4="Sensorineural hearing loss, bilateral" | H90.5="Sensorineural hearing loss, unspecified" | H90.1="Conductive hearing loss, unilateral with unrestricted hearing on the contralateral side" | H90.0="Conductive hearing loss, bilateral" | H90.2="Conductive hearing loss, unspecified".
+
+## EXTERNAL CAUSE (Chapter XX)
+Injury/trauma → ALWAYS add external cause DS: V20-V29=motorcycle, V40-V49=car, W00-W19=falls, X00-X09=fire, X60-X84=self-harm, X85-Y09=assault. Y92=place (Y92.4=street, Y92.0=home) if mentioned. Always DS.
+Drug-induced (Y40-Y59): ONLY if drug explicitly named. Y42=corticosteroids, Y44=anticoagulants, Y45=NSAIDs, Y57=other. Always DS.
 
 ## SPECIFICITY
-E10=DM type1, E11=DM type2. I61=haemorrhagic stroke, I63=ischaemic. 4th/5th digit always.
+E10=DM type1, E11=DM type2 + complication. I61=haemorrhagic stroke, I63=ischaemic+location. Fracture: bone+location+open/closed. 4th/5th digit always; .9 only if truly no detail.
 
-## EXTERNAL CAUSE
-Injury → ALWAYS add DS: V20-V29=motorcycle, V40-V49=car, W00-W19=falls. Always DS.
-
-Return ONLY valid JSON:
-{"summary","du_reasoning","validations":[{"type","message"}],"diagnoses":[{"role","code","dagger_asterisk","description","description_id","category","confidence","lead_term_path","volume1_notes":[{"type","text"}],"paired_with","reasoning"}],"procedures":[{"code","description","description_id","category","confidence","lead_term_path","volume1_notes","reasoning"}]}`;
+Return ONLY valid JSON with these keys:
+{"summary","du_reasoning","validations":[{"type","message"}],"diagnoses":[{"role","code","dagger_asterisk","description","description_id","category","confidence","lead_term_path","volume1_notes":[{"type","text"}],"paired_with","reasoning"}],"procedures":[{"code","description","description_id","category","confidence","lead_term_path","volume1_notes","reasoning"}]};
 
   try {
     const resp = await fetch("/api/claude", {
@@ -592,6 +620,15 @@ Return ONLY valid JSON:
     if (!Array.isArray(result.diagnoses))   result.diagnoses   = [];
     if (!Array.isArray(result.procedures))  result.procedures  = [];
     if (!Array.isArray(result.validations)) result.validations = [];
+
+    // ── FIX: normalisasi confidence — AI kadang kirim 0.9 bukan 90 ──
+    function fixConf(val) {
+      const n = parseFloat(val);
+      if (isNaN(n)) return 80;
+      return n <= 1 ? Math.round(n * 100) : Math.round(n);
+    }
+    result.diagnoses  = result.diagnoses.map(d => ({ ...d, confidence: fixConf(d.confidence) }));
+    result.procedures = result.procedures.map(p => ({ ...p, confidence: fixConf(p.confidence) }));
 
     renderResults(result);
   } catch(err) {
