@@ -705,7 +705,7 @@ function renderLeadPath(pathStr, code, description) {
           }
           lines.push(trimmed);
         } else {
-          lines.push(Array(i).fill('-').join(' ') + ' ' + trimmed);
+          lines.push('-'.repeat(i) + ' ' + trimmed);
         }
       });
       pathStr = lines.join('\n');
@@ -760,7 +760,7 @@ function renderLeadPath(pathStr, code, description) {
       const parts = trimmed.split(/\s+/);
       let level = 0;
       while (level < parts.length && parts[level] === '-') level++;
-      const dashLabel = Array(level).fill('-').join(' ') + ' ';
+      const dashLabel = '-'.repeat(level) + ' ';
       const rest = parts.slice(level).join(' ');
       return `<span class="lp-indent">${dashLabel}</span>${highlightCodes(rest)}`;
     }
