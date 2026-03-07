@@ -555,7 +555,7 @@ Drug-induced (Y40-Y59): ONLY if drug explicitly named. Y42=corticosteroids, Y44=
 E10=DM type1, E11=DM type2 + complication. I61=haemorrhagic stroke, I63=ischaemic+location. Fracture: bone+location+open/closed. 4th/5th digit always; .9 only if truly no detail.
 
 Return ONLY valid JSON with these keys:
-{"summary","du_reasoning","validations":[{"type","message"}],"diagnoses":[{"role","code","dagger_asterisk","description","description_id","category","confidence","lead_term_path","volume1_notes":[{"type","text"}],"paired_with","reasoning"}],"procedures":[{"code","description","description_id","category","confidence","lead_term_path","volume1_notes","reasoning"}]};
+{"summary","du_reasoning","validations":[{"type","message"}],"diagnoses":[{"role","code","dagger_asterisk","description","description_id","category","confidence","lead_term_path","volume1_notes":[{"type","text"}],"paired_with","reasoning"}],"procedures":[{"code","description","description_id","category","confidence","lead_term_path","volume1_notes","reasoning"}]}`
 
   try {
     const resp = await fetch("/api/claude", {
