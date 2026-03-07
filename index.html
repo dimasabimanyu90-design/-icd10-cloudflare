@@ -495,7 +495,7 @@ CLINICAL NOTE: ${input}
   N83.2="Other and unspecified ovarian cysts", O34.2="Maternal care due to uterine scar from previous surgery"
   74.1="Low cervical caesarean section", 65.29="Other local excision or destruction of ovary"
 - description_id: Indonesian translation of official title.
-- lead_term_path: STRING dengan \n (newline) antar baris. BUKAN array, BUKAN satu baris. Tampilkan hierarki Vol.3 lengkap. WAJIB 3 bagian:
+- lead_term_path: STRING untuk SATU kode saja. BUKAN array, BUKAN gabungan dua kode. Setiap kode punya lead_term_path sendiri. Tampilkan hierarki Vol.3 lengkap. WAJIB 3 bagian:
   [1] Lead term  [2] Subterm (- / - - / - - -)  [3] Baris final: CODE deskripsi resmi
   DILARANG: arrow(→), skip level, lead term langsung ke final tanpa subterm, kode tanpa deskripsi.
   DILARANG: baris final hilang — SELALU tulis "CODE Deskripsi resmi" setelah subterm terakhir.
@@ -710,6 +710,42 @@ function getCleanPath(pathStr, code, description) {
 
   const normalizeLine = (line) => line.replace(/^(\s*)(--+)(\s*)/, (m, pre, dashes) =>
     pre + '-'.repeat(dashes.length) + ' ');
+
+  // Jika AI gabungkan dua path dalam satu string, pisahkan per kode
+  if (code) {
+    const splitLines = pathStr.split('\n');
+    const ourCodeRe = new RegExp('^' + code.replace('.', '\\.'));
+    const hasOtherCode = splitLines.some(l => {
+      const t = l.trim();
+      return /^[A-Z]\d{2}/.test(t) && !ourCodeRe.test(t);
+    });
+    if (hasOtherCode) {
+      // Strategi: ambil semua baris non-kode di awal (lead+subterm),
+      // lalu hanya baris final yang cocok dengan kode kita
+      const headerLines = []; // lead term + subterm sebelum kode pertama
+      const finalLine = [];
+      let foundAnyCode = false;
+      for (const line of splitLines) {
+        const t = line.trim();
+        if (/^[A-Z]\d{2}/.test(t)) {
+          foundAnyCode = true;
+          if (ourCodeRe.test(t)) finalLine.push(line); // baris final kode kita
+          // kode lain: skip
+        } else if (!foundAnyCode) {
+          headerLines.push(line); // lead term & subterm sebelum kode pertama
+        }
+      }
+      // Rebuild: header + subterm yang mengandung kode kita + baris final
+      // Ambil subterm yang mengandung kode kita (jika belum ada di headerLines)
+      const subtermWithOurCode = splitLines.filter(l => {
+        const t = l.trim();
+        return t.startsWith('-') && ourCodeRe.test(t.replace(/.*\s/, ''))
+          && !headerLines.includes(l);
+      });
+      const rebuilt = [...headerLines, ...subtermWithOurCode, ...finalLine].filter(Boolean);
+      if (rebuilt.length > 0) pathStr = rebuilt.join('\n');
+    }
+  }
   const normalizeDashes = (line) => {
     const trimmed = line.trimStart();
     if (!trimmed.startsWith('-')) return line.trimEnd();
@@ -723,7 +759,22 @@ function getCleanPath(pathStr, code, description) {
   };
 
   const isFinalLine = (s) => /^(CODE\s+)?[A-Z]\d{2}(\.|\b)/.test(s) || /^\d{2}\.\d/.test(s);
-  const lines = pathStr.split('\n').map(l => normalizeDashes(normalizeLine(l))).filter(l => l.trim());
+  const normalizelevelsClean = (lines) => {
+    let prevLevel = 0;
+    return lines.map(line => {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith('-')) { prevLevel = 0; return line; }
+      let level = 0;
+      while (level < trimmed.length && trimmed[level] === '-') level++;
+      const rest = trimmed.slice(level).trim();
+      const allowedLevel = Math.min(level, prevLevel + 1);
+      prevLevel = allowedLevel;
+      return '-'.repeat(allowedLevel) + ' ' + rest;
+    });
+  };
+  const lines = normalizelevelsClean(
+    pathStr.split('\n').map(l => normalizeDashes(normalizeLine(l))).filter(l => l.trim())
+  );
   const hasExplicitFinal = lines.some(l => !l.trim().startsWith('-') && isFinalLine(l.trim()));
   const subtermLines = lines.filter(l => l.trim().startsWith('-'));
   const lastSubterm = subtermLines[subtermLines.length - 1] || '';
@@ -803,27 +854,44 @@ function renderLeadPath(pathStr, code, description) {
     });
   };
 
-  // Normalize semua format dash ke "---" style sebelum diproses
+  // Normalize semua format dash ke "---" style
   const normalizeDashes = (line) => {
     const trimmed = line.trimStart();
     if (!trimmed.startsWith('-')) return line.trimEnd();
     const spaces = line.length - trimmed.length;
-    // Hitung '-' di awal (handle "- -" dan "---" dan "-")
     const dashParts = trimmed.split(/\s+/);
     let dashCount = 0;
     for (const p of dashParts) {
       if (p === '-') dashCount++;
       else break;
     }
-    // Level = max(dash count, spasi/2 + 1)
     const level = Math.max(dashCount, Math.floor(spaces / 2) + 1);
     const rest = trimmed.replace(/^[-\s]+/, '').trim();
     return '-'.repeat(level) + ' ' + rest;
   };
 
-  const lines = pathStr.split('\n')
+  // Normalize level agar runtut: tidak boleh loncat level
+  // misal: level 1 → level 3 diubah jadi level 1 → level 2
+  const normalizelevels = (lines) => {
+    let prevLevel = 0;
+    return lines.map(line => {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith('-')) { prevLevel = 0; return line; }
+      // Hitung level dari jumlah '-' di awal
+      let level = 0;
+      while (level < trimmed.length && trimmed[level] === '-') level++;
+      const rest = trimmed.slice(level).trim();
+      // Pastikan tidak loncat lebih dari 1 level
+      const allowedLevel = Math.min(level, prevLevel + 1);
+      prevLevel = allowedLevel;
+      return '-'.repeat(allowedLevel) + ' ' + rest;
+    });
+  };
+
+  const rawLines = pathStr.split('\n')
     .map(l => normalizeDashes(normalizeLine(l)))
     .filter(l => l.trim());
+  const lines = normalizelevels(rawLines);
 
   const hasExplicitFinal = lines.some(l => !l.trim().startsWith('-') && isFinalLine(l.trim()));
 
