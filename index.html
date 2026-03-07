@@ -560,6 +560,9 @@ O03-O07 4th digit (COMPLETE vs INCOMPLETE — tentukan dulu sebelum digit kompli
 O60: .0=tanpa delivery | .1=preterm delivery (SC prematurus→O60.1 DU) | .2=term delivery
 O30.0=twin pregnancy DS. ALWAYS jika gemelli.
 TTTS→O43.0† DS. IUFD→O36.4 DS. TTTS+IUFD: O36.4 DU+O43.0 DS.
+Kaidah INCLUDES: Jika suatu kondisi sudah tercantum sebagai "Includes" di Vol.1 suatu kode, kondisi tersebut TIDAK dicoding terpisah — cukup tambahkan volume1_notes: {type:"includes", text:"..."} pada kode tersebut. Berlaku untuk semua kode, contoh: Twin pregnancy sudah Includes di O43.0/O36.4, jadi O30.0 tidak perlu dicoding.
+Kaidah EXCLUDES: Jika suatu kondisi tercantum sebagai "Excludes" di Vol.1 suatu kode, kondisi tersebut WAJIB dikoding terpisah dengan kode yang sesuai. Tambahkan volume1_notes: {type:"excludes", text:"..."} sebagai pengingat, lalu pastikan kode excluded tersebut muncul sebagai diagnosa/prosedur tersendiri.
+Urutan DS gemelli+TTTS+IUFD: O36.4 DU → O43.0† DS → O34.2 DS(jika bekas SC) → Z37.x DS terakhir.
 Z37 WAJIB DS terakhir: Z37.0=single live | Z37.1=single still | Z37.2=twins both live | Z37.3=twins one live one still | Z37.4=twins both still
 O99.0=anaemia in pregnancy (Hb<10) DS. O34.2=bekas SC DS (ALWAYS).
 
