@@ -638,8 +638,9 @@ E10=DM type1, E11=DM type2. DM WAJIB pakai 4th digit komplikasi:
   E11.0=coma | E11.1=ketoacidosis | E11.2=renal | E11.3=ophthalmic | E11.4=neurological
   E11.5=peripheral circulatory | E11.6=other specified | E11.7=multiple | E11.9=without complication
   Jika ada retinopati/katarak/glaukoma diabetik → E11.3 (bukan E11.9)
-  Jika ada nefropati/gagal ginjal diabetik → E11.2
-  Jika ada neuropati diabetik → E11.4
+  Jika ada nefropati/proteinuria/gagal ginjal diabetik TERSEBUT EKSPLISIT → E11.2
+  Jika ada neuropati diabetik TERSEBUT EKSPLISIT → E11.4
+  DILARANG asumsi komplikasi tanpa bukti eksplisit di teks — "riwayat DM" saja → E11.9
 H36.0=diabetic retinopathy (WAJIB .0, bukan H36 saja).
 Pasangan dagger-asterisk DM+retinopati: E11.3† DU + H36.0* DS — KEDUANYA WAJIB dikoding.
 Laser fotokoagulasi retina → ICD-9-CM 14.24 "Destruction of chorioretinal lesion by laser photocoagulation" (BUKAN Z51.4, BUKAN 14.25). 14.25=unspecified type (hindari jika laser disebut eksplisit).
@@ -890,16 +891,17 @@ function getCleanPath(pathStr, code, description) {
   const hasMultiLevel = subtermLinesM.some(l => l.trim().startsWith('--'));
   // isFlat: 2+ subterm tapi semua level 1 — kemungkinan AI kirim flat tanpa hierarki
   const isFlat = subtermLinesM.length >= 2 && !hasMultiLevel;
-  // Cek apakah baris final terpisah sudah ada (bukan di dalam subterm)
+  // Cek apakah baris final terpisah sudah ada DAN punya deskripsi (bukan kode saja)
   const hasStandaloneFinal = pathStr.split('\n').some(l => {
     const t = l.trim();
-    return !t.startsWith('-') && /^[A-Z]\d{2}|^\d{2}\./.test(t);
+    // Harus: tidak dimulai '-', dimulai kode, DAN ada teks deskripsi setelah kode
+    return !t.startsWith('-') && /^([A-Z]\d{2}(\.\d+)?|\d{2}\.\d+)\s+\S+/.test(t);
   });
   const looksMessy = !pathStr.includes('\n')
     || /[A-Z]\d{2}.*[A-Z]\d{2}/.test(pathStr)
     || pathStr.includes('/')
     || isFlat
-    || !hasStandaloneFinal; // tidak ada baris final terpisah → selalu override jika ada KNOWN_PATHS
+    || !hasStandaloneFinal; // final line tanpa deskripsi → override dengan KNOWN_PATHS
   if (code && KNOWN_PATHS[code] && looksMessy) {
     pathStr = KNOWN_PATHS[code];
   } else if (!pathStr.includes('\n')) {
@@ -1028,16 +1030,17 @@ function renderLeadPath(pathStr, code, description) {
   const hasMultiLevel = subtermLinesM.some(l => l.trim().startsWith('--'));
   // isFlat: 2+ subterm tapi semua level 1 — kemungkinan AI kirim flat tanpa hierarki
   const isFlat = subtermLinesM.length >= 2 && !hasMultiLevel;
-  // Cek apakah baris final terpisah sudah ada (bukan di dalam subterm)
+  // Cek apakah baris final terpisah sudah ada DAN punya deskripsi (bukan kode saja)
   const hasStandaloneFinal = pathStr.split('\n').some(l => {
     const t = l.trim();
-    return !t.startsWith('-') && /^[A-Z]\d{2}|^\d{2}\./.test(t);
+    // Harus: tidak dimulai '-', dimulai kode, DAN ada teks deskripsi setelah kode
+    return !t.startsWith('-') && /^([A-Z]\d{2}(\.\d+)?|\d{2}\.\d+)\s+\S+/.test(t);
   });
   const looksMessy = !pathStr.includes('\n')
     || /[A-Z]\d{2}.*[A-Z]\d{2}/.test(pathStr)
     || pathStr.includes('/')
     || isFlat
-    || !hasStandaloneFinal; // tidak ada baris final terpisah → selalu override jika ada KNOWN_PATHS
+    || !hasStandaloneFinal; // final line tanpa deskripsi → override dengan KNOWN_PATHS
   if (code && KNOWN_PATHS[code] && looksMessy) {
     pathStr = KNOWN_PATHS[code];
   } else if (!pathStr.includes('\n')) {
