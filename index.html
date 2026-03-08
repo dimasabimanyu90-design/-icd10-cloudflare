@@ -531,12 +531,20 @@ CONTOH: pasien di ICU dengan sepsis + DM + HT → sepsis=DU
    - Katarak saja tanpa retinopati → TIDAK perlu H36.0*
 
 ## FIELDS
-- description: HARUS SAMA PERSIS dengan baris final di lead_term_path (official Vol.1 title).
-  Baris final lead_term_path FORMAT: "CODE Official title" → description = "Official title" (tanpa kode).
-  BENAR: lead_term_path baris final "O34.2 Maternal care due to uterine scar from previous surgery" → description="Maternal care due to uterine scar from previous surgery"
-  SALAH: description="Previous caesarean section" padahal baris final "O34.2 Maternal care due to uterine scar from previous surgery"
-  BENAR: 74.1="Low cervical caesarean section" | SALAH: "Operasi caesar serviks rendah"
-  ATURAN: description = copy EXACT dari baris final lead_term_path, hapus kode di depannya.
+- description: HARUS SAMA PERSIS dengan baris final lead_term_path = official Vol.1 title.
+  ATURAN: tulis lead_term_path dulu → baris finalnya (format "CODE Title") → description = Title saja (hapus kode).
+  WAJIB konsisten: description = baris final lead_term_path tanpa kode di depan.
+
+  CONTOH BENAR vs SALAH:
+  O60.1: description="Preterm labour with preterm delivery" ✓ — HANYA jika onset spontan
+  O82.1: description="Delivery by emergency caesarean section" ✓ — SC darurat tanpa onset spontan
+  O43.0: description="Placental transfusion syndromes" ✓ | SALAH: "Twin-to-twin transfusion syndrome" ✗
+  O36.4: description="Maternal care for intrauterine death" ✓ | SALAH: "Intrauterine death of one or more fetuses" ✗
+  O34.2: description="Maternal care due to uterine scar from previous surgery" ✓ | SALAH: "Previous caesarean section" ✗
+  O99.0: description="Anaemia complicating pregnancy, childbirth and the puerperium" ✓ | SALAH: "Anaemia during pregnancy" ✗
+  74.1:  description="Low cervical caesarean section" ✓ | SALAH: "Operasi caesar serviks rendah" ✗
+  65.29: description="Other local excision or destruction of ovary" ✓ | SALAH: "Kistektomi bilateral" ✗
+  DILARANG: mengarang nama kode dari ingatan — HARUS dari baris final lead_term_path yang ditulis sendiri.
 - description_id: Indonesian translation of official title.
 - lead_term_path: STRING, SATU kode saja. Hierarki Vol.3 lengkap. WAJIB 3 bagian:
   [1] Lead term  [2] Subterm (- / -- / ---)  [3] Baris final: CODE deskripsi resmi
@@ -597,11 +605,21 @@ O03-O07 4th digit — tentukan COMPLETE vs INCOMPLETE dulu:
   COMPLETE (post-kuret): .5=infeksi | .6=perdarahan | .7=emboli | .9=tanpa komplikasi
   INCOMPLETE (pre-kuret): .0=infeksi | .1=perdarahan | .2=emboli | .4=tanpa komplikasi
   +O08.x DS wajib: O08.0=infeksi | O08.1=perdarahan | O08.3=syok | O08.9=unspecified
-O60: .0=tanpa delivery | .1=preterm delivery | .2=term delivery. Partus prematurus+SC→O60.1 DU.
+O60 HANYA jika ada onset persalinan SPONTAN sebelum 37 minggu (kontraksi spontan, ketuban pecah spontan):
+  O60.0=preterm labour tanpa delivery | O60.1=preterm labour WITH preterm delivery | O60.2=preterm labour with term delivery
+  DILARANG O60 jika SC tanpa onset spontan — SC atas indikasi = O82.x bukan O60.
+O82: SC tanpa onset persalinan spontan:
+  O82.0=elective/elektif (terencana) | O82.1=emergency/darurat | O82.2=unspecified
+  "SC ai ..." (atas indikasi) tanpa kontraksi spontan → O82.0 atau O82.1 sesuai konteks
+  SC darurat (TTTS/IUFD/fetal distress/perdarahan) → O82.1 DU
+  SC terencana (bekas SC, plasenta previa stabil) → O82.0 DU
+  Kasus Ny.X (SC ai gemelli+TTTS+IUFD) → O82.1 DU (emergency, bukan O60.1)
+Urutan TTTS+IUFD+SC emergency: O82.1 DU→O43.0†→O36.4→O34.2→O99.0(jika Hb<10)→Z37.x terakhir.
 O34.2=bekas SC → WAJIB DS di semua kasus ada riwayat SC.
 TTTS→O43.0† DS | IUFD→O36.4 DS | Gemelli=Includes O43.0/O36.4 → O30.0 TIDAK dikoding terpisah.
-Urutan TTTS+IUFD+partus prematurus: O60.1 DU→O43.0†→O36.4→O34.2→O99.0(jika Hb<10)→Z37.x terakhir.
-Urutan TTTS+IUFD tanpa partus prematurus: O36.4 DU→O43.0†→O34.2→Z37.x terakhir.
+Urutan TTTS+IUFD+SC emergency (tanpa onset spontan): O82.1 DU→O43.0†→O36.4→O34.2→O99.0(jika Hb<10)→Z37.x terakhir.
+Urutan TTTS+IUFD+partus spontan preterm: O60.1 DU→O43.0†→O36.4→O34.2→O99.0(jika Hb<10)→Z37.x terakhir.
+Urutan TTTS+IUFD tanpa partus: O36.4 DU→O43.0†→O34.2→Z37.x terakhir.
 Z37 WAJIB DS terakhir (MANDATORY — jangan skip): .0=single live | .1=single still | .2=twins both live | .3=twins one live one still | .4=twins both still. Gemelli+IUFD→Z37.3.
 INCLUDES: kondisi yang listed sebagai Includes di Vol.1 → TIDAK dikoding terpisah, tulis di volume1_notes saja.
 EXCLUDES: kondisi Excludes → WAJIB dikoding terpisah + catat di volume1_notes.
@@ -624,7 +642,7 @@ Kode definitif (J/K/I/dll) BOLEH jika ADA salah satu:
   1. Dokter tulis diagnosis eksplisit di resume/SOAP
   2. Penunjang konfirmasi (foto thorax infiltrat→pneumonia | CT scan→stroke)
   3. Patogen/kuman spesifik disebut ("PCR COVID-19+"→U07.1 | "kultur Klebsiella"→J15.0)
-  4. Tindakan operatif dilakukan (appendektomi→K35.x | SC→O60.1/O82.x)
+  4. Tindakan operatif dilakukan (appendektomi→K35.x | SC elektif→O82.0 | SC darurat→O82.1)
 
 Jika HANYA gejala tanpa konfirmasi → R code + WARNING provisional:
   Demam+batuk+pilek+PCR+(tanpa nama patogen) → R50.9 DU+WARNING | R05 DS — BUKAN J22
