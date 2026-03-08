@@ -484,7 +484,8 @@ CLINICAL NOTE: ${input}
   DILARANG koding foto thorax jika teks tidak menyebut "foto thorax/rontgen/chest x-ray/x-ray".
   DILARANG koding nebulisasi jika teks tidak menyebut "nebulisasi/nebulizer/inhalasi".
   DILARANG koding kultur sputum jika teks tidak menyebut "kultur sputum/kultur dahak/sputum culture".
-  WAJIB koding 90.59 jika ada nilai lab numerik di teks (Hb, leukosit, GDS, kreatinin, dll) — nilai numerik = bukti pemeriksaan dilakukan.
+  WAJIB koding 90.59 jika ada nilai lab numerik di teks (Hb, leukosit, GDS, kreatinin, troponin, dll) — nilai numerik = bukti pemeriksaan dilakukan.
+  DILARANG koding 90.59 hanya karena ada nilai TTV (TD/tekanan darah, nadi, suhu, RR, SpO2) — TTV bukan pemeriksaan lab.
   DILARANG koding oksigen (93.96) jika teks tidak menyebut "oksigen/O2/nasal kanul/masker O2".
   BOLEH koding hanya jika KATA KUNCI prosedur ADA secara eksplisit di teks input.
   Contoh BENAR: teks menyebut "dilakukan foto thorax" → koding 87.44
@@ -822,7 +823,13 @@ Nefropati/GFR↓ diabetik eksplisit → E11.2. Neuropati diabetik eksplisit → 
 GDS tinggi tanpa komplikasi organ → E11.9.
 Fakoemulsifikasi+IOL→13.72 | Fakoemulsifikasi tanpa IOL→13.41 | ECCE→13.71.
 Laser fotokoagulasi retina→14.24 (BUKAN 14.25). 14.25=unspecified, hindari jika laser disebut.
-I61=haemorrhagic stroke | I63=ischaemic+location. Fracture: bone+location+open/closed. 4th/5th digit always.
+I61=haemorrhagic stroke WAJIB digit lokasi:
+  I61.0=subcortical hemisfer (ganglia basalis, thalamus, kapsula interna) | I61.1=kortikal hemisfer
+  I61.2=hemisfer unspecified | I61.3=batang otak | I61.4=serebelum | I61.5=intraventrikel
+  I61.6=multiple | I61.8=other | I61.9=unspecified
+  "ganglia basalis" → I61.0 | "talamus" → I61.0 | "lobus frontal/parietal/temporal" → I61.1
+  "serebelum" → I61.4 | "batang otak/pons/medulla" → I61.3
+I63=ischaemic+location WAJIB digit. Fracture: bone+location+open/closed. 4th/5th digit always.
 
 Return ONLY valid JSON with these keys:
 {"summary","du_reasoning","validations":[{"type","message"}],"diagnoses":[{"role","code","dagger_asterisk","description","description_id","category","confidence","lead_term_path","volume1_notes":[{"type","text"}],"paired_with","reasoning"}],"procedures":[{"code","description","description_id","category","confidence","lead_term_path","volume1_notes","reasoning"}]}`
@@ -1253,12 +1260,14 @@ function renderResults(result) {
 
   // ── Render hallucination warnings sebelum list prosedur ──
   if (_procWarnings && _procWarnings.length > 0) {
-    const _warnHTML = `<div class="validation-banner" style="border-radius:0;border-left-width:4px;border-left-color:#f59e0b;background:#fffbeb;border-color:#fde68a;color:#92400e;margin-bottom:0">
+    const _warnHTML = `<div class="validation-banner proc-validator-banner" style="border-radius:0;border-left-width:4px;border-left-color:#f59e0b;background:#fffbeb;border-color:#fde68a;color:#92400e;margin-bottom:0">
       <strong>⚠ PROSEDUR TIDAK TERVERIFIKASI DI TEKS INPUT</strong>
       ${_procWarnings.map(w => `<div class="val-item"><span>🟡</span><span>${w.message}</span></div>`).join('')}
       <div style="font-size:10px;margin-top:6px;opacity:0.65;font-style:italic">Verifikasi manual — kemungkinan halusinasi AI karena kata kunci tidak ditemukan di teks</div>
     </div>`;
-    // Insert setelah proc-header, sebelum procList
+    // Hapus banner lama dulu sebelum insert baru (cegah duplikat)
+    const _oldBanner = document.querySelector('.proc-validator-banner');
+    if (_oldBanner) _oldBanner.remove();
     document.querySelector('.proc-header').insertAdjacentHTML('afterend', _warnHTML);
   }
 
