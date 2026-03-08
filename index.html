@@ -1279,7 +1279,19 @@ function renderResults(result) {
     document.querySelector('.proc-header').insertAdjacentHTML('afterend', _warnHTML);
   }
 
-  document.getElementById('procList').innerHTML = procedures.map((p, i) => {
+  // Filter: hapus prosedur yang di-warning validator DAN confidence rendah (<80)
+  // Khusus 90.59: hapus kalau ada di warning list (artinya tidak ada bukti lab di teks)
+  const _warnedCodes = new Set((_procWarnings || []).map(w => w.code));
+  const _filteredProcs = procedures.filter(p => {
+    if (p.code === '90.59' && _warnedCodes.has('90.59')) return false;
+    return true;
+  });
+  const _removedCount = procedures.length - _filteredProcs.length;
+  if (_removedCount > 0) {
+    document.getElementById('procCount').textContent = `${_filteredProcs.length} ${currentLang === 'id' ? 'kode' : 'codes'}`;
+  }
+
+  document.getElementById('procList').innerHTML = _filteredProcs.map((p, i) => {
     const descAlt = currentLang === 'id' && p.description_id ? `<div class="diag-desc-alt">🇮🇩 ${p.description_id}</div>` : '';
     return `<div class="diag-item" style="animation-delay:${(diagnoses.length+i)*0.06}s">
       <div class="diag-main">
