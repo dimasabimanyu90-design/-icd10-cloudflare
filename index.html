@@ -495,7 +495,9 @@ CLINICAL NOTE: ${input}
   Contoh SALAH: teks hanya menyebut "pasien anemia" tanpa nilai → JANGAN koding 90.59
   PCR/swab nasofaring/tenggorok → 90.41 | PCR darah → 90.59 | Rapid test apapun → 90.59
   Nilai lab numerik di teks = bukti pemeriksaan dilakukan → WAJIB koding 90.59
-  Sebelum finalisasi: cek ulang setiap prosedur — apakah kata kuncinya ADA di teks? Tidak ada → hapus.
+  Sebelum finalisasi prosedur — WAJIB cek 2 hal:
+  1. Setiap prosedur dikoding: apakah kata kuncinya ADA di teks? Tidak ada → hapus.
+  2. Apakah ada nilai lab numerik di teks (Hb, leukosit, GDS, kreatinin, dll)? Ada → WAJIB tambah 90.59 jika belum ada.
 
 ## DU SELECTION RULES (WHO ICD-10 Vol.2)
 DU = kondisi yang setelah diteliti PALING BERTANGGUNG JAWAB atas kebutuhan perawatan pada episode ini.
@@ -529,9 +531,12 @@ CONTOH: pasien di ICU dengan sepsis + DM + HT → sepsis=DU
    - Katarak saja tanpa retinopati → TIDAK perlu H36.0*
 
 ## FIELDS
-- description: EXACT Vol.1 official code title verbatim. NOT paraphrase. NOT patient diagnosis.
+- description: HARUS SAMA PERSIS dengan baris final di lead_term_path (official Vol.1 title).
+  Baris final lead_term_path FORMAT: "CODE Official title" → description = "Official title" (tanpa kode).
+  BENAR: lead_term_path baris final "O34.2 Maternal care due to uterine scar from previous surgery" → description="Maternal care due to uterine scar from previous surgery"
+  SALAH: description="Previous caesarean section" padahal baris final "O34.2 Maternal care due to uterine scar from previous surgery"
   BENAR: 74.1="Low cervical caesarean section" | SALAH: "Operasi caesar serviks rendah"
-  BENAR: H72.1="Attic perforation of tympanic membrane" | SALAH: "Perforasi membran timpani"
+  ATURAN: description = copy EXACT dari baris final lead_term_path, hapus kode di depannya.
 - description_id: Indonesian translation of official title.
 - lead_term_path: STRING, SATU kode saja. Hierarki Vol.3 lengkap. WAJIB 3 bagian:
   [1] Lead term  [2] Subterm (- / -- / ---)  [3] Baris final: CODE deskripsi resmi
@@ -597,7 +602,7 @@ O34.2=bekas SC → WAJIB DS di semua kasus ada riwayat SC.
 TTTS→O43.0† DS | IUFD→O36.4 DS | Gemelli=Includes O43.0/O36.4 → O30.0 TIDAK dikoding terpisah.
 Urutan TTTS+IUFD+partus prematurus: O60.1 DU→O43.0†→O36.4→O34.2→O99.0(jika Hb<10)→Z37.x terakhir.
 Urutan TTTS+IUFD tanpa partus prematurus: O36.4 DU→O43.0†→O34.2→Z37.x terakhir.
-Z37 WAJIB DS terakhir: .0=single live | .1=single still | .2=twins both live | .3=twins one live one still | .4=twins both still.
+Z37 WAJIB DS terakhir (MANDATORY — jangan skip): .0=single live | .1=single still | .2=twins both live | .3=twins one live one still | .4=twins both still. Gemelli+IUFD→Z37.3.
 INCLUDES: kondisi yang listed sebagai Includes di Vol.1 → TIDAK dikoding terpisah, tulis di volume1_notes saja.
 EXCLUDES: kondisi Excludes → WAJIB dikoding terpisah + catat di volume1_notes.
 
@@ -708,10 +713,13 @@ Salpingo-oophorectomy (angkat ovarium+tuba):
   Unilateral → 65.49 | Bilateral → 65.61
 KUNCI: kata "kistektomi" = 65.29. Kata "oophorectomi/angkat ovarium" = 65.39/65.51.
 
-Z37 WAJIB DS TERAKHIR di semua kasus persalinan/SC:
+Z37 WAJIB DS TERAKHIR di semua kasus persalinan/SC — INI MANDATORY, TIDAK BOLEH DILEWATI:
   Z37.0=single liveborn | Z37.1=single stillborn
   Z37.2=twins both liveborn | Z37.3=twins one live one still | Z37.4=twins both stillborn
-  JANGAN skip Z37 — tanpa Z37 coding obstetri TIDAK LENGKAP.
+  Gemelli + IUFD satu fetus → Z37.3 (one live one still)
+  Gemelli + IUFD dua fetus → Z37.4 (both stillborn)
+  CHECKLIST AKHIR: sebelum finalisasi output, pastikan ada Z37.x di diagnoses array.
+  Jika tidak ada Z37.x → TAMBAHKAN sekarang sebelum return JSON.
 
 LEAD_TERM_PATH FORMAT:
   DILARANG koma setelah lead term: "Anaemia," → SALAH. Tulis "Anaemia" tanpa koma.
