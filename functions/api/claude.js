@@ -106,6 +106,12 @@ Jika ada retinopati/katarak/glaukoma + DM → komplikasi mata=DU, DM=DS
 - reasoning: data klinis SPESIFIK dari teks (nilai lab, gejala, tindakan). DILARANG ulang nama kode.
   SALAH: "O99.0 karena anemia kehamilan" | BENAR: "Hb 9,1 g/dL (<10), pasien hamil"
 - dagger_asterisk: "dagger"|"asterisk"|"none". ONLY if officially marked †/* in Vol.1.
+  O43.0 = DS biasa (bukan dagger) | O36.4 = DS biasa | O34.2 = DS biasa | O99.0 = DS biasa
+  DILARANG mark dagger kecuali ada pasangan asterisk resmi (E11.3†+H36.0*, G20†+F02.3*, dll)
+- paired_with: kode DU untuk semua DS, kode DS untuk DU. WAJIB diisi — jangan "none".
+  DU paired_with = list semua kode DS | DS paired_with = kode DU
+  Contoh: O82.1 DU → paired_with: ["O43.0","O36.4","O34.2","O99.0","Z37.3"]
+  Contoh: O43.0 DS → paired_with: ["O82.1"]
 - volume1_notes: SELALU isi dengan array kosong [].
   DILARANG KERAS mengisi volume1_notes dengan apapun — AI tidak punya akses Vol.1 resmi.
   WAJIB: volume1_notes: [] untuk semua kode tanpa pengecualian.
