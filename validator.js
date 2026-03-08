@@ -30,8 +30,11 @@ const PROC_KEYWORDS = {
             'crp','led','troponin','bnp','gds','gdp','gd2pp','hba1c','kreatinin','ureum',
             'sgot','sgpt','bilirubin','albumin','natrium','kalium','klorida','kolesterol',
             'trigliserida','ldl','hdl','kimia darah','darah rutin','cbc','pemeriksaan darah',
-            'hasil lab','nilai lab','pcr','rapid test','antigen','swab'],
-  '90.41': ['kultur sputum','sputum culture','kultur dahak','biakan sputum'],
+            'hasil lab','nilai lab','rapid test','rapid antigen','rapid antibodi','serologi',
+            'swab darah','pemeriksaan rapid',
+            // nilai numerik lab = bukti pemeriksaan dilakukan
+            'hb :', 'hb:', 'leukosit :', 'leukosit:', 'gds ', 'gds:', 'hba1c ', 'troponin '],
+  '90.41': ['kultur sputum','sputum culture','kultur dahak','biakan sputum','pcr','swab nasofaring','swab tenggorok','bta sputum','sputum bta'],
   '90.54': ['kultur darah','blood culture','biakan darah'],
   '90.29': ['kultur urin','urine culture','biakan urin'],
   '91.31': ['urinalisis','urin rutin','urinalysis','urine rutin','pemeriksaan urin'],
@@ -114,9 +117,16 @@ function validateProcedures(procedures, inputText) {
   const lowerInput = inputText.toLowerCase();
   const warnings = [];
 
+  // Deteksi khusus 90.59: nilai lab numerik = bukti pemeriksaan dilakukan
+  const LAB_NUMERIC_RE = /(hb|hemoglobin|leukosit|wbc|trombosit|platelet|hematokrit|eritrosit|gds|gdp|gd2pp|hba1c|kreatinin|ureum|sgot|sgpt|bilirubin|albumin|natrium|kalium|klorida|kolesterol|trigliserida|ldl|hdl|troponin|bnp|crp|led)\s*[:\s]\s*\d/i;
+  const hasLabNumeric = LAB_NUMERIC_RE.test(inputText);
+
   for (const proc of procedures) {
     const keywords = PROC_KEYWORDS[proc.code];
     if (!keywords) continue; // kode tidak ada di map → skip, tidak bisa divalidasi
+
+    // Khusus 90.59: lolos jika ada nilai numerik lab di teks
+    if (proc.code === '90.59' && hasLabNumeric) continue;
 
     const found = keywords.some(kw => lowerInput.includes(kw.toLowerCase()));
     if (!found) {
