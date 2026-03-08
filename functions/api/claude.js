@@ -106,7 +106,12 @@ Jika ada retinopati/katarak/glaukoma + DM → komplikasi mata=DU, DM=DS
 - reasoning: data klinis SPESIFIK dari teks (nilai lab, gejala, tindakan). DILARANG ulang nama kode.
   SALAH: "O99.0 karena anemia kehamilan" | BENAR: "Hb 9,1 g/dL (<10), pasien hamil"
 - dagger_asterisk: "dagger"|"asterisk"|"none". ONLY if officially marked †/* in Vol.1.
-- volume1_notes: HANYA jika BENAR-BENAR ada di Vol.1. DILARANG mengarang. Tidak yakin → []
+- volume1_notes: HANYA jika BENAR-BENAR ada di Vol.1 resmi ICD-10/ICD-9-CM.
+  DILARANG KERAS mengarang INCLUDES/EXCLUDES dari konteks klinis.
+  INCLUDES di Vol.1 = daftar resmi kondisi yang sudah tercakup dalam kode tersebut.
+  BUKAN: "INCLUDES: Gemelli, TTTS, IUFD" — ini TIDAK ADA di Vol.1 O82.1.
+  BUKAN: "INCLUDES: Hb 9,1" — nilai lab BUKAN bagian Vol.1 notes.
+  Tidak yakin → volume1_notes: [] (kosong lebih baik daripada mengarang)
 
 ## VOL.3 INDEX RULES
 - Use Vol.3 Alphabetical Index to find lead term → subterms → code.
@@ -209,6 +214,12 @@ WAJIB scan nilai lab/TTV abnormal:
   GDS>200/GDP>126→O24(hamil) | SpO2<95% akut→J96.0 DS
 
 ## GINEKOLOGI / OBSTETRI PROSEDUR
+SC/SCTP → WAJIB koding 74.1 "Low cervical caesarean section" (ICD-9-CM)
+  BUKAN O82.1 — O82.1 adalah kode DIAGNOSIS bukan prosedur
+  O82.1 = diagnosis ICD-10 | 74.1 = prosedur ICD-9-CM Vol.3
+  LARANGAN KERAS: JANGAN pakai O82.x/O60.x sebagai kode prosedur
+  Lead term prosedur SC: Caesarean section → low cervical 74.1
+  74.1 Low cervical caesarean section
 Kistektomi ovarium (buang kista, ovarium TETAP):
   Unilateral/Bilateral → 65.29 "Other local excision or destruction of ovary"
   BUKAN 65.31 (itu salpingo-oophorectomy = angkat ovarium+tuba seluruhnya)
