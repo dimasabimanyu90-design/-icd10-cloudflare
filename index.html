@@ -529,71 +529,28 @@ CONTOH: pasien di ICU dengan sepsis + DM + HT → sepsis=DU
    - Katarak saja tanpa retinopati → TIDAK perlu H36.0*
 
 ## FIELDS
-- description: EXACT Vol.1 official code title verbatim. NOT patient diagnosis. NOT paraphrase.
-  H72.1="Attic perforation of tympanic membrane" NOT "Chronic suppurative otitis media"
-  H90.3="Sensorineural hearing loss, unilateral with unrestricted hearing on the contralateral side"
-  N83.2="Other and unspecified ovarian cysts", O34.2="Maternal care due to uterine scar from previous surgery"
-  74.1="Low cervical caesarean section", 65.29="Other local excision or destruction of ovary"
-  14.24="Destruction of chorioretinal lesion by laser photocoagulation"
-  14.25="Destruction of chorioretinal lesion by photocoagulation of unspecified type"
-  14.23="Destruction of chorioretinal lesion by xenon arc photocoagulation"
-  DILARANG paraphrase: "Laser photocoagulation of retina" → SALAH. Gunakan EXACT official title.
+- description: EXACT Vol.1 official code title verbatim. NOT paraphrase. NOT patient diagnosis.
+  BENAR: 74.1="Low cervical caesarean section" | SALAH: "Operasi caesar serviks rendah"
+  BENAR: H72.1="Attic perforation of tympanic membrane" | SALAH: "Perforasi membran timpani"
 - description_id: Indonesian translation of official title.
-- lead_term_path: STRING untuk SATU kode saja. BUKAN array, BUKAN gabungan dua kode. Setiap kode punya lead_term_path sendiri. Tampilkan hierarki Vol.3 lengkap. WAJIB 3 bagian:
-  [1] Lead term  [2] Subterm (- / - - / - - -)  [3] Baris final: CODE deskripsi resmi
-  DILARANG: arrow(→), skip level, lead term langsung ke final tanpa subterm, kode tanpa deskripsi.
-  DILARANG: baris final hilang — SELALU tulis "CODE Deskripsi resmi" setelah subterm terakhir.
-
-  ICD-10 diagnosis:
-  FORMAT WAJIB lead_term_path — DILARANG:
-  - Separator "/" (Myocardial infarction / Acute) → HARUS pakai newline + dash
-  - Subterm kosong "- -" atau "-- " tanpa teks → HAPUS, langsung ke subterm berikutnya
-  - Level loncat (langsung "--" tanpa "-" sebelumnya)
-  CONTOH SALAH: "Myocardial infarction / Acute / -- CODE desc"
-  CONTOH BENAR:
+- lead_term_path: STRING, SATU kode saja. Hierarki Vol.3 lengkap. WAJIB 3 bagian:
+  [1] Lead term  [2] Subterm (- / -- / ---)  [3] Baris final: CODE deskripsi resmi
+  DILARANG: arrow(→), skip level, separator "/", subterm kosong, baris final hilang.
+  CONTOH ICD-10:
   Infarction
   - myocardial
   -- acute
   --- inferior I21.1
   I21.1 Acute transmural myocardial infarction of inferior wall
-
-  Section                                    Labour                          Abortion
-  - cesarean (see also Delivery,cesarean) O82.9  - premature O60            - spontaneous O03
-  - cesarean (for) O82.9                     - - with delivery O60.1        - - complicated by
-  - - previous                               O60.1 Preterm labour with      - - - genital tract infection O03.5
-  - - - cesarean section O34.2                     preterm delivery         O03.5 Spontaneous abortion,
-  O34.2 Maternal care due to uterine scar                                         complete, with pelvic infection
-  from previous surgery
-  Syndrome                  Death                      Outcome of delivery     Pregnancy
-  - transfusion             - fetus, fetal             - twins                 - complicated by
-  - - feto-fetal O43.0      - - (near term) O36.4      - - one liveborn        - - multiple gestation
-  O43.0 Placental           O36.4 Maternal care              one stillborn Z37.3    - - - twin O30.0
-        transfusion               for intrauterine     Z37.3 Twins, one liveborn   O30.0 Twin pregnancy
-        syndromes                 death                      and one stillborn
-
-  ICD-9-CM prosedur:
-  Cesarean section          Cystectomy               Reduction, fracture        Nailing,intramedullary
-  - low cervical 74.1       - ovary                  - femur (closed) 79.05     - femur 79.35
-  74.1 Low cervical         - - partial 65.29        - - with internal          79.35 Open reduction,
-       caesarean section    65.29 Other local              fixation 79.15             internal fixation,femur
-                                  excision,ovary     79.15 Open reduction,
-  Angioplasty                                              internal fixation,femur
-  - coronary (balloon) 00.66
-  00.66 Percutaneous transluminal coronary angioplasty
-  Photocoagulation            Extraction of lens
-  - retina                    - phacoemulsification
-  -- for destruction of       -- with insertion of
-  --- laser 14.24             --- intraocular lens prosthesis 13.72
-  14.24 Destruction of        13.72 Phacoemulsification and insertion
-        chorioretinal lesion        of intraocular lens prosthesis
-        by laser photocoagulation
-- confidence: integer 1-99, estimasi keyakinan koding. WAJIB diisi, jangan kosong atau null.
-- reasoning: WAJIB berisi data klinis spesifik dari teks input (nilai lab, gejala, tindakan) yang menjadi dasar pemilihan kode. DILARANG hanya mengulang nama kode atau deskripsi kode. Contoh SALAH: "Dikategorikan sebagai O99.0 karena anemia kehamilan." Contoh BENAR: "Hb 9,1 g/dL (di bawah normal <10), pasien sedang hamil."
-- dagger_asterisk: "dagger"|"asterisk"|"none". ONLY if OFFICIALLY marked †/* in Vol.1. Most="none".
-- volume1_notes: includes/excludes/notes per code.
-  PERINGATAN: HANYA tulis volume1_notes yang BENAR-BENAR ada di Vol.1 ICD-10.
-  DILARANG mengarang/mengasumsikan includes/excludes yang tidak ada.
-  Jika tidak yakin → kosongkan volume1_notes: []
+  CONTOH ICD-9-CM:
+  Caesarean section
+  - low cervical 74.1
+  74.1 Low cervical caesarean section
+- confidence: integer 1-99. WAJIB diisi.
+- reasoning: data klinis SPESIFIK dari teks (nilai lab, gejala, tindakan). DILARANG ulang nama kode.
+  SALAH: "O99.0 karena anemia kehamilan" | BENAR: "Hb 9,1 g/dL (<10), pasien hamil"
+- dagger_asterisk: "dagger"|"asterisk"|"none". ONLY if officially marked †/* in Vol.1.
+- volume1_notes: HANYA jika BENAR-BENAR ada di Vol.1. DILARANG mengarang. Tidak yakin → []
 
 ## VOL.3 INDEX RULES
 1. NEVER use anatomical site as lead term → always says "see condition".
@@ -629,44 +586,28 @@ intake sulit/intake kurang/sulit makan/tidak mau makan/anoreksia/tidak nafsu mak
 R63.3=Feeding difficulties | R63.0=Anorexia (tidak nafsu makan spesifik) | R11=Nausea and vomiting
 
 ## OBSTETRIC RULES
-O00: O00.1=tubal, O00.2=ovarian, O00.0=abdominal. Ruptur→+O08.1 DS.
-O02.1=missed abortion (fetal death+NO expulsion). +O08.9 DS. BUKAN O03.x.
-O03-O07 4th digit (COMPLETE vs INCOMPLETE — tentukan dulu sebelum digit komplikasi):
-  COMPLETE (sudah kuret/tindakan): .5=infeksi | .6=perdarahan | .7=emboli | .9=tanpa komplikasi
-  INCOMPLETE (belum tindakan):     .0=infeksi | .1=perdarahan | .2=emboli | .4=tanpa komplikasi
-  +O08.x selalu DS: O08.0=infection | O08.1=haemorrhage | O08.3=shock | O08.9=unspecified
-  "infeksi setelah kuretase"→O03.5+O08.0 | "infeksi belum kuret"→O03.0+O08.0 | "perdarahan belum kuret"→O03.1+O08.1 | "incomplete tanpa komplikasi"→O03.4+O08.9 | "complete tanpa komplikasi"→O03.9+O08.9
-O60: .0=tanpa delivery | .1=preterm delivery (partus prematurus+SC→O60.1 DU) | .2=term delivery
-O34.2=bekas SC/previous caesarean scar → WAJIB DS di SEMUA kasus, bukan hanya TTTS/IUFD.
-TTTS→O43.0† DS. IUFD→O36.4 DS.
-TTTS+IUFD dengan partus prematurus: O60.1 DU → O43.0† DS → O36.4 DS → O34.2 DS → Z37.x DS terakhir.
-TTTS+IUFD tanpa partus prematurus: O36.4 DU → O43.0† DS → O34.2 DS(jika ada) → Z37.x DS terakhir.
-Kaidah INCLUDES: Jika suatu kondisi sudah tercantum sebagai "Includes" di Vol.1 suatu kode, kondisi tersebut TIDAK dicoding terpisah — cukup tambahkan volume1_notes: {type:"includes", text:"..."} pada kode tersebut. Berlaku untuk semua kode.
-CONTOH Includes: O30.0 (Twin pregnancy) sudah tercantum sebagai Includes di bawah O43.0 dan O36.4 → O30.0 TIDAK dicoding terpisah, cukup note Includes saja.
-CONTOH Includes: jangan coding kondisi lain yang sudah jelas tercakup Includes di kode utama.
-Kaidah EXCLUDES: Jika suatu kondisi tercantum sebagai "Excludes" di Vol.1 suatu kode, kondisi tersebut WAJIB dikoding terpisah dengan kode yang sesuai. Tambahkan volume1_notes: {type:"excludes", text:"..."} sebagai pengingat, lalu pastikan kode excluded tersebut muncul sebagai diagnosa/prosedur tersendiri.
-Urutan koding kasus Ny.X (partus prematurus+SC+gemelli+TTTS+IUFD+bekas SC): O60.1 DU → O43.0† DS → O36.4 DS → O34.2 DS → O99.0 DS(jika Hb<10) → Z37.x DS terakhir.
-Z37 WAJIB DS terakhir: Z37.0=single live | Z37.1=single still | Z37.2=twins both live | Z37.3=twins one live one still | Z37.4=twins both still
-O99.0=anaemia in pregnancy: HANYA jika nilai Hb <10 ditemukan di teks (bukan hanya kata "anemia"). Reasoning JANGAN hanya ulang nama kode atau diagnosis — jelaskan data klinis yang jadi dasar, contoh: "Hb 9,1 g/dL (normal ≥10), pasien hamil".
-WAJIB scan semua nilai pemeriksaan fisik, lab, dan penunjang dalam teks input.
-Jika nilai abnormal ditemukan, tambahkan kode yang sesuai meskipun dokter tidak menulisnya di diagnosis:
-- Hb <10 + hamil → O99.0 DS | Hb <10 non-hamil → D64.9
-- Hb <10 + non-hamil + kronik → D63.8† (anemia in chronic disease)
-- TD ≥140/90 + hamil → O13/O14 | TD ≥140/90 non-hamil → I10
-- GDS >200 atau GDP >126 → pertimbangkan E11/E14 atau O24 (jika hamil)
-- GDS/GDP rendah (<70) → E16.0 hipoglikemia
-- Natrium rendah (<135) → E87.1 hiponatremia
-- Kalium rendah (<3.5) → E87.6 hipokalemia | Kalium tinggi (>5.5) → E87.5 hiperkalemia
-- Kreatinin tinggi → N19 gagal ginjal / N17/N18 sesuai konteks
-- Leukosit tinggi (>11.000) tanpa dx infeksi eksplisit → pertimbangkan sebagai supporting dx
-- Saturasi O2 / SpO2 rendah (<95%) → WAJIB tambah kode:
-  SpO2 <95% onset akut → J96.0 Acute respiratory failure DS
-  SpO2 <95% kronik → J96.1 Chronic respiratory failure DS
-  SpO2 <95% tanpa info durasi → J96.9 Respiratory failure, unspecified DS
-  RR >24x/menit + SpO2 <95% → perkuat J96.0
-  JANGAN hanya "pertimbangkan" — jika nilai ada di teks, WAJIB dikoding
-- Nilai lain yang jelas abnormal: tetap kode sesuai konteks klinis
-- JANGAN abaikan nilai abnormal hanya karena dokter tidak menyebutnya di diagnosis.
+O00: .1=tubal | .2=ovarian | .0=abdominal. Ruptur→+O08.1 DS.
+O02.1=missed abortion (fetal death, NO expulsion). +O08.9 DS. BUKAN O03.x.
+O03-O07 4th digit — tentukan COMPLETE vs INCOMPLETE dulu:
+  COMPLETE (post-kuret): .5=infeksi | .6=perdarahan | .7=emboli | .9=tanpa komplikasi
+  INCOMPLETE (pre-kuret): .0=infeksi | .1=perdarahan | .2=emboli | .4=tanpa komplikasi
+  +O08.x DS wajib: O08.0=infeksi | O08.1=perdarahan | O08.3=syok | O08.9=unspecified
+O60: .0=tanpa delivery | .1=preterm delivery | .2=term delivery. Partus prematurus+SC→O60.1 DU.
+O34.2=bekas SC → WAJIB DS di semua kasus ada riwayat SC.
+TTTS→O43.0† DS | IUFD→O36.4 DS | Gemelli=Includes O43.0/O36.4 → O30.0 TIDAK dikoding terpisah.
+Urutan TTTS+IUFD+partus prematurus: O60.1 DU→O43.0†→O36.4→O34.2→O99.0(jika Hb<10)→Z37.x terakhir.
+Urutan TTTS+IUFD tanpa partus prematurus: O36.4 DU→O43.0†→O34.2→Z37.x terakhir.
+Z37 WAJIB DS terakhir: .0=single live | .1=single still | .2=twins both live | .3=twins one live one still | .4=twins both still.
+INCLUDES: kondisi yang listed sebagai Includes di Vol.1 → TIDAK dikoding terpisah, tulis di volume1_notes saja.
+EXCLUDES: kondisi Excludes → WAJIB dikoding terpisah + catat di volume1_notes.
+
+WAJIB scan nilai lab/TTV abnormal di teks — koding meskipun dokter tidak tulis di diagnosis:
+  Hb<10+hamil→O99.0 DS | Hb<10+non-hamil→D64.9 | Hb<10+kronik→D63.8†
+  TD≥140/90+hamil→O13/O14 | TD≥140/90+non-hamil→I10
+  GDS>200/GDP>126→E11/E14 atau O24(hamil) | GDS<70→E16.0
+  Na<135→E87.1 | K<3.5→E87.6 | K>5.5→E87.5 | Kreatinin↑→N17/N18/N19
+  SpO2<95% akut→J96.0 DS | SpO2<95% kronik→J96.1 DS | SpO2<95% unspecified→J96.9 DS
+  RR>24+SpO2<95%→perkuat J96.0. JANGAN skip nilai abnormal.
 
 ## R CODES
 - Do NOT code R if definitive dx explains symptom.
@@ -674,27 +615,18 @@ Jika nilai abnormal ditemukan, tambahkan kode yang sesuai meskipun dokter tidak 
 - DM→no R73 | fever unknown→R50.9 DU+WARNING | post-op fever→R50.9 DS.
 
 ## KAPAN PAKAI R CODE vs DIAGNOSIS DEFINITIF
-Diagnosis definitif (J/K/I/dll) HANYA boleh dikoding jika ADA salah satu bukti berikut di teks:
-  1. Dokter menulis diagnosis eksplisit ("Diagnosis: pneumonia", "kesan: bronkitis")
-  2. Hasil pemeriksaan penunjang konfirmasi (foto thorax: infiltrat → pneumonia; CT scan: dll)
-  3. Kultur/PCR menyebutkan kuman/virus spesifik ("PCR COVID positif", "kultur Klebsiella")
+Kode definitif (J/K/I/dll) BOLEH jika ADA salah satu:
+  1. Dokter tulis diagnosis eksplisit di resume/SOAP
+  2. Penunjang konfirmasi (foto thorax infiltrat→pneumonia | CT scan→stroke)
+  3. Patogen/kuman spesifik disebut ("PCR COVID-19+"→U07.1 | "kultur Klebsiella"→J15.0)
+  4. Tindakan operatif dilakukan (appendektomi→K35.x | SC→O60.1/O82.x)
 
-Jika hanya ada GEJALA + hasil PCR/rapid TANPA menyebut patogen spesifik → JANGAN langsung J22/J06.9
-  Gejala saja (demam+batuk+pilek) tanpa konfirmasi → R50.9 (demam) DU + WARNING provisional
-  PCR positif tanpa keterangan apa → R50.9 DU + WARNING "PCR positif, patogen tidak diidentifikasi"
-  Batuk dominan tanpa konfirmasi → R05 DS
-  Pilek dominan tanpa konfirmasi → R09.8 DS (atau R05 DS)
-
-Pengecualian — BOLEH langsung kode definitif tanpa pemeriksaan penunjang jika:
-  - Diagnosis tertulis eksplisit oleh dokter di resume/SOAP
-  - Kondisi klinis sangat khas dan dokter sudah menyimpulkan (STEMI + EKG ST elevasi → I21.x)
-  - Tindakan operatif dilakukan (appendektomi → K35.x pasti ada)
-
-Contoh kasus:
-  "demam 3 hari batuk pilek PCR+ rapid+" → DU=R50.9+WARNING, DS=R05 — BUKAN J22
-  "demam batuk, foto thorax: infiltrat paru kanan, Diagnosis: pneumonia" → DU=J18.1 (boleh definitif)
-  "PCR COVID-19 positif" → DU=U07.1 (patogen spesifik disebut → boleh definitif)
-  "kultur Klebsiella pneumoniae" → DU=J15.0+B96.1 (kuman spesifik → boleh definitif)
+Jika HANYA gejala tanpa konfirmasi → R code + WARNING provisional:
+  Demam+batuk+pilek+PCR+(tanpa nama patogen) → R50.9 DU+WARNING | R05 DS — BUKAN J22
+  Nyeri dada tanpa EKG/troponin konfirmasi → R07.4 — BUKAN I20/I21
+  Sesak tanpa konfirmasi → R06.0 — BUKAN J96
+  Kejang tanpa konfirmasi → R56.8 — BUKAN G40
+  Penurunan kesadaran tanpa CT → R41.3/R55 — BUKAN S06/G93
 
 ## MUSCULOSKELETAL (M00-M99)
 Site digit: 0=multi,1=shoulder,2=elbow,3=wrist,4=hand,5=hip,6=knee,7=ankle,8=other,9=unspec. NEVER omit.
@@ -747,52 +679,23 @@ Appendisitis:
   K37 = unspecified (hindari jika ada info akut/kronik)
 
 ## ICD-9-CM PROCEDURE RULES
-ICD-9-CM Vol.3 mencakup TIGA kategori — semua wajib dikoding jika disebutkan:
-
-### 1. PROSEDUR OPERATIF / INVASIF
-  Operasi, biopsi, intubasi, drainase, kateter, bronkoskopi, dll
-  Ventilator mekanik → 96.70-96.72 | Intubasi → 96.04 | Bronkoskopi → 33.22
-
-### 2. PEMERIKSAAN DIAGNOSTIK — WAJIB dikoding jika disebutkan
-  Foto thorax/rontgen:
-    87.44=Routine chest x-ray | 87.49=Other x-ray of thorax
-  CT Scan:
-    87.03=CT scan of head | 87.41=CT scan of thorax | 88.01=CT scan of abdomen
-  MRI:
-    88.91=MRI of brain | 88.92=MRI of chest | 88.93=MRI of abdomen
-  USG:
-    88.72=Echography of heart (echocardiogram) | 88.76=USG abdomen
-    88.78=USG obstetrik | 88.79=USG lain
-  EKG → 89.52 | EEG → 89.14 | Spirometri → 89.37
-  Endoskopi: 45.13=kolonoskopi | 44.13=gastroskopi | 33.22=bronkoskopi
-
-### 3. PEMERIKSAAN LAB — WAJIB dikoding jika disebutkan
-  Darah rutin/CBC → 90.59 | Kimia darah/panel → 90.59
-  Kultur darah → 90.54 | Kultur sputum → 90.41 | Kultur urin → 90.29
-  Analisa gas darah/AGD → 89.65
-  Troponin/enzim jantung → 90.59
-  HbA1c → 90.59 | Urinalisis → 91.31
-  Histopatologi/PA → 91.49
-
-### DILARANG:
-  Antibiotik IV, infus cairan/obat = BUKAN prosedur ICD-9-CM
-  "antibiotic therapy 80.1" — kode TIDAK VALID
-  "nebulization 93.91" — SALAH KODE! 93.91=IPPB bukan nebulisasi
-  Nebulisasi BOLEH dikoding → 93.94 "Respiratory medication administered by nebulizer"
-  IPPB → 93.91 | Oksigen tambahan → 93.96 | Ventilator → 96.70-96.72
-
-### CONTOH kasus pneumonia dengan lab + foto:
-  Foto thorax → 87.44 | Kultur sputum → 90.41 | Lab darah (leukosit/CRP/troponin/HbA1c) → 90.59
-  AGD → 89.65 | EKG → 89.52 | Nebulisasi → 93.94 | Oksigen/O2 nasal kanul/masker → 93.96 | Bronkoskopi → 33.22
-  WAJIB koding 93.96 HANYA jika teks menyebut eksplisit: "O2 nasal kanul", "oksigen tambahan", "O2 masker", "pemberian oksigen"
-  WAJIB koding 33.22 HANYA jika teks menyebut eksplisit: "bronkoskopi"
-  WAJIB koding 90.59 jika teks menyebut: "pemeriksaan lab", "cek darah", "darah rutin", "kimia darah", "rapid test", "rapid antigen", "serologi", ATAU ada nilai lab numerik (Hb, leukosit, GDS, kreatinin, troponin, HbA1c, dll)
-  WAJIB koding 90.41 jika teks menyebut: "kultur sputum", "kultur dahak", "PCR", "swab nasofaring", "swab tenggorok", "BTA sputum"
-  PENTING: nilai lab numerik di teks = pemeriksaan lab dilakukan → WAJIB koding 90.59
-  PENTING: diagnosis tanpa nilai (misal "pasien anemia" saja) → JANGAN koding 90.59
-  PENTING: "PCR positif" atau "rapid test positif" = tindakan pemeriksaan disebut → BOLEH dikoding
-  WAJIB koding 87.44 HANYA jika teks menyebut eksplisit: "foto thorax", "rontgen dada", "chest x-ray", "rontgen thorax"
-  INGAT: koding prosedur = prosedur DISEBUT di teks, BUKAN prosedur yang lazim dilakukan untuk kondisi tersebut
+Tiga kategori — koding HANYA jika DISEBUT EKSPLISIT di teks:
+1. OPERATIF: operasi, biopsi, intubasi, drainase, kateter, bronkoskopi, dll.
+   Ventilator→96.70 | Intubasi→96.04 | Bronkoskopi→33.22 | Trakeostomi→31.21
+2. DIAGNOSTIK:
+   Rontgen/foto thorax→87.44 | CT kepala→87.03 | CT thorax→87.41 | CT abdomen→88.01
+   MRI otak→88.91 | Echo jantung→88.72 | USG abdomen→88.76 | USG obstetri→88.78
+   EKG→89.52 | EEG→89.14 | Spirometri→89.37
+   Gastroskopi→44.13 | Kolonoskopi→45.13
+3. LAB:
+   Darah rutin/kimia darah/nilai lab numerik di teks→90.59
+   PCR/swab nasofaring/BTA sputum→90.41 | Kultur darah→90.54 | Kultur urin→90.29
+   AGD→89.65 | Urinalisis→91.31 | PA/histopatologi→91.49
+   Rapid test/rapid antigen/serologi→90.59
+DILARANG: antibiotik IV, infus obat/cairan = BUKAN kode prosedur.
+DILARANG: 93.91 untuk nebulisasi (93.91=IPPB). Nebulisasi→93.94.
+90.59: koding jika ada kata lab/nilai numerik (Hb 9,1 / leukosit 15.000 / GDS 380 = cukup bukti).
+90.59: JANGAN koding jika hanya ada kata diagnosis tanpa nilai ("anemia" saja → tidak cukup).
 
 ## EYE (H00-H59)
 Katarak — WAJIB spesifik, jangan langsung H26.9:
@@ -829,26 +732,15 @@ Gegar otak/concussion → S06.0 | EDH → S06.4 | SDH → S06.5 | SAH → S06.6
 Drug-induced (Y40-Y59) ONLY jika obat disebut eksplisit: Y42=steroid,Y44=antikoagulan,Y45=NSAID,Y57=lain.
 
 ## SPECIFICITY
-E10=DM type1, E11=DM type2. DM WAJIB pakai 4th digit komplikasi:
-  E11.0=coma | E11.1=ketoacidosis | E11.2=renal | E11.3=ophthalmic | E11.4=neurological
-  E11.5=peripheral circulatory | E11.6=other specified | E11.7=multiple | E11.9=without complication
-  Jika ada retinopati diabetik eksplisit → E11.3† + H36.0* (keduanya wajib)
-  Jika ada katarak + DM → E11.3† DS (katarak = komplikasi oftalmik DM)
-    CATATAN: katarak senilis pada pasien DM tetap E11.3 karena DM memperburuk katarak
-    H36.0* HANYA jika retinopati ditemukan/disebutkan — TIDAK otomatis muncul hanya karena DM
-  Jika ada glaukoma diabetik eksplisit → E11.3† DS
-  Jika ada nefropati/proteinuria/gagal ginjal diabetik EKSPLISIT → E11.2
-  Jika ada neuropati diabetik EKSPLISIT → E11.4
-  DILARANG asumsi komplikasi tanpa bukti eksplisit di teks — "riwayat DM" saja tanpa komplikasi → E11.9
-  GDS tinggi saja tanpa komplikasi organ → E11.9 (bukan E11.3/E11.2)
-H36.0=diabetic retinopathy (WAJIB .0, bukan H36 saja).
-Pasangan dagger-asterisk DM+retinopati: E11.3† DU + H36.0* DS — KEDUANYA WAJIB dikoding.
-Fakoemulsifikasi/phacoemulsification + IOL → ICD-9-CM 13.72 "Phacoemulsification and insertion of intraocular lens prosthesis" (BUKAN 74.x yang untuk SC)
-Fakoemulsifikasi tanpa IOL → 13.41
-Ekstraksi katarak ECCE → 13.71
-Laser fotokoagulasi retina → ICD-9-CM 14.24 "Destruction of chorioretinal lesion by laser photocoagulation" (BUKAN Z51.4, BUKAN 14.25). 14.25=unspecified type (hindari jika laser disebut eksplisit).
-E11.3=dagger (etiologi), H36.0=asterisk (manifestasi). JANGAN hanya coding E11.3 tanpa H36.0.
-I61=haemorrhagic stroke, I63=ischaemic+location. Fracture: bone+location+open/closed. 4th/5th digit always; .9 only if truly no detail.
+E10=DM type1 | E11=DM type2. WAJIB 4th digit: .0=coma | .1=ketoacidosis | .2=renal | .3=ophthalmic | .4=neurological | .5=peripheral circ | .6=other | .7=multiple | .9=tanpa komplikasi.
+DILARANG asumsi komplikasi tanpa bukti eksplisit — "riwayat DM" saja → E11.9.
+Retinopati diabetik eksplisit → E11.3† + H36.0* (keduanya wajib, H36.0 WAJIB .0).
+Katarak+DM → E11.3† (komplikasi oftalmik). H36.0* HANYA jika retinopati disebut.
+Nefropati/GFR↓ diabetik eksplisit → E11.2. Neuropati diabetik eksplisit → E11.4.
+GDS tinggi tanpa komplikasi organ → E11.9.
+Fakoemulsifikasi+IOL→13.72 | Fakoemulsifikasi tanpa IOL→13.41 | ECCE→13.71.
+Laser fotokoagulasi retina→14.24 (BUKAN 14.25). 14.25=unspecified, hindari jika laser disebut.
+I61=haemorrhagic stroke | I63=ischaemic+location. Fracture: bone+location+open/closed. 4th/5th digit always.
 
 Return ONLY valid JSON with these keys:
 {"summary","du_reasoning","validations":[{"type","message"}],"diagnoses":[{"role","code","dagger_asterisk","description","description_id","category","confidence","lead_term_path","volume1_notes":[{"type","text"}],"paired_with","reasoning"}],"procedures":[{"code","description","description_id","category","confidence","lead_term_path","volume1_notes","reasoning"}]}`
