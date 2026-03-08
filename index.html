@@ -502,7 +502,9 @@ CLINICAL NOTE: ${input}
   Nilai lab numerik di teks = bukti pemeriksaan dilakukan → WAJIB koding 90.59
   Sebelum finalisasi prosedur — WAJIB cek 2 hal:
   1. Setiap prosedur dikoding: apakah kata kuncinya ADA di teks? Tidak ada → hapus.
-  2. Apakah ada nilai lab numerik di teks (Hb, leukosit, GDS, kreatinin, dll)? Ada → WAJIB tambah 90.59 jika belum ada.
+  2. Apakah ada nilai lab numerik di teks (Hb, leukosit, GDS, kreatinin, troponin, dll)? Ada → WAJIB tambah 90.59.
+     HANYA nilai TTV di teks (TD, nadi, suhu, RR, SpO2) tanpa nilai lab → JANGAN koding 90.59 sama sekali.
+     Cek: ada Hb/leukosit/GDS/kreatinin/troponin/enzim/elektrolit? Tidak ada → hapus 90.59 dari output.
 
 ## DU SELECTION RULES (WHO ICD-10 Vol.2)
 DU = kondisi yang setelah diteliti PALING BERTANGGUNG JAWAB atas kebutuhan perawatan pada episode ini.
@@ -541,6 +543,7 @@ CONTOH: pasien di ICU dengan sepsis + DM + HT → sepsis=DU
   WAJIB konsisten: description = baris final lead_term_path tanpa kode di depan.
 
   CONTOH BENAR vs SALAH:
+  I61.0: description="Nontraumatic intracerebral haemorrhage in hemisphere, subcortical" ✓ | SALAH: "Subcortical hemorrhage" / "Intracerebral haemorrhage" ✗
   O60.1: description="Preterm labour with preterm delivery" ✓ — HANYA jika onset spontan
   O82.1: description="Delivery by emergency caesarean section" ✓ — SC darurat tanpa onset spontan
   O43.0: description="Placental transfusion syndromes" ✓ | SALAH: "Twin-to-twin transfusion syndrome" ✗
