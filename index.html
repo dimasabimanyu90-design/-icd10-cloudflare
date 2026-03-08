@@ -484,13 +484,13 @@ CLINICAL NOTE: ${input}
   DILARANG koding foto thorax jika teks tidak menyebut "foto thorax/rontgen/chest x-ray/x-ray".
   DILARANG koding nebulisasi jika teks tidak menyebut "nebulisasi/nebulizer/inhalasi".
   DILARANG koding kultur sputum jika teks tidak menyebut "kultur sputum/kultur dahak/sputum culture".
-  DILARANG koding 90.59 hanya karena ada NILAI lab di teks — nilai lab di teks BUKAN perintah koding.
+  WAJIB koding 90.59 jika ada nilai lab numerik di teks (Hb, leukosit, GDS, kreatinin, dll) — nilai numerik = bukti pemeriksaan dilakukan.
   DILARANG koding oksigen (93.96) jika teks tidak menyebut "oksigen/O2/nasal kanul/masker O2".
   BOLEH koding hanya jika KATA KUNCI prosedur ADA secara eksplisit di teks input.
   Contoh BENAR: teks menyebut "dilakukan foto thorax" → koding 87.44
   Contoh SALAH: teks menyebut "sesak napas" → JANGAN koding 93.96 atau 87.44
-  Contoh SALAH: teks menyebut "leukosit 15.000" atau "Hb 9,1" → JANGAN koding 90.59
-  Contoh BENAR: teks menyebut nilai lab (Hb 9,1 / leukosit 15.000 / GDS 380 / kreatinin 2,1) → WAJIB koding 90.59
+  Contoh BENAR: teks menyebut nilai lab numerik (Hb 9,1 / leukosit 15.000 / GDS 380 / kreatinin 2,1) → WAJIB koding 90.59
+  Contoh SALAH: teks hanya "pasien anemia" tanpa nilai numerik → JANGAN koding 90.59
   Contoh BENAR: teks menyebut "PCR", "rapid test", "rapid antigen", "swab" → BOLEH koding 90.59 atau 90.41
   Contoh SALAH: teks hanya menyebut "pasien anemia" tanpa nilai → JANGAN koding 90.59
   PCR/swab nasofaring/tenggorok → 90.41 | PCR darah → 90.59 | Rapid test apapun → 90.59
@@ -546,19 +546,43 @@ CONTOH: pasien di ICU dengan sepsis + DM + HT → sepsis=DU
   65.29: description="Other local excision or destruction of ovary" ✓ | SALAH: "Kistektomi bilateral" ✗
   DILARANG: mengarang nama kode dari ingatan — HARUS dari baris final lead_term_path yang ditulis sendiri.
 - description_id: Indonesian translation of official title.
-- lead_term_path: STRING, SATU kode saja. Hierarki Vol.3 lengkap. WAJIB 3 bagian:
-  [1] Lead term  [2] Subterm (- / -- / ---)  [3] Baris final: CODE deskripsi resmi
-  DILARANG: arrow(→), skip level, separator "/", subterm kosong, baris final hilang.
-  CONTOH ICD-10:
+- lead_term_path: STRING, SATU kode saja. Hierarki Vol.3 lengkap. WAJIB format PERSIS seperti contoh.
+  FORMAT WAJIB — SETIAP LEVEL HARUS NEWLINE + DASH, BUKAN ARROW:
+  Lead term (tanpa dash)
+  - subterm level 1
+  -- subterm level 2
+  --- subterm level 3 (jika ada)
+  CODE Official title
+
+  DILARANG KERAS — akan membuat output RUSAK:
+  ❌ Arrow: "Delivery→Caesarean section→Emergency O82.1"
+  ❌ Slash: "Delivery / Caesarean / Emergency O82.1"
+  ❌ Skip level: langsung "-- subterm" tanpa "- subterm" dulu
+  ❌ Baris final hilang (tidak ada "CODE Title" di akhir)
+  ❌ Subterm kosong: "- " tanpa teks
+
+  CONTOH BENAR ICD-10:
+  Delivery
+  - caesarean section
+  -- emergency O82.1
+  O82.1 Delivery by emergency caesarean section
+
   Infarction
   - myocardial
   -- acute
   --- inferior I21.1
   I21.1 Acute transmural myocardial infarction of inferior wall
-  CONTOH ICD-9-CM:
+
+  CONTOH BENAR ICD-9-CM:
   Caesarean section
   - low cervical 74.1
   74.1 Low cervical caesarean section
+
+  Excision
+  - ovary
+  -- local
+  --- other 65.29
+  65.29 Other local excision or destruction of ovary
 - confidence: integer 1-99. WAJIB diisi.
 - reasoning: data klinis SPESIFIK dari teks (nilai lab, gejala, tindakan). DILARANG ulang nama kode.
   SALAH: "O99.0 karena anemia kehamilan" | BENAR: "Hb 9,1 g/dL (<10), pasien hamil"
