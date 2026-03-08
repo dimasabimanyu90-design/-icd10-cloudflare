@@ -485,7 +485,11 @@ CLINICAL NOTE: ${input}
   DILARANG koding nebulisasi jika teks tidak menyebut "nebulisasi/nebulizer/inhalasi".
   DILARANG koding kultur sputum jika teks tidak menyebut "kultur sputum/kultur dahak/sputum culture".
   WAJIB koding 90.59 jika ada nilai lab numerik di teks (Hb, leukosit, GDS, kreatinin, troponin, dll) — nilai numerik = bukti pemeriksaan dilakukan.
-  DILARANG koding 90.59 hanya karena ada nilai TTV (TD/tekanan darah, nadi, suhu, RR, SpO2) — TTV bukan pemeriksaan lab.
+  DILARANG koding 90.59 hanya karena ada nilai TTV — TTV BUKAN pemeriksaan lab:
+  TTV (bukan lab): TD/tekanan darah, nadi/HR, suhu/temperature, RR/laju napas, SpO2/saturasi
+  Contoh SALAH: "TD 200/120" → JANGAN koding 90.59 (TD = TTV, bukan lab)
+  Contoh SALAH: "SpO2 92%" → JANGAN koding 90.59 (SpO2 = TTV)
+  Contoh BENAR: "Hb 9,1 / leukosit 15.000 / GDS 380 / troponin I (+)" → WAJIB koding 90.59
   DILARANG koding oksigen (93.96) jika teks tidak menyebut "oksigen/O2/nasal kanul/masker O2".
   BOLEH koding hanya jika KATA KUNCI prosedur ADA secara eksplisit di teks input.
   Contoh BENAR: teks menyebut "dilakukan foto thorax" → koding 87.44
