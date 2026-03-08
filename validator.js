@@ -79,6 +79,44 @@ const PROC_KEYWORDS = {
   '14.24': ['laser fotokoagulasi','photocoagulation','laser retina','laser fotokoagulasi retina','laser photocoagulation','destruction of chorioretinal'],
   '14.25': ['fotokoagulasi tipe tidak spesifik','photocoagulation unspecified type'],
   '16.49': ['enukleasi','enucleation','angkat bola mata'],
+
+  '01.24': ['kraniotomi','craniotomy','trepanasi','bur hole'],
+  '02.12': ['kraniektomi','craniectomy','dekompresi kranial','decompressive craniectomy'],
+  '03.09': ['laminektomi','laminectomy','eksplorasi spinal','dekompresi spinal'],
+  '39.61': ['endarterektomi','endarterectomy','karotis','carotid'],
+
+  '37.23': ['pacemaker','pacu jantung','pemasangan pacemaker','implant pacemaker','ppm'],
+  '37.80': ['icd','implantable cardioverter','defibrilator'],
+  '37.61': ['perikardiektomi','pericardiectomy','perikardiektomi'],
+  '39.25': ['bypass vena safena','saphenous vein bypass','cabg'],
+
+  '34.04': ['chest tube','wsd','water seal drainage','selang dada','torakostomi','thoracostomy','pungsi pleura','pleural tap'],
+  '34.09': ['torakoskopi','thoracoscopy','vats','video assisted thoracoscopy'],
+  '31.1':  ['trakeostomi permanen','permanent tracheostomy'],
+  '31.21': ['trakeostomi','tracheostomy','trakeostomi temporer'],
+
+  '42.10': ['esofagoskopi','esophagoscopy','endoskopi esofagus'],
+  '43.19': ['gastrektomi','gastrectomy','reseksi lambung'],
+  '48.50': ['reseksi rektum','rectal resection','hartmann','lar','anterior resection'],
+  '52.12': ['biopsi pankreas','pancreas biopsy','biopsi pankreas'],
+
+  '55.23': ['biopsi ginjal','renal biopsy','kidney biopsy'],
+  '55.51': ['nefrektomi','nephrectomy','angkat ginjal'],
+  '56.0':  ['nefrostomi','nephrostomy','pielostomi','pyelostomy'],
+  '59.8':  ['dj stent','double j','stent ureter','ureteral stent','pemasangan stent ureter'],
+
+  '75.34': ['versi luar','external cephalic version','ecv','versi kepala'],
+  '73.59': ['forseps','forceps','vakum','vacuum extraction','ekstraksi vakum'],
+
+  '90.09': ['pcr darah','blood pcr','pemeriksaan darah lain'],
+  '91.71': ['analisa cairan pleura','pleural fluid','pungsi pleura','torakosentesis','thoracocentesis'],
+  '91.61': ['lumbal pungsi','lumbar puncture','lp ','cairan serebrospinal','csf','pungsi lumbal'],
+
+  '99.04': ['transfusi','transfusion','prc','wbc transfusi','transfusi darah','packed red cell'],
+  '99.15': ['injeksi insulin','insulin injection','insulin drip','infus insulin'],
+  '57.94': ['kateter urin','foley catheter','foley','pemasangan kateter','dauer catheter','dc '],
+  '38.93': ['cvp','cvc','central venous','pemasangan cvp','pemasangan cvc','central line'],
+  '89.11': ['konsultasi neurologi','neurology consult','penilaian neurologis'],
 };
 
 /**
