@@ -538,8 +538,9 @@ CONTOH: pasien di ICU dengan sepsis + DM + HT → sepsis=DU
    - Katarak saja tanpa retinopati → TIDAK perlu H36.0*
 
 ## FIELDS
-- description: HARUS SAMA PERSIS dengan baris final lead_term_path = official Vol.1 title.
-  ATURAN: tulis lead_term_path dulu → baris finalnya (format "CODE Title") → description = Title saja (hapus kode).
+- description: PROSES WAJIB — JANGAN isi description dari memori/nama populer kode.
+  LANGKAH: (1) Tulis lead_term_path lengkap dulu → (2) Ambil baris TERAKHIR lead_term_path → (3) Hapus kode di depan → (4) Hasil = description.
+  description = baris final lead_term_path TANPA kode. Tidak boleh berbeda satu kata pun.
   WAJIB konsisten: description = baris final lead_term_path tanpa kode di depan.
 
   CONTOH BENAR vs SALAH:
