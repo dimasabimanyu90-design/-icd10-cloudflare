@@ -478,21 +478,24 @@ CLINICAL NOTE: ${input}
 
 ## EXTRACTION
 - Diagnoses: ONLY explicitly stated. 1 DU + ALL DS. No dx → diagnoses:[] unless strong objective evidence.
-- Procedures: ONLY explicitly mentioned. None → procedures:[]. Code ALL if multiple.
-  KRITIS: SETIAP tindakan/pemeriksaan yang disebut di teks WAJIB dikoding — TIDAK BOLEH skip.
-  Checklist wajib sebelum submit — pastikan semua ini sudah dikoding jika disebut di teks:
-  □ Foto thorax/rontgen → 87.44
-  □ CT scan kepala → 87.03 | CT thorax → 87.41 | CT abdomen → 88.01
-  □ Lab darah (leukosit/Hb/CRP/troponin/GDS/kreatinin/dll) → 90.59
-  □ Kultur sputum → 90.41 | Kultur darah → 90.54 | Kultur urin → 90.29
-  □ AGD/analisa gas darah → 89.65
-  □ EKG → 89.52 | Echocardiografi → 88.72 | USG → 88.76/88.78
-  □ Nebulisasi → 93.94
-  □ Oksigen/O2 nasal kanul/masker → 93.96
-  □ Bronkoskopi → 33.22
-  □ Intubasi → 96.04 | Ventilator → 96.70
-  □ Operasi/tindakan bedah → kode sesuai
-  JANGAN lewatkan satu pun — model wajib scan ulang teks sebelum finalisasi prosedur.
+- Procedures: ONLY explicitly mentioned in text. None → procedures:[]. Code ALL if multiple.
+  LARANGAN MUTLAK: JANGAN koding prosedur yang tidak disebut secara eksplisit di teks input.
+  DILARANG mengasumsikan prosedur berdasarkan logika klinis, kelaziman, atau kebiasaan.
+  DILARANG koding foto thorax jika teks tidak menyebut "foto thorax/rontgen/chest x-ray/x-ray".
+  DILARANG koding nebulisasi jika teks tidak menyebut "nebulisasi/nebulizer/inhalasi".
+  DILARANG koding kultur sputum jika teks tidak menyebut "kultur sputum/kultur dahak/sputum culture".
+  DILARANG koding 90.59 hanya karena ada NILAI lab di teks — nilai lab di teks BUKAN perintah koding.
+  DILARANG koding oksigen (93.96) jika teks tidak menyebut "oksigen/O2/nasal kanul/masker O2".
+  BOLEH koding hanya jika KATA KUNCI prosedur ADA secara eksplisit di teks input.
+  Contoh BENAR: teks menyebut "dilakukan foto thorax" → koding 87.44
+  Contoh SALAH: teks menyebut "sesak napas" → JANGAN koding 93.96 atau 87.44
+  Contoh SALAH: teks menyebut "leukosit 15.000" atau "Hb 9,1" → JANGAN koding 90.59
+  Contoh BENAR: teks menyebut nilai lab (Hb 9,1 / leukosit 15.000 / GDS 380 / kreatinin 2,1) → WAJIB koding 90.59
+  Contoh BENAR: teks menyebut "PCR", "rapid test", "rapid antigen", "swab" → BOLEH koding 90.59 atau 90.41
+  Contoh SALAH: teks hanya menyebut "pasien anemia" tanpa nilai → JANGAN koding 90.59
+  PCR/swab nasofaring/tenggorok → 90.41 | PCR darah → 90.59 | Rapid test apapun → 90.59
+  Nilai lab numerik di teks = bukti pemeriksaan dilakukan → WAJIB koding 90.59
+  Sebelum finalisasi: cek ulang setiap prosedur — apakah kata kuncinya ADA di teks? Tidak ada → hapus.
 
 ## DU SELECTION RULES (WHO ICD-10 Vol.2)
 DU = kondisi yang setelah diteliti PALING BERTANGGUNG JAWAB atas kebutuhan perawatan pada episode ini.
@@ -622,6 +625,8 @@ WARNING: wrong DU, missing DS, Excludes2 needs confirmation, R-code as DU (provi
 
 ## ABBREVIATIONS
 SC/SCTP=sectio caesarea, TTTS=twin-twin transfusion, IUFD=intrauterine fetal death, gemelli=twins, partus prematurus=preterm labour, kista ovarium=ovarian cyst, kistektomi=cystectomy, bekas SC=previous caesarean scar, HT=hypertension, DM=diabetes mellitus, ORIF=open reduction internal fixation, ai=atas indikasi.
+intake sulit/intake kurang/sulit makan/tidak mau makan/anoreksia/tidak nafsu makan → R63.3 DS (kecuali ada diagnosis definitif penyebabnya, misal stomatitis/disfagia → kode kondisi itu saja, R63.3 tidak perlu)
+R63.3=Feeding difficulties | R63.0=Anorexia (tidak nafsu makan spesifik) | R11=Nausea and vomiting
 
 ## OBSTETRIC RULES
 O00: O00.1=tubal, O00.2=ovarian, O00.0=abdominal. Ruptur→+O08.1 DS.
@@ -756,13 +761,15 @@ ICD-9-CM Vol.3 mencakup TIGA kategori — semua wajib dikoding jika disebutkan:
 ### CONTOH kasus pneumonia dengan lab + foto:
   Foto thorax → 87.44 | Kultur sputum → 90.41 | Lab darah (leukosit/CRP/troponin/HbA1c) → 90.59
   AGD → 89.65 | EKG → 89.52 | Nebulisasi → 93.94 | Oksigen/O2 nasal kanul/masker → 93.96 | Bronkoskopi → 33.22
-  WAJIB: jika teks menyebut "O2 nasal kanul", "oksigen tambahan", "O2 masker" → koding 93.96
-  WAJIB: jika teks menyebut "bronkoskopi" → koding 33.22
-  WAJIB: jika teks menyebut "lab darah", "hasil laboratorium", "leukosit", "CRP", "Hb",
-  "troponin", "HbA1c", "kreatinin", "GDS", "GDP", "natrium", "kalium" → koding 90.59
-  90.59 = semua pemeriksaan kimia darah/hematologi rutin
-  JANGAN lewatkan 90.59 hanya karena tidak ada prosedur lab eksplisit — nilai lab di teks = bukti lab dilakukan
-  WAJIB: jika teks menyebut "foto thorax", "rontgen dada", "chest x-ray" → koding 87.44
+  WAJIB koding 93.96 HANYA jika teks menyebut eksplisit: "O2 nasal kanul", "oksigen tambahan", "O2 masker", "pemberian oksigen"
+  WAJIB koding 33.22 HANYA jika teks menyebut eksplisit: "bronkoskopi"
+  WAJIB koding 90.59 jika teks menyebut: "pemeriksaan lab", "cek darah", "darah rutin", "kimia darah", "rapid test", "rapid antigen", "serologi", ATAU ada nilai lab numerik (Hb, leukosit, GDS, kreatinin, troponin, HbA1c, dll)
+  WAJIB koding 90.41 jika teks menyebut: "kultur sputum", "kultur dahak", "PCR", "swab nasofaring", "swab tenggorok", "BTA sputum"
+  PENTING: nilai lab numerik di teks = pemeriksaan lab dilakukan → WAJIB koding 90.59
+  PENTING: diagnosis tanpa nilai (misal "pasien anemia" saja) → JANGAN koding 90.59
+  PENTING: "PCR positif" atau "rapid test positif" = tindakan pemeriksaan disebut → BOLEH dikoding
+  WAJIB koding 87.44 HANYA jika teks menyebut eksplisit: "foto thorax", "rontgen dada", "chest x-ray", "rontgen thorax"
+  INGAT: koding prosedur = prosedur DISEBUT di teks, BUKAN prosedur yang lazim dilakukan untuk kondisi tersebut
 
 ## EYE (H00-H59)
 Katarak — WAJIB spesifik, jangan langsung H26.9:
