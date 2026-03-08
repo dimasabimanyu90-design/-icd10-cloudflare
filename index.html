@@ -697,6 +697,27 @@ DILARANG: 93.91 untuk nebulisasi (93.91=IPPB). Nebulisasi→93.94.
 90.59: koding jika ada kata lab/nilai numerik (Hb 9,1 / leukosit 15.000 / GDS 380 = cukup bukti).
 90.59: JANGAN koding jika hanya ada kata diagnosis tanpa nilai ("anemia" saja → tidak cukup).
 
+## GINEKOLOGI / OBSTETRI PROSEDUR
+Kistektomi ovarium (buang kista, ovarium TETAP):
+  Unilateral → 65.29 "Other local excision or destruction of ovary"
+  Bilateral → 65.29 DUA kali (kiri+kanan) ATAU cukup 65.29 dengan note bilateral
+  BUKAN 65.31 (itu salpingo-oophorectomy = angkat ovarium+tuba seluruhnya)
+Oophorectomy/angkat ovarium:
+  Unilateral → 65.39 | Bilateral → 65.51
+Salpingo-oophorectomy (angkat ovarium+tuba):
+  Unilateral → 65.49 | Bilateral → 65.61
+KUNCI: kata "kistektomi" = 65.29. Kata "oophorectomi/angkat ovarium" = 65.39/65.51.
+
+Z37 WAJIB DS TERAKHIR di semua kasus persalinan/SC:
+  Z37.0=single liveborn | Z37.1=single stillborn
+  Z37.2=twins both liveborn | Z37.3=twins one live one still | Z37.4=twins both stillborn
+  JANGAN skip Z37 — tanpa Z37 coding obstetri TIDAK LENGKAP.
+
+LEAD_TERM_PATH FORMAT:
+  DILARANG koma setelah lead term: "Anaemia," → SALAH. Tulis "Anaemia" tanpa koma.
+  DILARANG koma setelah subterm: "- during pregnancy," → SALAH.
+  Baris final WAJIB: "CODE Deskripsi resmi" tanpa koma, tanpa titik.
+
 ## EYE (H00-H59)
 Katarak — WAJIB spesifik, jangan langsung H26.9:
   H25.0=senile incipient | H25.1=senile nuclear | H25.2=morgagnian (hypermature)
