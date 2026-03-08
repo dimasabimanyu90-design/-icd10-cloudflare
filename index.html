@@ -829,11 +829,15 @@ Return ONLY valid JSON with these keys:
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prompt: PROMPT })
     });
-    if (resp.status === 429) {
-      startCooldown(60);
-      throw new Error("Rate limit Groq. Silakan tunggu 60 detik.");
+    if (!resp.ok) {
+      const errData = await resp.json().catch(() => ({}));
+      if (resp.status === 429) {
+        // Semua key rate limit → tampilkan cooldown
+        startCooldown(60);
+        throw new Error(errData.error || "Semua API key sedang rate limit. Tunggu 60 detik.");
+      }
+      throw new Error(errData.error || `HTTP ${resp.status}`);
     }
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const data = await resp.json();
     if (data.error) throw new Error(data.error);
 
