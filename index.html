@@ -673,7 +673,8 @@ function getCleanPath(pathStr, code, description) {
   });
 
   if (code && KNOWN_PATHS[code]) {
-    pathStr = KNOWN_PATHS[code];
+    const _entry = KNOWN_PATHS[code];
+    pathStr = (typeof _entry === 'string') ? _entry : (_entry.path || pathStr);
   } else if (!pathStr.includes('\n')) {
     const parts = pathStr.split(' - ').filter(Boolean);
     if (parts.length >= 2) {
@@ -750,7 +751,8 @@ function renderLeadPath(pathStr, code, description) {
   });
 
   if (code && KNOWN_PATHS[code]) {
-    pathStr = KNOWN_PATHS[code];
+    const _entry = KNOWN_PATHS[code];
+    pathStr = (typeof _entry === 'string') ? _entry : (_entry.path || pathStr);
   } else if (!pathStr.includes('\n')) {
     const parts = pathStr.split(' - ').filter(Boolean);
     if (parts.length >= 2) {
