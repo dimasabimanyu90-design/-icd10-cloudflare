@@ -37,8 +37,9 @@ const PROC_KEYWORDS = {
   '96.70': ['ventilator','mechanical ventilation','ventilasi mekanik','ventilasi invasif'],
   '33.22': ['bronkoskopi','bronchoscopy','bronkos','fiber optic bronchoscopy'],
   '33.23': ['bronkoskopi terapeutik','therapeutic bronchoscopy'],
-  '00.66': ['pci','angioplasti','balloon','ptca','kateterisasi intervensi','primary pci'],
-  '36.06': ['stent','pemasangan stent','drug eluting stent'],
+  '00.66': ['pci','angioplasti','balloon','ptca','kateterisasi intervensi','primary pci','percutaneous coronary','angioplasty'],
+  '36.06': ['bare metal stent','bms','stent bms'],
+  '36.07': ['drug eluting stent','des','stent des','drug-eluting stent','stent koroner','pemasangan stent','stent lad','stent rca','stent lcx'],
   '36.01': ['cabg','bypass','coronary artery bypass','bpas'],
   '37.21': ['kateterisasi jantung kanan','right heart cath'],
   '37.22': ['kateterisasi jantung kiri','left heart cath','coronary angiography','angiografi koroner'],
@@ -139,7 +140,10 @@ function validateProcedures(procedures, inputText) {
   for (const proc of procedures) {
     const keywords = PROC_KEYWORDS[proc.code];
     if (!keywords) continue; // kode tidak ada di map → skip, tidak bisa divalidasi
-    if (proc.code === '90.59' && hasLabNumeric) continue;
+    if (proc.code === '90.59') {
+      const hasLabKeyword = keywords.some(kw => lowerInput.includes(kw.toLowerCase()));
+      if (hasLabNumeric || hasLabKeyword) continue;
+    }
 
     const found = keywords.some(kw => lowerInput.includes(kw.toLowerCase()));
     if (!found) {
