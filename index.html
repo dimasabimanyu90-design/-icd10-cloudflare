@@ -837,6 +837,7 @@ function renderVol1Notes(notes) {
     const t = typeMap[n.type] || { cls: 'vnt-note', label: n.type };
     return `<div class="vol1-note"><span class="vol1-note-type ${t.cls}">${t.label}</span><span>${n.text}</span></div>`;
   }).join('');
+  if (!items) return ''; // sembunyikan jika kosong
   return `<div class="vol1-box"><div class="vol1-label">${T[currentLang].labelVol1}</div><div class="vol1-notes">${items}</div></div>`;
 }
 
