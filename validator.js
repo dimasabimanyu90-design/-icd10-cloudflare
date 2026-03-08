@@ -3,7 +3,7 @@
 const PROC_KEYWORDS = {
   '87.44': ['foto thorax','rontgen dada','chest x-ray','rontgen thorax','x-ray dada','foto dada','cxr'],
   '87.49': ['foto thorax','rontgen','chest x-ray','x-ray thorax'],
-  '87.03': ['ct scan kepala','ct head','ct-scan kepala','ct kepala','ct otak'],
+  '87.03': ['ct scan kepala','ct head','ct-scan kepala','ct kepala','ct otak','ct scan','computed tomography','hiperdensitas','hiperdens','hipodens','ct-scan'],
   '87.41': ['ct scan thorax','ct thorax','ct scan dada','ct dada'],
   '88.01': ['ct scan abdomen','ct abdomen','ct scan perut','ct perut'],
   '88.38': ['ct scan lumbar','ct spine','ct lumbal','ct tulang belakang'],
@@ -134,7 +134,7 @@ function validateProcedures(procedures, inputText) {
   if (!procedures || procedures.length === 0) return [];
   const lowerInput = inputText.toLowerCase();
   const warnings = [];
-  const LAB_NUMERIC_RE = /(hb|hemoglobin|leukosit|wbc|trombosit|platelet|hematokrit|eritrosit|gds|gdp|gd2pp|hba1c|kreatinin|ureum|sgot|sgpt|bilirubin|albumin|natrium|kalium|klorida|kolesterol|trigliserida|ldl|hdl|troponin|bnp|crp|led)\s*[:\s]\s*\d/i;
+  const LAB_NUMERIC_RE = /\b(hb|hemoglobin|leukosit|wbc|trombosit|platelet|hematokrit|eritrosit|gds|gdp|gd2pp|hba1c|kreatinin|ureum|sgot|sgpt|bilirubin|albumin|natrium|kalium|klorida|kolesterol|trigliserida|ldl|hdl|troponin|bnp|crp|led)\s*:?\s*\d/i;
   const hasLabNumeric = LAB_NUMERIC_RE.test(inputText);
 
   for (const proc of procedures) {
