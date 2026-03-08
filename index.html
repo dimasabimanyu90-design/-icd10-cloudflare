@@ -673,6 +673,29 @@ Jika nilai abnormal ditemukan, tambahkan kode yang sesuai meskipun dokter tidak 
 - R as DU: valid if no definitive dx → WARNING provisional.
 - DM→no R73 | fever unknown→R50.9 DU+WARNING | post-op fever→R50.9 DS.
 
+## KAPAN PAKAI R CODE vs DIAGNOSIS DEFINITIF
+Diagnosis definitif (J/K/I/dll) HANYA boleh dikoding jika ADA salah satu bukti berikut di teks:
+  1. Dokter menulis diagnosis eksplisit ("Diagnosis: pneumonia", "kesan: bronkitis")
+  2. Hasil pemeriksaan penunjang konfirmasi (foto thorax: infiltrat → pneumonia; CT scan: dll)
+  3. Kultur/PCR menyebutkan kuman/virus spesifik ("PCR COVID positif", "kultur Klebsiella")
+
+Jika hanya ada GEJALA + hasil PCR/rapid TANPA menyebut patogen spesifik → JANGAN langsung J22/J06.9
+  Gejala saja (demam+batuk+pilek) tanpa konfirmasi → R50.9 (demam) DU + WARNING provisional
+  PCR positif tanpa keterangan apa → R50.9 DU + WARNING "PCR positif, patogen tidak diidentifikasi"
+  Batuk dominan tanpa konfirmasi → R05 DS
+  Pilek dominan tanpa konfirmasi → R09.8 DS (atau R05 DS)
+
+Pengecualian — BOLEH langsung kode definitif tanpa pemeriksaan penunjang jika:
+  - Diagnosis tertulis eksplisit oleh dokter di resume/SOAP
+  - Kondisi klinis sangat khas dan dokter sudah menyimpulkan (STEMI + EKG ST elevasi → I21.x)
+  - Tindakan operatif dilakukan (appendektomi → K35.x pasti ada)
+
+Contoh kasus:
+  "demam 3 hari batuk pilek PCR+ rapid+" → DU=R50.9+WARNING, DS=R05 — BUKAN J22
+  "demam batuk, foto thorax: infiltrat paru kanan, Diagnosis: pneumonia" → DU=J18.1 (boleh definitif)
+  "PCR COVID-19 positif" → DU=U07.1 (patogen spesifik disebut → boleh definitif)
+  "kultur Klebsiella pneumoniae" → DU=J15.0+B96.1 (kuman spesifik → boleh definitif)
+
 ## MUSCULOSKELETAL (M00-M99)
 Site digit: 0=multi,1=shoulder,2=elbow,3=wrist,4=hand,5=hip,6=knee,7=ankle,8=other,9=unspec. NEVER omit.
 B95-B96: kode TAMBAHAN (additional code) — BUKAN dagger/asterisk, BUKAN pasangan †/*
