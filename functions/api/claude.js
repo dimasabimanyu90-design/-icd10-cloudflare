@@ -106,12 +106,9 @@ Jika ada retinopati/katarak/glaukoma + DM → komplikasi mata=DU, DM=DS
 - reasoning: data klinis SPESIFIK dari teks (nilai lab, gejala, tindakan). DILARANG ulang nama kode.
   SALAH: "O99.0 karena anemia kehamilan" | BENAR: "Hb 9,1 g/dL (<10), pasien hamil"
 - dagger_asterisk: "dagger"|"asterisk"|"none". ONLY if officially marked †/* in Vol.1.
-- volume1_notes: HANYA jika BENAR-BENAR ada di Vol.1 resmi ICD-10/ICD-9-CM.
-  DILARANG KERAS mengarang INCLUDES/EXCLUDES dari konteks klinis.
-  INCLUDES di Vol.1 = daftar resmi kondisi yang sudah tercakup dalam kode tersebut.
-  BUKAN: "INCLUDES: Gemelli, TTTS, IUFD" — ini TIDAK ADA di Vol.1 O82.1.
-  BUKAN: "INCLUDES: Hb 9,1" — nilai lab BUKAN bagian Vol.1 notes.
-  Tidak yakin → volume1_notes: [] (kosong lebih baik daripada mengarang)
+- volume1_notes: SELALU isi dengan array kosong [].
+  DILARANG KERAS mengisi volume1_notes dengan apapun — AI tidak punya akses Vol.1 resmi.
+  WAJIB: volume1_notes: [] untuk semua kode tanpa pengecualian.
 
 ## VOL.3 INDEX RULES
 - Use Vol.3 Alphabetical Index to find lead term → subterms → code.
@@ -196,10 +193,17 @@ O03-O07 4th digit — tentukan COMPLETE vs INCOMPLETE dulu:
 O60 HANYA jika ada onset persalinan SPONTAN sebelum 37 minggu:
   O60.0=preterm labour tanpa delivery | O60.1=preterm labour WITH preterm delivery | O60.2=preterm labour with term delivery
   DILARANG O60 jika SC tanpa onset spontan — SC atas indikasi = O82.x bukan O60.
+  KATA KUNCI O60: "mulas sendiri", "kontraksi spontan", "his spontan", "pembukaan spontan"
+  KATA KUNCI O82: "SC ai", "SC atas indikasi", "SCTP ai", "elektif", "emergency SC", "SC darurat"
+  "SC ai ..." = SC atas indikasi = TIDAK ada onset spontan = WAJIB O82.x bukan O60.x
+  Teks menyebut "SC" tanpa onset spontan eksplisit → SELALU O82.x
 O82: SC tanpa onset persalinan spontan:
   O82.0=elective/elektif (terencana) | O82.1=emergency/darurat | O82.2=unspecified
-  SC darurat (TTTS/IUFD/fetal distress/perdarahan) → O82.1 DU
-  SC terencana (bekas SC, plasenta previa stabil) → O82.0 DU
+  SC darurat (TTTS/IUFD/fetal distress/perdarahan/ai indikasi darurat) → O82.1 DU
+  SC terencana (bekas SC stabil, plasenta previa stabil tanpa perdarahan) → O82.0 DU
+  CONTOH BENAR: "SC ai gemelli anak ke 2 + TTTS + IUFD" → O82.1 DU (bukan O60.1)
+  CONTOH BENAR: "partus prematurus + SC ai fetal distress" → O82.1 DU (bukan O60.1)
+  CONTOH SALAH: "SC ai gemelli" → O60.1 ✗ (tidak ada onset spontan di teks)
 O34.2=bekas SC → WAJIB DS di semua kasus ada riwayat SC.
 TTTS→O43.0† DS | IUFD→O36.4 DS | Gemelli=Includes O43.0/O36.4 → O30.0 TIDAK dikoding terpisah.
 Urutan TTTS+IUFD+SC emergency: O82.1 DU→O43.0†→O36.4→O34.2→O99.0(jika Hb<10)→Z37.x terakhir.
@@ -228,6 +232,7 @@ Salpingo-oophorectomy: Unilateral→65.49 | Bilateral→65.61
 Z37 WAJIB DS TERAKHIR (MANDATORY):
   Z37.0=single liveborn | Z37.1=single stillborn
   Z37.2=twins both liveborn | Z37.3=twins one live one still | Z37.4=twins both stillborn
+  description Z37.3 WAJIB: "Twins, one liveborn and one stillborn" (bukan "one live and one stillborn")
   Gemelli+IUFD satu fetus→Z37.3 | Gemelli+IUFD dua fetus→Z37.4
   CHECKLIST: sebelum finalisasi → cek ada Z37.x? Tidak ada → TAMBAHKAN sekarang.`;
 
