@@ -8,8 +8,6 @@ export async function onRequestPost(context) {
 
   const MODELS = [
     "llama-3.3-70b-versatile",
-    "meta-llama/llama-4-scout-17b-16e-instruct",
-    "llama-3.1-8b-instant",
   ];
 
   // ── MULTI API KEY FALLBACK ──
@@ -31,8 +29,8 @@ export async function onRequestPost(context) {
   try {
     const body = await context.request.json();
 
-    // Coba setiap kombinasi API key × model
-    // Urutan: key1+model1 → key1+model2 → key2+model1 → key2+model2 → dst
+    // Coba setiap API key dengan model terbaik
+    // Urutan: key1 → key2 → key3 (semua pakai llama-3.3-70b-versatile)
     const attempts = [];
     for (const key of API_KEYS) {
       for (const model of MODELS) {
@@ -74,7 +72,7 @@ export async function onRequestPost(context) {
             await new Promise(r => setTimeout(r, Math.min(delay, 10000)));
             continue;
           }
-          // Masih 429 setelah retry → skip ke kombinasi berikutnya
+          // Masih 429 setelah retry → skip ke key berikutnya
           const keyIdx = API_KEYS.indexOf(key) + 1;
           lastError = `Rate limit — key ${keyIdx}, model ${model}`;
           break;
@@ -82,7 +80,7 @@ export async function onRequestPost(context) {
         break; // sukses atau error non-429
       }
 
-      if (response.status === 429) continue; // coba kombinasi berikutnya
+      if (response.status === 429) continue; // coba key berikutnya
 
       if (data.error) {
         lastError = `Groq (key${API_KEYS.indexOf(key)+1}/${model}): ${data.error.code} - ${data.error.message}`;
@@ -127,10 +125,10 @@ export async function onRequestPost(context) {
       );
     }
 
-    // Semua kombinasi key+model habis
+    // Semua API key habis / rate limit
     return new Response(
       JSON.stringify({
-        error: `Semua API key & model sedang rate limit. Tunggu 1-2 menit. (${lastError})`
+        error: `Semua API key sedang rate limit. Tunggu 1-2 menit. (${lastError})`
       }),
       { status: 429, headers: corsHeaders }
     );
