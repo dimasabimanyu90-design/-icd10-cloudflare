@@ -554,6 +554,19 @@ async function analyze() {
     result.diagnoses  = result.diagnoses.map(d => ({ ...d, confidence: fixConf(d.confidence) }));
     result.procedures = result.procedures.map(p => ({ ...p, confidence: fixConf(p.confidence) }));
 
+    // Inject Vol.1 notes dari known-paths.js (trusted source, bukan AI)
+    function injectVol1(items) {
+      return items.map(item => {
+        const entry = (typeof getKnownPath === 'function') ? getKnownPath(item.code) : null;
+        if (entry && Array.isArray(entry.vol1) && entry.vol1.length > 0) {
+          return { ...item, volume1_notes: entry.vol1 };
+        }
+        return { ...item, volume1_notes: [] }; // selalu kosongkan AI vol1
+      });
+    }
+    result.diagnoses  = injectVol1(result.diagnoses);
+    result.procedures = injectVol1(result.procedures);
+
     renderResults(result);
   } catch(err) {
     showError(T[currentLang].errorPrefix + err.message);
