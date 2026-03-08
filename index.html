@@ -146,6 +146,7 @@ textarea::placeholder { color: #b8b0a6; font-style: italic; }
 }
 </style>
 <script src="known-paths.js"></script>
+<script src="validator.js"></script>
 </head>
 <body>
 
@@ -434,8 +435,6 @@ function fmtNum(n) {
 function updateQuotaBar(quota) {
   const strip = document.getElementById('quotaStrip');
   strip.classList.add('visible');
-
-  // RPM
   const rpmPct = calcPct(quota.rpm_remaining, quota.rpm_limit);
   const rpmBar = document.getElementById('qBarRpm');
   rpmBar.style.width = (rpmPct ?? 0) + '%';
@@ -444,8 +443,6 @@ function updateQuotaBar(quota) {
     (quota.rpm_remaining && quota.rpm_limit)
       ? `${fmtNum(quota.rpm_remaining)}/${fmtNum(quota.rpm_limit)}`
       : '–';
-
-  // TPM
   const tpmPct = calcPct(quota.tpm_remaining, quota.tpm_limit);
   const tpmBar = document.getElementById('qBarTpm');
   tpmBar.style.width = (tpmPct ?? 0) + '%';
@@ -454,18 +451,12 @@ function updateQuotaBar(quota) {
     (quota.tpm_remaining && quota.tpm_limit)
       ? `${fmtNum(quota.tpm_remaining)}/${fmtNum(quota.tpm_limit)}`
       : '–';
-
-  // Token usage request ini
   if (quota.tokens_used) {
     document.getElementById('qTokensUsed').textContent = `${fmtNum(quota.tokens_used)} tok`;
     document.getElementById('qTokensDetail').textContent =
       `(↑${fmtNum(quota.prompt_tokens)} ↓${fmtNum(quota.completion_tokens)})`;
   }
-
-  // Model
   document.getElementById('qModelVal').textContent = quota.model || '–';
-
-  // Reset info
   if (quota.tpm_reset) {
     document.getElementById('qResetInfo').textContent = `reset: ${quota.tpm_reset}`;
   }
@@ -846,7 +837,6 @@ Return ONLY valid JSON with these keys:
     const data = await resp.json();
     if (data.error) throw new Error(data.error);
 
-    // ── Tampilkan quota dari response ──
     if (data.quota) updateQuotaBar(data.quota);
 
     const raw = data.text;
@@ -891,20 +881,15 @@ Return ONLY valid JSON with these keys:
       catch(e2) { throw new Error("Failed to parse AI response. Please try again."); }
     }
 
-    // ── FIX: normalisasi array agar .map() tidak crash ──
     if (!Array.isArray(result.diagnoses))   result.diagnoses   = [];
     if (!Array.isArray(result.procedures))  result.procedures  = [];
     if (!Array.isArray(result.validations)) result.validations = [];
 
-    // ── FIX: normalisasi confidence — AI kadang kirim 0.9 bukan 90 ──
     function fixConf(val) {
-      // Kalau tidak ada nilai sama sekali, default 85
       if (val === null || val === undefined || val === '' || val === '-') return 85;
       const n = parseFloat(String(val).replace('%', '').trim());
       if (isNaN(n) || n <= 0) return 85;
-      // AI kadang kirim desimal 0.85 bukan 85
       const pct = n <= 1 ? Math.round(n * 100) : Math.round(n);
-      // Clamp antara 1-99
       return Math.min(99, Math.max(1, pct));
     }
     result.diagnoses  = result.diagnoses.map(d => ({ ...d, confidence: fixConf(d.confidence) }));
@@ -926,9 +911,7 @@ function copyPath(btn, text) {
   });
 }
 
-// Shared helpers untuk path rendering
 function normalizeLine(line) {
-  // Handle consecutive dashes with optional spaces e.g. "- -" → "--"
   line = line.replace(/^(\s*)((?:-\s*)+)(?=\S)/, (m, pre, dashes) => {
     const level = (dashes.match(/-/g) || []).length;
     return pre + '-'.repeat(level) + ' ';
@@ -937,16 +920,13 @@ function normalizeLine(line) {
 }
 
 function convertSlashPath(pathStr) {
-  // Handle "Lead / Sub / Sub / CODE desc" format (slash separator)
   if (!pathStr.includes('/') || pathStr.includes('\n')) return pathStr;
   const parts = pathStr.split('/').map(p => p.trim()).filter(Boolean);
   if (parts.length < 2) return pathStr;
   const lines = [];
   parts.forEach((part, i) => {
     if (i === 0) { lines.push(part); return; }
-    // Last part or part starting with code
     if (isFinalLine(part) || i === parts.length - 1) {
-      // Attach code to previous subterm if it's just a code
       const codeOnly = part.match(/^([A-Z]\d{2}(\.\d+)?)$/);
       if (codeOnly && lines.length > 0) {
         lines[lines.length - 1] += ' ' + part;
@@ -963,17 +943,12 @@ function convertSlashPath(pathStr) {
 function normalizeDashesShared(line) {
   const trimmed = line.trimStart();
   if (!trimmed.startsWith('-')) return line.trimEnd();
-
-  // Format "-- text" atau "--- text" (consecutive dashes langsung diikuti spasi+text)
-  // Ini sudah format benar, hitung level dari jumlah dash berturut-turut
   const consecutiveMatch = trimmed.match(/^(-+)\s+(.*)$/);
   if (consecutiveMatch) {
     const level = consecutiveMatch[1].length;
     const rest = consecutiveMatch[2].trim();
     return '-'.repeat(level) + ' ' + rest;
   }
-
-  // Format "- - text" (dash-spasi-dash) → hitung berapa pasang
   const spaces = line.length - trimmed.length;
   const dashParts = trimmed.split(/\s+/);
   let dashCount = 0;
@@ -1010,13 +985,7 @@ function getCleanPath(pathStr, code, description) {
   if (!pathStr) return '';
   if (Array.isArray(pathStr)) pathStr = pathStr.join('\n');
   else pathStr = String(pathStr);
-
-  // KNOWN_PATHS loaded from known-paths.js
-
-  // Convert slash format first
   pathStr = convertSlashPath(pathStr);
-
-  // Remove empty subterm lines like "- -" or "-- " with no text after
   pathStr = pathStr.split('\n').filter(l => {
     const t = l.trim();
     return !(t.match(/^-+$/) || t.match(/^-+\s*$/));
@@ -1025,20 +994,12 @@ function getCleanPath(pathStr, code, description) {
   const pathLines = pathStr.split('\n');
   const subtermLinesM = pathLines.filter(l => l.trim().startsWith('-'));
   const hasMultiLevel = subtermLinesM.some(l => l.trim().startsWith('--'));
-  // isFlat: 2+ subterm tapi semua level 1 — kemungkinan AI kirim flat tanpa hierarki
   const isFlat = subtermLinesM.length >= 2 && !hasMultiLevel;
-  // Cek apakah baris final terpisah sudah ada DAN punya deskripsi (bukan kode saja)
   const hasStandaloneFinal = pathStr.split('\n').some(l => {
     const t = l.trim();
-    // Harus: tidak dimulai '-', dimulai kode, DAN ada teks deskripsi setelah kode
     return !t.startsWith('-') && /^([A-Z]\d{2}(\.\d+)?|\d{2}\.\d+)\s+\S+/.test(t);
   });
-  const looksMessy = !pathStr.includes('\n')
-    || /[A-Z]\d{2}.*[A-Z]\d{2}/.test(pathStr)
-    || pathStr.includes('/')
-    || isFlat
-    || !hasStandaloneFinal; // final line tanpa deskripsi → override dengan KNOWN_PATHS
-  // Jika kode ada di KNOWN_PATHS → SELALU gunakan (deskripsi resmi terjamin benar)
+
   if (code && KNOWN_PATHS[code]) {
     pathStr = KNOWN_PATHS[code];
   } else if (!pathStr.includes('\n')) {
@@ -1065,7 +1026,6 @@ function getCleanPath(pathStr, code, description) {
     }
   }
 
-  // Return PLAIN TEXT — normalize dash levels only, no HTML
   const rawLines = pathStr.split('\n')
     .map(l => normalizeDashesShared(normalizeLine(l)))
     .filter(l => l.trim());
@@ -1098,19 +1058,11 @@ function getCleanPath(pathStr, code, description) {
   return result.join('\n');
 }
 
-
 function renderLeadPath(pathStr, code, description) {
   if (!pathStr) return '';
   if (Array.isArray(pathStr)) pathStr = pathStr.join('\n');
   else pathStr = String(pathStr);
-
-  // Lookup table untuk kode yang sering dikirim AI dengan format rusak
-  // KNOWN_PATHS loaded from known-paths.js
-
-  // Convert slash format first
   pathStr = convertSlashPath(pathStr);
-
-  // Remove empty subterm lines like "- -" or "-- " with no text after
   pathStr = pathStr.split('\n').filter(l => {
     const t = l.trim();
     return !(t.match(/^-+$/) || t.match(/^-+\s*$/));
@@ -1119,20 +1071,12 @@ function renderLeadPath(pathStr, code, description) {
   const pathLines = pathStr.split('\n');
   const subtermLinesM = pathLines.filter(l => l.trim().startsWith('-'));
   const hasMultiLevel = subtermLinesM.some(l => l.trim().startsWith('--'));
-  // isFlat: 2+ subterm tapi semua level 1 — kemungkinan AI kirim flat tanpa hierarki
   const isFlat = subtermLinesM.length >= 2 && !hasMultiLevel;
-  // Cek apakah baris final terpisah sudah ada DAN punya deskripsi (bukan kode saja)
   const hasStandaloneFinal = pathStr.split('\n').some(l => {
     const t = l.trim();
-    // Harus: tidak dimulai '-', dimulai kode, DAN ada teks deskripsi setelah kode
     return !t.startsWith('-') && /^([A-Z]\d{2}(\.\d+)?|\d{2}\.\d+)\s+\S+/.test(t);
   });
-  const looksMessy = !pathStr.includes('\n')
-    || /[A-Z]\d{2}.*[A-Z]\d{2}/.test(pathStr)
-    || pathStr.includes('/')
-    || isFlat
-    || !hasStandaloneFinal; // final line tanpa deskripsi → override dengan KNOWN_PATHS
-  // Jika kode ada di KNOWN_PATHS → SELALU gunakan (deskripsi resmi terjamin benar)
+
   if (code && KNOWN_PATHS[code]) {
     pathStr = KNOWN_PATHS[code];
   } else if (!pathStr.includes('\n')) {
@@ -1160,7 +1104,6 @@ function renderLeadPath(pathStr, code, description) {
     }
   }
 
-  // Split jika AI gabung dua path
   if (code) {
     const splitLines = pathStr.split('\n');
     const ourCodeRe = new RegExp('^' + code.replace('.', '\\.'));
@@ -1252,6 +1195,11 @@ function renderResults(result) {
   document.getElementById('emptyState').style.display = 'none';
   document.getElementById('resultsSection').style.display = 'block';
 
+  // ── HALLUCINATION VALIDATOR ──
+  const _inputText = document.getElementById('clinicalInput').value;
+  const _procWarnings = (typeof validateProcedures === 'function')
+    ? validateProcedures(result.procedures, _inputText) : [];
+
   document.getElementById('summaryBox').innerHTML = `
     <div class="summary-strip"><strong>${t.labelSummary}</strong>${result.summary || ''}</div>
     ${result.du_reasoning ? `<div class="summary-strip" style="background:#eff6ff;border-color:#bfdbfe;border-left-color:#2563eb;color:#1e3a5f;margin-top:8px">
@@ -1294,6 +1242,18 @@ function renderResults(result) {
 
   const procedures = result.procedures;
   document.getElementById('procCount').textContent = `${procedures.length} ${currentLang === 'id' ? 'kode' : 'codes'}`;
+
+  // ── Render hallucination warnings sebelum list prosedur ──
+  if (_procWarnings && _procWarnings.length > 0) {
+    const _warnHTML = `<div class="validation-banner" style="border-radius:0;border-left-width:4px;border-left-color:#f59e0b;background:#fffbeb;border-color:#fde68a;color:#92400e;margin-bottom:0">
+      <strong>⚠ PROSEDUR TIDAK TERVERIFIKASI DI TEKS INPUT</strong>
+      ${_procWarnings.map(w => `<div class="val-item"><span>🟡</span><span>${w.message}</span></div>`).join('')}
+      <div style="font-size:10px;margin-top:6px;opacity:0.65;font-style:italic">Verifikasi manual — kemungkinan halusinasi AI karena kata kunci tidak ditemukan di teks</div>
+    </div>`;
+    // Insert setelah proc-header, sebelum procList
+    document.querySelector('.proc-header').insertAdjacentHTML('afterend', _warnHTML);
+  }
+
   document.getElementById('procList').innerHTML = procedures.map((p, i) => {
     const descAlt = currentLang === 'id' && p.description_id ? `<div class="diag-desc-alt">🇮🇩 ${p.description_id}</div>` : '';
     return `<div class="diag-item" style="animation-delay:${(diagnoses.length+i)*0.06}s">
