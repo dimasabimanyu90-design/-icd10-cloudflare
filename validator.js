@@ -26,14 +26,12 @@ const PROC_KEYWORDS = {
   '89.37': ['spirometri','spirometry','fev','fvc','uji fungsi paru'],
 
   // ── LABORATORIUM ──
-  '90.59': ['lab','darah','leukosit','hemoglobin',' hb ','hematokrit','trombosit','eritrosit',
+  '90.59': ['lab','darah','leukosit','hemoglobin','hematokrit','trombosit','eritrosit',
             'crp','led','troponin','bnp','gds','gdp','gd2pp','hba1c','kreatinin','ureum',
             'sgot','sgpt','bilirubin','albumin','natrium','kalium','klorida','kolesterol',
             'trigliserida','ldl','hdl','kimia darah','darah rutin','cbc','pemeriksaan darah',
             'hasil lab','nilai lab','rapid test','rapid antigen','rapid antibodi','serologi',
-            'swab darah','pemeriksaan rapid',
-            // nilai numerik lab = bukti pemeriksaan dilakukan
-            'hb :', 'hb:', 'leukosit :', 'leukosit:', 'gds ', 'gds:', 'hba1c ', 'troponin '],
+            'swab darah','pemeriksaan rapid'],
   '90.41': ['kultur sputum','sputum culture','kultur dahak','biakan sputum','pcr','swab nasofaring','swab tenggorok','bta sputum','sputum bta'],
   '90.54': ['kultur darah','blood culture','biakan darah'],
   '90.29': ['kultur urin','urine culture','biakan urin'],
