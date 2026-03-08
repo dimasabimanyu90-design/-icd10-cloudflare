@@ -53,7 +53,7 @@ export async function onRequestPost(context) {
           body: JSON.stringify({
             model: model,
             temperature: 0.1,
-            max_tokens: Math.min(8000, Math.max(4096, Math.ceil(body.prompt.length / 6))),
+            max_tokens: Math.min(4000, Math.max(2000, Math.ceil(body.prompt.length / 8))),
             messages: [{ role: "user", content: body.prompt }]
           })
         }
