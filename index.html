@@ -557,11 +557,14 @@ async function analyze() {
     // Inject Vol.1 notes dari known-paths.js (trusted source, bukan AI)
     function injectVol1(items) {
       return items.map(item => {
+        // Jika D1 backend sudah inject vol1, jangan overwrite
+        if (Array.isArray(item.volume1_notes) && item.volume1_notes.length > 0) return item;
+        // Fallback: cek known-paths.js lokal
         const entry = (typeof getKnownPath === 'function') ? getKnownPath(item.code) : null;
         if (entry && Array.isArray(entry.vol1) && entry.vol1.length > 0) {
           return { ...item, volume1_notes: entry.vol1 };
         }
-        return { ...item, volume1_notes: [] }; // selalu kosongkan AI vol1
+        return item; // biarkan apa adanya, jangan kosongkan
       });
     }
     result.diagnoses  = injectVol1(result.diagnoses);
@@ -672,10 +675,7 @@ function getCleanPath(pathStr, code, description) {
     return !t.startsWith('-') && /^([A-Z]\d{2}(\.\d+)?|\d{2}\.\d+)\s+\S+/.test(t);
   });
 
-  if (code && KNOWN_PATHS[code]) {
-    const _entry = KNOWN_PATHS[code];
-    pathStr = (typeof _entry === 'string') ? _entry : (_entry.path || pathStr);
-  } else if (!pathStr.includes('\n')) {
+  if (!pathStr.includes('\n')) {
     const parts = pathStr.split(' - ').filter(Boolean);
     if (parts.length >= 2) {
       const finalIdx = parts.findIndex(p => /^[A-Z]\d{2}/.test(p.trim()) || /^\d{2}\./.test(p.trim()));
@@ -750,10 +750,8 @@ function renderLeadPath(pathStr, code, description) {
     return !t.startsWith('-') && /^([A-Z]\d{2}(\.\d+)?|\d{2}\.\d+)\s+\S+/.test(t);
   });
 
-  if (code && KNOWN_PATHS[code]) {
-    const _entry = KNOWN_PATHS[code];
-    pathStr = (typeof _entry === 'string') ? _entry : (_entry.path || pathStr);
-  } else if (!pathStr.includes('\n')) {
+  // D1 backend sudah inject path — skip KNOWN_PATHS override agar tidak overwrite D1
+  if (!pathStr.includes('\n')) {
     const parts = pathStr.split(' - ').filter(Boolean);
     if (parts.length >= 2) {
       const finalIdx = parts.findIndex(p => /^[A-Z]\d{2}/.test(p.trim()) || /^\d{2}\./.test(p.trim()));
