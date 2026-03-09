@@ -100,14 +100,13 @@ S72.1 Pertrochanteric fracture`, vol1: [] },
 S72.9 Fracture of femur, unspecified`, vol1: [] },
   '79.05': { path: `Reduction
 - fracture
--- femur
---- closed 79.05
+-- without fixation
+--- femur 79.05
 79.05 Closed reduction of fracture without internal fixation, femur`, vol1: [] },
   '79.15': { path: `Reduction
 - fracture
--- femur
---- open
----- with internal fixation 79.15
+-- with internal fixation
+--- femur 79.15
 79.15 Open reduction of fracture with internal fixation, femur`, vol1: [] },
   '79.35': { path: `Nailing
 - intramedullary
@@ -118,25 +117,27 @@ S72.9 Fracture of femur, unspecified`, vol1: [] },
 -- tibia 79.36
 79.36 Open reduction of fracture with internal fixation, tibia and fibula`, vol1: [] },
   '00.66': { path: `Angioplasty
-- coronary (balloon) 00.66
-00.66 Percutaneous transluminal coronary angioplasty`, vol1: [{"type": "includes", "text": "Balloon angioplasty of coronary artery"}, {"type": "includes", "text": "PTCA NOS"}, {"type": "note", "text": "Code also any: insertion of coronary artery stent (36.06-36.07)"}] },
+- coronary artery
+-- percutaneous transluminal (balloon) 00.66
+00.66 Percutaneous transluminal coronary angioplasty [PTCA]`, vol1: [{"type": "includes", "text": "Balloon angioplasty of coronary artery"}, {"type": "includes", "text": "PTCA NOS"}, {"type": "note", "text": "Code also any: insertion of coronary artery stent (36.06-36.07)"}] },
   '36.06': { path: `Insertion
 - stent
--- coronary artery 36.06
-36.06 Insertion of coronary artery stent`, vol1: [] },
+-- coronary artery
+--- bare metal 36.06
+36.06 Insertion of non-drug-eluting coronary artery stent`, vol1: [] },
   '36.07': { path: `Insertion
 - stent
 -- coronary artery
 --- drug-eluting 36.07
 36.07 Insertion of drug-eluting coronary artery stent`, vol1: [{"type": "includes", "text": "Drug-eluting coronary artery stent"}, {"type": "note", "text": "Code also any open chest coronary artery angioplasty (36.03)"}] },
   '36.01': { path: `Bypass
-- coronary artery 36.01
+- coronary artery
+-- saphenous vein graft
+--- single 36.01
 36.01 Single coronary artery bypass using saphenous vein graft`, vol1: [] },
   '14.24': { path: `Photocoagulation
-- retina
--- for
---- destruction of lesion
----- laser 14.24
+- retinal lesion
+-- laser 14.24
 14.24 Destruction of chorioretinal lesion by laser photocoagulation`, vol1: [] },
   '14.25': { path: `Photocoagulation
 - retina
@@ -763,9 +764,8 @@ M54.4 Lumbago with sciatica`, vol1: [] },
   '44.13': { path: `Gastroscopy
 - other 44.13
 44.13 Other gastroscopy`, vol1: [] },
-  '45.13': { path: `Endoscopy
-- large intestine
--- colonoscopy 45.13
+  '45.13': { path: `Colonoscopy
+- fiberoptic 45.13
 45.13 Colonoscopy`, vol1: [] },
   '45.23': { path: `Endoscopy
 - small bowel 45.23
@@ -935,16 +935,16 @@ B96.2 Escherichia coli as the cause of diseases classified elsewhere`, vol1: [] 
 -- other 87.49
 87.49 Other x-ray of chest`, vol1: [] },
   '88.76': { path: `Ultrasonography
-- abdominal 88.76
+- abdomen 88.76
 88.76 Abdominal ultrasonography`, vol1: [] },
   '88.78': { path: `Ultrasonography
 - gravid uterus 88.78
 88.78 Diagnostic ultrasound of gravid uterus`, vol1: [] },
   '88.72': { path: `Echocardiography
-- cardiac 88.72
+- 88.72
 88.72 Diagnostic ultrasound of heart`, vol1: [] },
   '89.52': { path: `Electrocardiogram
-- routine ECG 89.52
+- routine 89.52
 89.52 Electrocardiogram`, vol1: [] },
   '89.65': { path: `Measurement
 - arterial blood gases 89.65
@@ -953,16 +953,16 @@ B96.2 Escherichia coli as the cause of diseases classified elsewhere`, vol1: [] 
 - nebulizer 93.94
 93.94 Respiratory medication administered by nebulizer`, vol1: [] },
   '93.96': { path: `Oxygenation
-- other oxygen enrichment 93.96
+- supplemental 93.96
 93.96 Other oxygen enrichment`, vol1: [] },
   '93.91': { path: `Breathing
 - intermittent positive pressure (IPPB) 93.91
 93.91 Intermittent positive pressure breathing`, vol1: [] },
   '33.22': { path: `Bronchoscopy
-- diagnostic 33.22
+- fiber-optic 33.22
 33.22 Fiber-optic bronchoscopy`, vol1: [] },
   '33.23': { path: `Bronchoscopy
-- therapeutic 33.23
+- other 33.23
 33.23 Other bronchoscopy`, vol1: [] },
   '96.04': { path: `Intubation
 - endotracheal 96.04
@@ -977,7 +977,7 @@ B96.2 Escherichia coli as the cause of diseases classified elsewhere`, vol1: [] 
 90.59 Other blood chemistry`, vol1: [] },
   '90.41': { path: `Examination
 - sputum
--- culture 90.41
+-- bacteriological 90.41
 90.41 Bacteriological examination of sputum`, vol1: [] },
   '90.54': { path: `Examination
 - blood
@@ -988,8 +988,8 @@ B96.2 Escherichia coli as the cause of diseases classified elsewhere`, vol1: [] 
 -- routine 91.31
 91.31 Urinalysis`, vol1: [] },
   '91.49': { path: `Examination
-- histological
--- other 91.49
+- specimen
+-- histological 91.49
 91.49 Other histological examination`, vol1: [] },
   'H25.1': { path: `Cataract
 - senile
@@ -1014,20 +1014,18 @@ H26.1 Cataract, senile, immature`, vol1: [] },
   'H26.9': { path: `Cataract
 - unspecified H26.9
 H26.9 Cataract, unspecified`, vol1: [] },
-  '13.41': { path: `Extraction
-- lens
--- phacoemulsification
---- without IOL 13.41
+  '13.41': { path: `Phacoemulsification
+- without IOL 13.41
 13.41 Phacoemulsification and aspiration of cataract`, vol1: [] },
   '13.71': { path: `Extraction
 - lens
 -- extracapsular
---- by temporal inferior route 13.71
+--- one-stage 13.71
 13.71 Extracapsular extraction of lens by temporal inferior route`, vol1: [] },
-  '13.72': { path: `Extraction
-- lens
--- phacoemulsification
---- with insertion of intraocular lens prosthesis 13.72
+  '13.72': { path: `Insertion
+- lens prosthesis
+-- intraocular
+--- one-stage 13.72
 13.72 Phacoemulsification and insertion of intraocular lens prosthesis`, vol1: [{"type": "includes", "text": "Phacoemulsification with insertion of intraocular lens prosthesis (posterior chamber)"}] },
   '74.1': { path: `Caesarean section
 - low cervical 74.1
@@ -1041,20 +1039,23 @@ H26.9 Cataract, unspecified`, vol1: [] },
 - unilateral 65.31
 65.31 Unilateral salpingo-oophorectomy`, vol1: [] },
   '65.39': { path: `Oophorectomy
-- unilateral 65.39
+- unilateral
+-- other 65.39
 65.39 Other unilateral oophorectomy`, vol1: [] },
   '65.51': { path: `Oophorectomy
-- bilateral 65.51
+- bilateral
+-- other 65.51
 65.51 Other bilateral oophorectomy`, vol1: [] },
   '65.61': { path: `Salpingo-oophorectomy
 - bilateral 65.61
 65.61 Bilateral salpingo-oophorectomy`, vol1: [] },
   '73.59': { path: `Delivery
-- other manually assisted 73.59
+- manually assisted
+-- other 73.59
 73.59 Other manually assisted delivery`, vol1: [] },
   '75.34': { path: `Monitoring
 - fetal
--- intrapartum 75.34
+-- during labor 75.34
 75.34 Other fetal monitoring`, vol1: [] },
   'S00.0': { path: `Injury
 - superficial
@@ -1166,6 +1167,84 @@ X59.9 Exposure to unspecified factor`, vol1: [] },
 - occurrence
 -- street and highway Y92.4
 Y92.4 Street and highway as the place of occurrence`, vol1: [] },
+
+  // ── ADDED FROM ICD-9-CM PDF ──
+  '01.24': { path: `Craniotomy
+- burr holes 01.24
+01.24 Other craniotomy`, vol1: [] },
+  '02.12': { path: `Repair
+- encephalocele 02.12
+02.12 Other repair of cerebral meninges`, vol1: [] },
+  '03.09': { path: `Laminectomy
+- other 03.09
+03.09 Other exploration and decompression of spinal canal`, vol1: [] },
+  '31.1': { path: `Tracheostomy
+- temporary 31.1
+31.1 Temporary tracheostomy`, vol1: [] },
+  '31.21': { path: `Tracheostomy
+- permanent 31.21
+31.21 Mediastinal tracheostomy`, vol1: [] },
+  '34.04': { path: `Thoracentesis
+- 34.04
+34.04 Insertion of intercostal catheter for drainage`, vol1: [] },
+  '34.09': { path: `Drainage
+- pleural cavity 34.09
+34.09 Other incision of pleura`, vol1: [] },
+  '37.23': { path: `Biopsy
+- heart 37.23
+37.23 Endomyocardial biopsy`, vol1: [] },
+  '37.61': { path: `Implantation
+- pacemaker
+-- heart (initial) 37.61
+37.61 Implant of pacemaker`, vol1: [] },
+  '38.93': { path: `Catheterization
+- venous
+-- central 38.93
+38.93 Venous catheterization, not elsewhere classified`, vol1: [] },
+  '39.25': { path: `Repair
+- aneurysm
+-- aortic 39.25
+39.25 Aortic aneurysm repair`, vol1: [] },
+  '42.10': { path: `Esophagoscopy
+- other 42.10
+42.10 Esophagoscopy NOS`, vol1: [] },
+  '43.19': { path: `Gastroscopy
+- other 43.19
+43.19 Other gastroscopy`, vol1: [] },
+  '48.50': { path: `Sigmoidoscopy
+- 48.50
+48.50 Proctosigmoidoscopy NOS`, vol1: [] },
+  '55.23': { path: `Biopsy
+- kidney 55.23
+55.23 Percutaneous biopsy of kidney`, vol1: [] },
+  '55.51': { path: `Nephrectomy
+- partial 55.51
+55.51 Nephrectomy of remaining kidney`, vol1: [] },
+  '56.0': { path: `Ureterotomy
+- 56.0
+56.0 Transurethral removal of obstruction from ureter and renal pelvis`, vol1: [] },
+  '57.94': { path: `Cystostomy
+- 57.94
+57.94 Insertion of indwelling urinary catheter`, vol1: [] },
+  '59.8': { path: `Urethral suspension
+- 59.8
+59.8 Ureteral catheterization`, vol1: [] },
+  '65.49': { path: `Salpingo-oophorectomy
+- unilateral
+-- other 65.49
+65.49 Other unilateral salpingo-oophorectomy`, vol1: [] },
+  '74.0': { path: `Caesarean section
+- classical 74.0
+74.0 Classical caesarean section`, vol1: [] },
+  '89.11': { path: `Measurement
+- blood pressure 89.11
+89.11 Arterial pressure monitoring`, vol1: [] },
+  '99.04': { path: `Transfusion
+- packed cells 99.04
+99.04 Transfusion of packed cells`, vol1: [] },
+  '99.15': { path: `Injection
+- insulin 99.15
+99.15 Insulin injection`, vol1: [] },
 };
 
 // Helper: get path string (backward compat)
