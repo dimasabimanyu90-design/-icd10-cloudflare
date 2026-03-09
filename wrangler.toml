@@ -4,4 +4,4 @@ compatibility_date = "2024-01-01"
 [[d1_databases]]
 binding = "ICD9_DB"
 database_name = "icd9-paths-db"
-database_id = "AKAN_DIISI_OTOMATIS_SETELAH_CREATE"
+database_id = "276b126c-00cf-4b6d-8a9a-0ddde27650be"
