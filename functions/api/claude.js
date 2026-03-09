@@ -335,6 +335,26 @@ function buildPrompt(clinicalText, langInstruction) {
   return rules + '\n\n' + langInstruction + '\n\nTEKS KLINIS:\n' + clinicalText + '\n\n' + PROMPT_JSON;
 }
 
+
+// ── KV LOOKUP: inject Vol.3 paths + Vol.1 notes from Cloudflare KV ──
+async function enrichWithKV(items, kvNamespace) {
+  if (!kvNamespace) return items;
+  return await Promise.all(items.map(async item => {
+    try {
+      const val = await kvNamespace.get(`proc:${item.code}`);
+      if (val) {
+        const entry = JSON.parse(val);
+        return {
+          ...item,
+          lead_term_path: entry.path || item.lead_term_path,
+          volume1_notes: (entry.vol1 && entry.vol1.length > 0) ? entry.vol1 : []
+        };
+      }
+    } catch(e) {}
+    return { ...item, volume1_notes: [] };
+  }));
+}
+
 export async function onRequestPost(context) {
   const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
@@ -457,8 +477,24 @@ export async function onRequestPost(context) {
         completion_tokens: data.usage ? data.usage.completion_tokens              : null,
       };
 
+      // Parse and enrich with KV paths
+      let enrichedText = text;
+      try {
+        const parsed = JSON.parse(text.replace(/```json|```/g, '').trim());
+        if (parsed.diagnoses || parsed.procedures) {
+          const kv = context.env.ICD9_PATHS || null;
+          if (kv) {
+            if (parsed.procedures) {
+              parsed.procedures = await enrichWithKV(parsed.procedures, kv);
+            }
+            // Also enrich diagnoses if needed
+          }
+          enrichedText = JSON.stringify(parsed);
+        }
+      } catch(e) {}
+
       return new Response(
-        JSON.stringify({ text, model_used: model, quota }),
+        JSON.stringify({ text: enrichedText, model_used: model, quota }),
         { status: 200, headers: corsHeaders }
       );
     }
