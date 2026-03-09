@@ -405,24 +405,17 @@ export async function onRequestPost(context) {
 
     // Browser kirim: { clinicalText, langInstruction }
     // BUKAN full prompt — hemat bandwidth
-    const clinicalText    = body.clinicalText || body.prompt || '';
+    const clinicalText    = body.clinicalText || '';
     const langInstruction = body.langInstruction || '';
 
     // Build prompt di server
     const fullPrompt = buildPrompt(clinicalText, langInstruction);
 
-    const attempts = [];
-    for (const key of API_KEYS) {
-      for (const model of MODELS) {
-        attempts.push({ key, model });
-      }
-    }
-
+    const model = MODELS[0];
     let lastError = null;
 
-    for (let i = 0; i < attempts.length; i++) {
-      const { key, model } = attempts[i];
-      const keyIdx = API_KEYS.indexOf(key) + 1;
+    for (let keyIdx = 0; keyIdx < API_KEYS.length; keyIdx++) {
+      const key = API_KEYS[keyIdx];
       let response, data;
 
       response = await fetch(
@@ -436,7 +429,7 @@ export async function onRequestPost(context) {
           body: JSON.stringify({
             model: model,
             temperature: 0.1,
-            max_tokens: Math.min(4000, Math.max(2000, Math.ceil(fullPrompt.length / 8))),
+            max_tokens: 4000,
             messages: [{ role: "user", content: fullPrompt }]
           })
         }
@@ -456,16 +449,16 @@ export async function onRequestPost(context) {
           waitMs = Math.min(waitMs, 15000);
         }
 
-        lastError = `Rate limit — key ${keyIdx}, model ${model}, tunggu ${Math.round(waitMs/1000)}s`;
+        lastError = `Rate limit — key ${keyIdx+1}, model ${model}, tunggu ${Math.round(waitMs/1000)}s`;
 
-        if (i < attempts.length - 1) {
+        if (keyIdx < API_KEYS.length - 1) {
           await new Promise(r => setTimeout(r, waitMs));
         }
         continue;
       }
 
       if (data.error) {
-        lastError = `Groq (key${keyIdx}/${model}): ${data.error.code} - ${data.error.message}`;
+        lastError = `Groq (key${keyIdx+1}/${model}): ${data.error.code} - ${data.error.message}`;
         if (response.status !== 429 && response.status !== 503) {
           return new Response(
             JSON.stringify({ error: lastError }),
@@ -487,7 +480,7 @@ export async function onRequestPost(context) {
 
       const quota = {
         model:             model,
-        api_key_used:      `key_${keyIdx}`,
+        api_key_used:      `key_${keyIdx+1}`,
         rpm_limit:         response.headers.get("x-ratelimit-limit-requests")     || null,
         rpm_remaining:     response.headers.get("x-ratelimit-remaining-requests") || null,
         rpm_reset:         response.headers.get("x-ratelimit-reset-requests")     || null,
@@ -499,20 +492,13 @@ export async function onRequestPost(context) {
         completion_tokens: data.usage ? data.usage.completion_tokens              : null,
       };
 
-      // Parse and enrich with KV paths
+      // Enrich procedures with D1 paths (ICD-9-CM only)
       let enrichedText = text;
       try {
-        const parsed = JSON.parse(text.replace(/```json|```/g, '').trim());
-        if (parsed.diagnoses || parsed.procedures) {
+        const parsed = JSON.parse(text); // text already clean (no backticks)
+        if (parsed.procedures && parsed.procedures.length > 0) {
           const db = context.env.ICD9_DB || null;
-          if (db) {
-            if (parsed.procedures) {
-              parsed.procedures = await enrichWithD1(parsed.procedures, db);
-            }
-            if (parsed.diagnoses) {
-              parsed.diagnoses = await enrichWithD1(parsed.diagnoses, db);
-            }
-          }
+          if (db) parsed.procedures = await enrichWithD1(parsed.procedures, db);
           enrichedText = JSON.stringify(parsed);
         }
       } catch(e) {}
