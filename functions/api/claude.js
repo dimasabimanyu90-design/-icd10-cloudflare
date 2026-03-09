@@ -336,23 +336,45 @@ function buildPrompt(clinicalText, langInstruction) {
 }
 
 
-// ── KV LOOKUP: inject Vol.3 paths + Vol.1 notes from Cloudflare KV ──
-async function enrichWithKV(items, kvNamespace) {
-  if (!kvNamespace) return items;
-  return await Promise.all(items.map(async item => {
-    try {
-      const val = await kvNamespace.get(`proc:${item.code}`);
-      if (val) {
-        const entry = JSON.parse(val);
+// ── D1 LOOKUP: inject Vol.3 paths + Vol.1 notes from Cloudflare D1 ──
+async function enrichWithD1(items, db) {
+  if (!db || !items || items.length === 0) return items;
+  try {
+    const codes = items.map(i => i.code).filter(Boolean);
+    if (codes.length === 0) return items;
+
+    // Batch query all codes at once
+    const placeholders = codes.map(() => '?').join(',');
+    const result = await db.prepare(
+      `SELECT code, path, vol1 FROM icd9_paths WHERE code IN (${placeholders})`
+    ).bind(...codes).all();
+
+    // Build lookup map
+    const map = {};
+    if (result.results) {
+      for (const row of result.results) {
+        map[row.code] = {
+          path: row.path,
+          vol1: row.vol1 ? JSON.parse(row.vol1) : []
+        };
+      }
+    }
+
+    return items.map(item => {
+      const entry = map[item.code];
+      if (entry) {
         return {
           ...item,
           lead_term_path: entry.path || item.lead_term_path,
           volume1_notes: (entry.vol1 && entry.vol1.length > 0) ? entry.vol1 : []
         };
       }
-    } catch(e) {}
-    return { ...item, volume1_notes: [] };
-  }));
+      return { ...item, volume1_notes: [] };
+    });
+  } catch(e) {
+    console.error('D1 lookup error:', e.message);
+    return items.map(i => ({ ...i, volume1_notes: [] }));
+  }
 }
 
 export async function onRequestPost(context) {
@@ -482,12 +504,14 @@ export async function onRequestPost(context) {
       try {
         const parsed = JSON.parse(text.replace(/```json|```/g, '').trim());
         if (parsed.diagnoses || parsed.procedures) {
-          const kv = context.env.ICD9_PATHS || null;
-          if (kv) {
+          const db = context.env.ICD9_DB || null;
+          if (db) {
             if (parsed.procedures) {
-              parsed.procedures = await enrichWithKV(parsed.procedures, kv);
+              parsed.procedures = await enrichWithD1(parsed.procedures, db);
             }
-            // Also enrich diagnoses if needed
+            if (parsed.diagnoses) {
+              parsed.diagnoses = await enrichWithD1(parsed.diagnoses, db);
+            }
           }
           enrichedText = JSON.stringify(parsed);
         }
