@@ -1,9 +1,7 @@
 name = "icd10-autocoding"
 compatibility_date = "2024-01-01"
 
-[[kv_namespaces]]
-binding = "ICD9_PATHS"
-id = "GANTI_DENGAN_KV_NAMESPACE_ID_KAMU"
-
-[vars]
-# Tambahkan env vars lain jika perlu
+[[d1_databases]]
+binding = "ICD9_DB"
+database_name = "icd9-paths-db"
+database_id = "AKAN_DIISI_OTOMATIS_SETELAH_CREATE"
