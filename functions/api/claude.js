@@ -3,7 +3,7 @@
 
 const PROMPT_BASE = `
 ## EXTRACTION
-Kamu adalah sistem auto-coding ICD-10 dan ICD-9-CM profesional.
+Kamu adalah sistem auto-coding ICD-10 dan ICD-9-CM profesional untuk iDRG/JKN Indonesia.
 Dari teks klinis berikut, ekstrak semua diagnosis dan prosedur.
 
 - Diagnoses: ONLY explicitly stated. 1 DU + ALL DS. No dx → diagnoses:[] unless strong objective evidence.
@@ -33,7 +33,7 @@ Dari teks klinis berikut, ekstrak semua diagnosis dan prosedur.
      HANYA nilai TTV di teks (TD, nadi, suhu, RR, SpO2) tanpa nilai lab → JANGAN koding 90.59 sama sekali.
      Cek: ada Hb/leukosit/GDS/kreatinin/troponin/enzim/elektrolit? Tidak ada → hapus 90.59 dari output.
 
-## DU SELECTION RULES (WHO ICD-10 Vol.2)
+## DU SELECTION RULES (WHO ICD-10 Vol.2 + ICS iDRG)
 ### Kriteria 1 — RESOURCE/SUMBER DAYA TERBESAR
 Pilih kondisi yang paling banyak menyita sumber daya (waktu perawatan, tindakan, biaya).
 ### Kriteria 2 — KAIDAH KODING WHO ICD-10 Vol.2
@@ -130,6 +130,7 @@ Jika ada retinopati/katarak/glaukoma + DM → komplikasi mata=DU, DM=DS
 - E11.2† + N08.3* (DM nephropathy)
 - E11.4† + G63.2* (DM neuropathy)
 - G20† + F02.3* (Parkinson dementia)
+- G30.-† + F00.* (Alzheimer dementia) — wajib keduanya
 - I10† + I68.1* (HT cerebrovascular)
 - B20-B24† + kode manifestasi* (HIV)
 Aturan: dagger (†) = DU/etiologi, asterisk (*) = DS/manifestasi. Keduanya HARUS ada.
@@ -137,6 +138,8 @@ Aturan: dagger (†) = DU/etiologi, asterisk (*) = DS/manifestasi. Keduanya HARU
 ## VALIDATION
 Tambahkan validations[] jika ada keraguan atau kondisi provisional.
 WARNING provisional jika diagnosis tidak terkonfirmasi pemeriksaan penunjang.
+WARNING jika Rule MB1-MB5 diterapkan (jelaskan rule yang dipakai).
+WARNING jika kode IM digunakan (jelaskan alasannya).
 
 ## ABBREVIATIONS
 UMUM: HT/hipertensi=hypertension | DM=diabetes mellitus | DM2=DM type 2 | DM1=DM type 1
@@ -179,7 +182,7 @@ intake sulit/intake kurang/sulit makan/tidak nafsu makan → R63.3 DS
 Kode definitif (J/K/I/dll) BOLEH jika ADA salah satu:
   1. Dokter tulis diagnosis eksplisit di resume/SOAP
   2. Penunjang konfirmasi (foto thorax infiltrat→pneumonia | CT scan→stroke)
-  3. Patogen/kuman spesifik disebut ("PCR COVID-19+"→U07.1 | "kultur Klebsiella"→J15.0)
+  3. Patogen/kuman spesifik disebut DAN dikonfirmasi dokter di resume medis
   4. Tindakan operatif dilakukan (appendektomi→K35.x | SC elektif→O82.0 | SC darurat→O82.1)
 Jika HANYA gejala tanpa konfirmasi → R code + WARNING provisional:
   Demam+batuk+pilek+PCR+(tanpa nama patogen) → R50.9 DU+WARNING | R05 DS — BUKAN J22
@@ -187,6 +190,145 @@ Jika HANYA gejala tanpa konfirmasi → R code + WARNING provisional:
   Sesak tanpa konfirmasi → R06.0 — BUKAN J96
   Kejang tanpa konfirmasi → R56.8 — BUKAN G40
   Penurunan kesadaran tanpa CT → R41.3/R55 — BUKAN S06/G93`;
+
+// ── ICS v1 IDRG RULES ──
+const PROMPT_IDRG = `
+## INDONESIAN CODING STANDARD (ICS) v1 — iDRG/JKN RULES
+Sumber: Pusat Pembiayaan Kesehatan Kemenkes RI (ICS Version 1, 2025)
+WAJIB diterapkan untuk semua kasus koding iDRG/JKN Indonesia.
+
+### A. DEFINISI DIAGNOSIS UTAMA (iDRG)
+Diagnosis utama = diagnosis AKHIR/FINAL setelah perawatan selesai.
+1. Alasan utama pasien memerlukan pelayanan kesehatan
+2. Kondisi PALING BANYAK menggunakan sumber daya
+3. Jika beberapa diagnosis setara → pilih paling parah/mengancam jiwa
+4. Jika tingkat keparahan sama → pilih yang butuh sumber daya TERBESAR (operasi > ICU > bangsal)
+5. BUKAN penyakit yang muncul SAAT perawatan (infeksi nosokomial, komplikasi prosedur)
+Prinsip: gunakan DIAGNOSIS AKHIR. Jika sudah ada → JANGAN kode gejala/sindrom/diagnosis sementara terkait.
+
+### B. RULE MB1–MB5 (RESELEKSI DU — gunakan jika DU dokter tidak sesuai kaidah)
+MB1: DU=kondisi minor, DS=kondisi bermakna relevan dengan tindakan/spesialisasi → reseleksi DS jadi DU.
+  Contoh: DU=Sinusitis, DS=Karsinoma endoserviks, Tindakan=Histerektomi → DU=C53.0
+MB2: Beberapa kondisi ditulis sebagai DU → pilih sesuai alasan utama perawatan atau spesialisasi.
+  Contoh: DU=Katarak+Meningitis+IHD, Spesialis=Neurologi → DU=G00.3
+MB3: DU=gejala dari kondisi yang sudah didiagnosis sebagai DS → reseleksi DS definitif jadi DU.
+  Contoh: DU=Hematuria, DS=Papillomata buli, Prosedur=Eksisi → DU=D41.4
+MB4: DU=umum, DS=lebih spesifik → pilih yang spesifik jadi DU.
+  Contoh: DU=CVA, DS=Perdarahan otak → DU=I61.9
+MB5: Diagnosis alternatif → kode gejala sebagai DU. Jika dua dx bersamaan → pilih yang PERTAMA ditulis DPJP.
+  Contoh: "kolesistitis akut atau pankreatitis akut" → DU=K81.0 (pertama ditulis)
+WAJIB tambahkan WARNING di validations[] jika Rule MB diterapkan.
+
+### C. PROSEDUR — OMIT CODE & URUTAN
+OMIT CODE (tidak dikoding jika diikuti prosedur utama):
+Craniotomy, Laparotomy, Laminectomy, Sternotomy, Thoracotomy, Arthrotomy = pendekatan operasi.
+KECUALI jika itu SATU-SATUNYA tindakan (tanpa prosedur lanjutan).
+Contoh: Craniotomy + reseksi tumor → kode reseksi saja (01.24 omit code)
+Contoh: Laparotomy + appendektomi → kode appendektomi saja (54.19 omit code)
+
+URUTAN PROSEDUR (input ke iDRG):
+1. Prosedur untuk DU = utama (input pertama)
+2. Jika tidak ada → prosedur untuk komplikasi = utama
+3. Jika tidak ada → prosedur untuk komorbid = utama
+Urutan = prioritas KLINIS, BUKAN urutan waktu operasi.
+
+### D. KETENTUAN KHUSUS MDC
+
+MDC 11 SARAF:
+- Stroke iskemik + trombolitik → tambah 99.10 sebagai prosedur
+- Epilepsi + cedera saat serangan → cedera=DU, epilepsi=DS + kode eksternal
+- Alzheimer <65th → G30.0 | ≥65th → G30.1 | tidak diketahui → G30.9
+- Alzheimer + demensia → G30.-† + F00.* (keduanya WAJIB)
+- Sleep apnea: ada penyebab spesifik → penyebab=DU, G47.3=DS | snoring primer → R06.5
+- UPPP → 3 kode: 27.79 + 27.69 + 29.4
+- Parkinsonism akibat obat → G21.1 + kode obat (T43.4 dll)
+- Status epilepticus → G41.- (BUKAN G40)
+- CVA umum + perdarahan spesifik → Rule MB4: I61.x atau I63.x (spesifik)
+- Sekuel penyakit SSP (G09) = kode opsional tambahan BUKAN kode utama
+
+MDC 12 MATA:
+- Fakoemulsifikasi + IOL → 13.72 | tanpa IOL → 13.41 | ECCE → 13.71
+- Retinopati DM → E11.3† + H36.0* | Katarak + DM (tanpa retinopati) → katarak=DU, E11.3†=DS
+- Laser fotokoagulasi retina → 14.24 (BUKAN 14.25)
+- Trabekulotomi → 12.54
+
+MDC 13 THT:
+- Perforasi membran timpani → H72.- (wajib digit: H72.0/H72.1/H72.2/H72.9)
+- Tonsillektomi + adenoidektomi → 28.3
+
+MDC 14 PERNAFASAN:
+- Pneumonia + kultur Klebsiella → J15.0 HANYA jika dokter KONFIRMASI di resume medis
+- Pneumonia lobar X-ray (tanpa konfirmasi kuman) → J18.1
+- JANGAN J15.0 hanya dari hasil lab/kultur sputum tanpa konfirmasi klinis dokter
+- PPOK + eksaserbasi akut → J44.1 | + infeksi saluran napas bawah → J44.0
+
+MDC 15 SIRKULASI:
+- Primary PCI → 00.66 + stent (36.06 BMS atau 36.07 DES) + jumlah vessel (00.40/00.41/00.42/00.43)
+- Coronary angiography → 88.55 (single catheter) atau 88.56 (two catheters)
+- Cardiac arrest + penyebab diketahui → penyebab=DU, I46.0=DS
+- PHT (I27.0) + HF (I50.9) → koding terpisah keduanya (tidak ada kombinasi)
+- VF + penyakit jantung struktural → I49.00 (IM) | VF idiopatik/Brugada → I49.01 (IM)
+- Varises esofagus + sirosis → K74.6=DU + I98.2* (tanpa perdarahan) atau I98.3* (dengan perdarahan)
+- DVT ekstremitas bawah → I80.2
+
+MDC 16 PENCERNAAN:
+- Ileus obstruksi + konstipasi → JANGAN kode konstipasi terpisah
+- K29.0 (acute haemorrhagic gastritis) → HANYA jika terkonfirmasi endoskopi
+- Appendisitis + perforasi + peritonitis → K35.2 | + abses → K35.3
+
+MDC 17 HEPATOBILIAR:
+- Sirosis + varises esofagus berdarah → K74.6=DU + I98.3*=DS
+- Kolesistektomi laparoskopik → 51.22 | terbuka → 51.23
+
+MDC 18 MUSKULOSKELETAL:
+- WAJIB digit lokasi: 0=multi,1=shoulder,2=elbow,3=wrist,4=hand,5=hip,6=knee,7=ankle,8=other,9=unspec
+- Total hip → 81.54 | Total knee → 81.55
+- ORIF femur → 79.35 | ORIF tibia/fibula → 79.36
+
+MDC 24 OBSTETRI:
+- Jika ada PENYULIT persalinan → penyulit=DU, O80-O84=DS (metode persalinan)
+- Jika TIDAK ada penyulit → O80-O84 boleh sebagai DU
+- Z37.- = WAJIB DS terakhir, TIDAK BOLEH sebagai DU
+- PEB ringan/tanpa pemberatan → O14.0 | PEB berat/dengan pemberatan/impending → O14.1
+- SC + sterilisasi tuba → tambah 66.39 | SC + B-Lynch/kompresi uterus → tambah 69.99
+- Abortus + kuretase → 69.02
+- KPD → O42.- | Malpresentasi sebelum persalinan → O32.-
+- Hyperemesis + gangguan metabolik/dehidrasi/penurunan BB → O21.1
+- DM pre-existing tipe 1 → O24.0 | tipe 2 → O24.1 | gestasional → O24.4
+- Puerperal sepsis → O85 (BUKAN A41.x)
+
+MDC 28 INFEKSI:
+- HIV + infeksi oportunistik → B20-B24=DU, manifestasi=DS
+- Malaria → B50-B53 spesifik (HINDARI B54 unspecified)
+- Sepsis → A41.- | Puerperal sepsis → O85
+
+MDC 29 MENTAL:
+- ECT → 94.27 WAJIB dikoding jika dilakukan (mempengaruhi DRG grouper)
+- Skizofrenia F20.- → 5 digit wajib
+
+MDC 34 NEOPLASMA:
+- Rawat untuk metastasis → metastasis=DU, primer=DS
+- Kemoterapi/radioterapi rawat inap → Z51.1/Z51.0 boleh sebagai DU
+
+### E. KODE INDONESIAN MODIFICATION (IM)
+Kode IM = kode baru/tambahan yang tidak ada di ICD standar. Tandai "(IM)" di reasoning.
+I49.00 (VF dengan penyakit struktural) | I49.01 (VF idiopatik/Brugada) | I49.09 (VF unspec)
+N93.00 (Contact bleeding) | N93.01 (Postcoital bleeding)
+R51.0 (Headache unspecified — IM menggantikan R51)
+94.270/94.271 (ECT variants) | G04.3 (Viral transverse myelitis unspec)
+
+### F. BUKTI KODING YANG SAH
+VALID: diagnosis dokter di resume medis, laporan radiologi dokter spesialis, laporan PA, hasil lab yang diinterpretasi dokter.
+TIDAK VALID: spekulasi dari resep/obat, hasil lab tanpa konfirmasi klinis dokter, catatan perawatan saja.
+
+### G. CHECKLIST AKHIR
+□ DU = diagnosis akhir/final (bukan diagnosis masuk)?
+□ Rule MB1-MB5 diperiksa jika ada inkonsistensi DU-DS?
+□ Prosedur pendekatan operasi (omit code) sudah dieliminasi?
+□ Kode IM diterapkan jika tersedia dan relevan?
+□ Z37.- sudah ada sebagai DS terakhir pada kasus obstetri?
+□ Kode dagger-asterisk lengkap berpasangan?
+□ Bukti koding valid (bukan spekulasi)?`;
 
 const PROMPT_OBSTETRI = `
 ## OBSTETRIC RULES
@@ -223,6 +365,11 @@ WAJIB scan nilai lab/TTV abnormal:
   Hb<10+hamil→O99.0 DS | Hb<10+non-hamil→D64.9 | TD≥140/90+hamil→O13/O14
   GDS>200/GDP>126→O24(hamil) | SpO2<95% akut→J96.0 DS
 
+ICS MDC 24 KHUSUS:
+  Penyulit persalinan → penyulit=DU, O80-O84=DS (metode)
+  SC + sterilisasi → tambah 66.39 | SC + B-Lynch/kompresi uterus → tambah 69.99
+  Abortus + kuretase → 69.02 | Puerperal sepsis → O85
+
 ## GINEKOLOGI / OBSTETRI PROSEDUR
 SC/SCTP → WAJIB koding 74.1 "Low cervical caesarean section" (ICD-9-CM)
   BUKAN O82.1 — O82.1 adalah kode DIAGNOSIS bukan prosedur
@@ -248,10 +395,11 @@ Tiga kategori — koding HANYA jika DISEBUT EKSPLISIT di teks:
 1. OPERATIF: operasi, biopsi, intubasi, drainase, kateter, bronkoskopi, dll.
    Ventilator→96.70 | Intubasi→96.04 | Bronkoskopi→33.22 | Trakeostomi→31.21
    PCI/PTCA koroner→00.66 (BUKAN 35.61) | Stent drug-eluting→36.07 | Stent bare metal→36.06
-   Primary PCI+stent → WAJIB dua kode: 00.66+36.07
+   Primary PCI+stent → WAJIB: 00.66+36.07+kode jumlah vessel (00.40 single/00.41 two/00.42 three/00.43 four+)
    KASUS STEMI/ACS — WAJIB jika disebut:
    EKG/elektrokardiogram disebut→89.52 | Troponin disebut (termasuk "(+)")→90.59
    Echo disebut→88.72 | Foto thorax disebut→87.44
+   Coronary angiography → 88.55 (single catheter) atau 88.56 (two catheters)
 2. DIAGNOSTIK:
    Rontgen/foto thorax→87.44 | CT kepala→87.03 | CT thorax→87.41 | CT abdomen→88.01
    MRI otak→88.91 | Echo jantung→88.72 | USG abdomen→88.76 | USG obstetri→88.78
@@ -267,7 +415,11 @@ Tiga kategori — koding HANYA jika DISEBUT EKSPLISIT di teks:
 DILARANG: antibiotik IV, infus obat/cairan = BUKAN kode prosedur.
 DILARANG: 93.91 untuk nebulisasi (93.91=IPPB). Nebulisasi→93.94.
 90.59: koding jika ada nilai numerik lab (Hb/leukosit/GDS/troponin = cukup bukti).
-90.59: JANGAN koding jika hanya TTV (TD, nadi, suhu, SpO2) tanpa nilai lab.`;
+90.59: JANGAN koding jika hanya TTV (TD, nadi, suhu, SpO2) tanpa nilai lab.
+
+ICS OMIT CODE:
+Craniotomy/Laparotomy/Laminectomy/Sternotomy/Thoracotomy/Arthrotomy sebagai pendekatan operasi = TIDAK dikoding jika diikuti prosedur utama.
+KECUALI jika itu SATU-SATUNYA tindakan yang dilakukan.`;
 
 const PROMPT_SPESIALIS = `
 ## MUSCULOSKELETAL (M00-M99)
@@ -281,10 +433,11 @@ RR>24+SpO2<95%→perkuat J96.0. JANGAN skip nilai abnormal.
 ## PNEUMONIA RULES
 J18.1=bronchopneumonia (tanpa organisme) | J18.0=bronchopneumonia unspec
 J15.x=bacterial: J15.0=Klebsiella | J15.1=Pseudomonas | J15.2=Staph | J15.4=other strep
-Kultur/PCR positif → kode spesifik J15.x + B95/B96. Tanpa kultur → J18.x
+Kultur/PCR positif + KONFIRMASI DOKTER DI RESUME MEDIS → kode spesifik J15.x + B95/B96
+Tanpa konfirmasi dokter → J18.x (JANGAN J15.x hanya dari hasil lab)
 
 ## APPENDIX RULES
-K35.0=perforasi+peritonitis | K35.1=perforasi+abscess | K35.8=acute appendicitis lain
+K35.2=perforasi+peritonitis | K35.3=perforasi+abscess | K35.8=acute appendicitis lain
 K36=chronic | K37=unspecified. JANGAN K35 tanpa digit.
 
 ## EYE (H00-H59)
@@ -305,7 +458,13 @@ GDS tinggi tanpa komplikasi organ → E11.9.
 I61=haemorrhagic stroke WAJIB digit:
   I61.0=subcortical hemisfer (ganglia basalis,thalamus,kapsula interna) | I61.1=kortikal
   I61.3=batang otak | I61.4=serebelum | I61.9=unspecified
-I63=ischaemic+location WAJIB digit. Fracture: bone+location+open/closed. 4th/5th digit always.`;
+I63=ischaemic+location WAJIB digit. Fracture: bone+location+open/closed. 4th/5th digit always.
+
+## CARDIAC SPECIFICS (ICS)
+VF + penyakit jantung struktural → I49.00 (IM) | VF idiopatik → I49.01 (IM) | VF unspec → I49.09 (IM)
+PHT (I27.0) + HF (I50.9) → koding terpisah (tidak ada kode kombinasi resmi)
+Cardiac arrest penyebab diketahui → penyebab=DU, I46.0=DS
+Alzheimer + demensia → G30.-† + F00.* (wajib keduanya)`;
 
 const PROMPT_TRAUMA = `
 ## EXTERNAL CAUSE (Chapter XX)
@@ -314,7 +473,8 @@ Drug-induced (Y40-Y59) ONLY jika obat disebut eksplisit.
 
 ## TRAUMA INJURY RULES
 S codes: WAJIB lokasi anatomi + open/closed. Fraktur: S+site+.0=closed .1=open
-Multiple trauma → kode setiap injury terpisah. T codes untuk burns, poisoning, complications.`;
+Multiple trauma → kode setiap injury terpisah. T codes untuk burns, poisoning, complications.
+Epilepsi + cedera saat serangan → cedera=DU (ICS MB rule), epilepsi=DS + kode eksternal.`;
 
 const PROMPT_JSON = `Return ONLY valid JSON with these keys:
 {"summary","du_reasoning","validations":[{"type","message"}],"diagnoses":[{"role","code","dagger_asterisk","description","description_id","category","confidence","lead_term_path","volume1_notes":[{"type","text"}],"paired_with","reasoning"}],"procedures":[{"code","description","description_id","category","confidence","lead_term_path","volume1_notes","reasoning"}]}`;
@@ -323,11 +483,12 @@ const PROMPT_JSON = `Return ONLY valid JSON with these keys:
 function buildPrompt(clinicalText, langInstruction) {
   const t = clinicalText.toLowerCase();
 
-  const isObstetri = /hamil|partus|sc|sectio|caesar|obstet|gravida|trimester|janin|fetus|persalinan|nifas|postpartum|abortus|keguguran|ektopik|gemelli|kembar|kista ovarium|kistektomi|iufd|ttts|ketuban|peb|eklampsia|hpp|g\dpa|g\dp\da/.test(t);
-  const isTrauma   = /fraktur|fracture|trauma|kecelakaan|luka|vulnus|dislokasi|orif|amputasi|combustio|luka bakar/.test(t);
-  const isSpesialis = /dm|diabetes|stroke|infark|stemi|pci|pneumonia|asma|ppok|copd|appendis|katarak|glaukoma|retinopati|gout|artritis|spondil|hernia|jantung|cardiac|hepatitis|sirosis|gagal ginjal|ckd|aki|leukemia|limfoma|tumor|kanker|neoplasm|karsinoma|tiroid|tb\b|tuberkulosis|i61|i63/.test(t);
+  const isObstetri  = /hamil|partus|sc|sectio|caesar|obstet|gravida|trimester|janin|fetus|persalinan|nifas|postpartum|abortus|keguguran|ektopik|gemelli|kembar|kista ovarium|kistektomi|iufd|ttts|ketuban|peb|eklampsia|hpp|g\dpa|g\dp\da/.test(t);
+  const isTrauma    = /fraktur|fracture|trauma|kecelakaan|luka|vulnus|dislokasi|orif|amputasi|combustio|luka bakar/.test(t);
+  const isSpesialis = /dm|diabetes|stroke|infark|stemi|pci|pneumonia|asma|ppok|copd|appendis|katarak|glaukoma|retinopati|gout|artritis|spondil|hernia|jantung|cardiac|hepatitis|sirosis|gagal ginjal|ckd|aki|leukemia|limfoma|tumor|kanker|neoplasm|karsinoma|tiroid|tb\b|tuberkulosis|i61|i63|alzheimer|epilep|ventrikel fibrilasi|vf |sleep apnea/.test(t);
 
-  let rules = PROMPT_BASE + '\n' + PROMPT_PROSEDUR;
+  // PROMPT_IDRG selalu disertakan (semua kasus iDRG/JKN)
+  let rules = PROMPT_BASE + '\n' + PROMPT_IDRG + '\n' + PROMPT_PROSEDUR;
   if (isObstetri)   rules += '\n' + PROMPT_OBSTETRI;
   if (isSpesialis)  rules += '\n' + PROMPT_SPESIALIS;
   if (isTrauma)     rules += '\n' + PROMPT_TRAUMA;
@@ -343,13 +504,11 @@ async function enrichWithD1(items, db) {
     const codes = items.map(i => i.code).filter(Boolean);
     if (codes.length === 0) return items;
 
-    // Batch query all codes at once
     const placeholders = codes.map(() => '?').join(',');
     const result = await db.prepare(
       `SELECT code, path, vol1 FROM icd9_paths WHERE code IN (${placeholders})`
     ).bind(...codes).all();
 
-    // Build lookup map
     const map = {};
     if (result.results) {
       for (const row of result.results) {
@@ -403,12 +562,9 @@ export async function onRequestPost(context) {
   try {
     const body = await context.request.json();
 
-    // Browser kirim: { clinicalText, langInstruction }
-    // BUKAN full prompt — hemat bandwidth
     const clinicalText    = body.clinicalText || '';
     const langInstruction = body.langInstruction || '';
 
-    // Build prompt di server
     const fullPrompt = buildPrompt(clinicalText, langInstruction);
 
     const model = MODELS[0];
@@ -495,7 +651,7 @@ export async function onRequestPost(context) {
       // Enrich procedures with D1 paths (ICD-9-CM only)
       let enrichedText = text;
       try {
-        const parsed = JSON.parse(text); // text already clean (no backticks)
+        const parsed = JSON.parse(text);
         if (parsed.procedures && parsed.procedures.length > 0) {
           const db = context.env.ICD9_DB || null;
           if (db) parsed.procedures = await enrichWithD1(parsed.procedures, db);
