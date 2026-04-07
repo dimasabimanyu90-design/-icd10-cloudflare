@@ -6,13 +6,14 @@
 <link rel="apple-touch-icon" sizes="192x192" href="/favicon-192.png">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Auto Coding ICD-10 & ICD-9-CM</title>
+<title>Auto Coding ICD-10 & ICD-9-CM — iDRG/JKN</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;1,400&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
 <style>
 :root {
   --ink: #1c1917; --paper: #faf7f2; --cream: #f2ede4; --rule: #ddd6ca; --muted: #78716c;
   --red: #b91c1c; --red-light: #fee2e2; --blue: #1d4ed8; --blue-light: #dbeafe;
   --green: #15803d; --green-light: #dcfce7; --gold: #92400e; --gold-light: #fef3c7;
+  --purple: #6d28d9; --purple-light: #ede9fe;
   --shadow-sm: 0 1px 3px rgba(28,25,23,.08);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -29,9 +30,17 @@ header { position: relative; z-index: 10; background: var(--ink); color: var(--p
 .htag { font-size: 10px; font-family: 'IBM Plex Mono', monospace; font-weight: 500; letter-spacing: 0.5px; padding: 3px 8px; border-radius: 3px; text-transform: uppercase; }
 .htag-red { background: var(--red); color: #fff; }
 .htag-outline { border: 1px solid #444; color: #a8a29e; }
+.htag-purple { background: #4c1d95; color: #ddd6fe; }
+.htag-green { background: #064e3b; color: #6ee7b7; }
 .lang-switch { display: flex; background: #2d2a27; border-radius: 4px; overflow: hidden; border: 1px solid #444; }
 .lang-btn { font-size: 11px; font-family: 'IBM Plex Mono', monospace; font-weight: 500; padding: 4px 10px; cursor: pointer; border: none; background: transparent; color: #a8a29e; transition: all .15s; letter-spacing: 0.5px; }
 .lang-btn.active { background: var(--red); color: #fff; }
+
+/* ── ICS BANNER ── */
+.ics-banner { background: linear-gradient(90deg, #1e1b4b, #2e1065); border-bottom: 1px solid #4c1d95; padding: 7px 40px; display: flex; align-items: center; gap: 14px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #c4b5fd; flex-wrap: wrap; position: relative; z-index: 9; }
+.ics-badge { background: #4c1d95; color: #ddd6fe; font-size: 10px; font-family: 'IBM Plex Mono', monospace; font-weight: 500; padding: 2px 8px; border-radius: 3px; letter-spacing: 0.5px; white-space: nowrap; }
+.ics-rule { color: #7c3aed; font-size: 9px; }
+.ics-source { margin-left: auto; color: #6d28d9; font-size: 9px; letter-spacing: 0.3px; }
 
 /* ── QUOTA BAR ── */
 .quota-strip { background: #111; border-bottom: 1px solid #222; padding: 6px 40px; display: none; align-items: center; gap: 20px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #6b6460; flex-wrap: wrap; position: relative; z-index: 9; }
@@ -78,6 +87,8 @@ textarea::placeholder { color: #b8b0a6; font-style: italic; }
 #resultsSection { display: none; }
 .summary-strip { background: var(--gold-light); border: 1px solid #fcd34d; border-left: 4px solid var(--gold); border-radius: 3px; padding: 14px 18px; margin-bottom: 20px; font-size: 13.5px; color: var(--gold); line-height: 1.65; }
 .summary-strip strong { font-weight: 600; display: block; margin-bottom: 4px; font-size: 10px; letter-spacing: 0.8px; text-transform: uppercase; }
+.mb-rule-banner { background: var(--purple-light); border: 1px solid #c4b5fd; border-left: 4px solid var(--purple); border-radius: 3px; padding: 12px 16px; margin-bottom: 12px; font-size: 12.5px; color: var(--purple); line-height: 1.65; }
+.mb-rule-banner strong { display: block; font-size: 10px; letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 5px; font-weight: 700; color: #5b21b6; }
 .coding-table-wrap { background: #fff; border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; box-shadow: var(--shadow-sm); margin-bottom: 24px; }
 .coding-table-header { background: var(--ink); color: #fff; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; }
 .coding-table-title { font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; }
@@ -92,6 +103,7 @@ textarea::placeholder { color: #b8b0a6; font-style: italic; }
 .du-badge.proc { background: var(--green-light); color: var(--green); border: 1px solid #86efac; }
 .diag-code-row { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
 .diag-code { font-family: 'IBM Plex Mono', monospace; font-size: 17px; font-weight: 500; color: var(--ink); letter-spacing: 1px; }
+.im-badge { font-size: 9px; font-family: 'IBM Plex Mono', monospace; font-weight: 600; background: #4c1d95; color: #ddd6fe; padding: 1px 5px; border-radius: 2px; letter-spacing: 0.5px; }
 .dagger-mark { font-size: 13px; color: var(--red); font-family: 'IBM Plex Mono', monospace; font-weight: 500; }
 .asterisk-mark { font-size: 13px; color: var(--blue); font-family: 'IBM Plex Mono', monospace; font-weight: 500; }
 .diag-desc { font-size: 14px; font-weight: 500; color: var(--ink); line-height: 1.4; margin-bottom: 3px; }
@@ -110,8 +122,6 @@ textarea::placeholder { color: #b8b0a6; font-style: italic; }
 .lp-line { display: block; line-height: 1.85; white-space: nowrap; }
 .lp-section { display: block; color: #6b5e4e; font-weight: 600; font-size: 11px; letter-spacing: 0.5px; }
 .lp-indent { color: var(--muted); }
-.lead-path br + span, .lead-path span { display: inline; }
-.lead-path br { display: block; content: ''; }
 .lp-code { color: var(--red); font-weight: 600; }
 .lp-final { display: block; margin-top: 4px; background: #fff; border: 1px solid var(--rule); border-left: 3px solid var(--red); padding: 6px 10px; border-radius: 2px; font-size: 12px; color: var(--ink); line-height: 1.5; }
 .reasoning-box { background: #f9f9f7; border-top: 1px solid var(--rule); padding: 10px 20px 10px 52px; font-size: 12.5px; color: var(--muted); line-height: 1.65; font-style: italic; }
@@ -141,11 +151,13 @@ textarea::placeholder { color: #b8b0a6; font-style: italic; }
 .footer-sep { color: var(--rule); font-size: 16px; }
 .footer-powered { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px; }
 .footer-groq { background: #f55036; color: #fff; font-size: 10px; font-family: 'IBM Plex Mono', monospace; font-weight: 500; padding: 2px 8px; border-radius: 3px; letter-spacing: 0.5px; }
+.footer-ics { background: #4c1d95; color: #ddd6fe; font-size: 10px; font-family: 'IBM Plex Mono', monospace; font-weight: 500; padding: 2px 8px; border-radius: 3px; letter-spacing: 0.5px; }
 .disclaimer { text-align: center; font-size: 11.5px; margin-top: 40px; line-height: 1.9; font-family: 'IBM Plex Mono', monospace; letter-spacing: 0.3px; width: 100%; padding: 14px 24px; background: linear-gradient(135deg, #fff7ed, #fef3c7); border-top: 2px solid #f97316; border-bottom: 2px solid #f97316; color: #92400e; }
 @media(max-width:600px){
   header{padding:0 16px;} .header-right{gap:6px;} .htag{display:none;}
   main{padding:24px 12px 60px;} .diag-main{grid-template-columns:auto 1fr; gap:10px;} .conf-wrap{display:none;}
   .quota-strip{padding:6px 12px; gap:10px;} .quota-model-wrap{display:none;} .quota-reset{display:none;}
+  .ics-banner{padding:6px 12px; gap:8px;} .ics-source{display:none;}
 }
 </style>
 <script src="known-paths.js"></script>
@@ -163,14 +175,28 @@ textarea::placeholder { color: #b8b0a6; font-style: italic; }
     <div class="logo-designer">Design by Dimas Abimanyu</div>
   </div>
   <div class="header-right">
-    <span class="htag htag-red">ICD-10 2nd Ed. 2005</span>
-    <span class="htag htag-outline">ICD-9-CM Vol.3</span>
+    <span class="htag htag-red">ICD-10 2010 IM</span>
+    <span class="htag htag-outline">ICD-9-CM IM</span>
+    <span class="htag htag-purple">iDRG/JKN</span>
     <div class="lang-switch">
       <button class="lang-btn active" id="btnID" onclick="setLang('id')">ID</button>
       <button class="lang-btn" id="btnEN" onclick="setLang('en')">EN</button>
     </div>
   </div>
 </header>
+
+<!-- ── ICS BANNER ── -->
+<div class="ics-banner">
+  <span class="ics-badge">ICS v1</span>
+  <span>Indonesian Coding Standard — Kemenkes RI</span>
+  <span class="ics-rule">│</span>
+  <span>Rule MB1–MB5 aktif</span>
+  <span class="ics-rule">│</span>
+  <span>Kode IM (Indonesian Modification)</span>
+  <span class="ics-rule">│</span>
+  <span>28 MDC iDRG</span>
+  <span class="ics-source">Pusat Pembiayaan Kesehatan Kemenkes RI · ICS Version 1 · 2025</span>
+</div>
 
 <!-- ── QUOTA BAR ── -->
 <div class="quota-strip" id="quotaStrip">
@@ -214,10 +240,12 @@ textarea::placeholder { color: #b8b0a6; font-style: italic; }
       <textarea id="clinicalInput" placeholder="Paste catatan klinis di sini...&#10;&#10;Contoh: Ny. X, G2P1A0 hamil 7 bulan, partus prematurus 32-33 minggu dengan SC ai gemelli anak ke 2 + TTTS + IUFD + bekas SC + kista ovarium bilateral. Tindakan: SCTP + kistektomi bilateral."></textarea>
       <div class="examples-row">
         <button class="ex-btn" onclick="loadEx(1)">▸ Obstetri (Ny. X)</button>
-        <button class="ex-btn" onclick="loadEx(2)">▸ STEMI</button>
+        <button class="ex-btn" onclick="loadEx(2)">▸ STEMI + PCI</button>
         <button class="ex-btn" onclick="loadEx(3)">▸ Stroke + HT</button>
         <button class="ex-btn" onclick="loadEx(4)">▸ DM + Retinopati</button>
         <button class="ex-btn" onclick="loadEx(5)">▸ Fraktur Femur</button>
+        <button class="ex-btn" onclick="loadEx(6)">▸ Rule MB1 (iDRG)</button>
+        <button class="ex-btn" onclick="loadEx(7)">▸ Pneumonia iDRG</button>
       </div>
       <div class="action-row">
         <button class="btn-analyze" id="analyzeBtn" onclick="analyze()">
@@ -232,7 +260,7 @@ textarea::placeholder { color: #b8b0a6; font-style: italic; }
   <div id="emptyState">
     <div class="empty-state">
       <div style="font-size:40px; opacity:.2">⚕</div>
-      <div class="empty-mono" id="emptyMsg">Masukkan catatan klinis untuk memulai coding</div>
+      <div class="empty-mono" id="emptyMsg">Masukkan catatan klinis untuk memulai coding iDRG</div>
     </div>
   </div>
 
@@ -245,7 +273,7 @@ textarea::placeholder { color: #b8b0a6; font-style: italic; }
     <div id="summaryBox"></div>
     <div class="coding-table-wrap">
       <div class="coding-table-header">
-        <div class="coding-table-title" id="labelDiagTable">Diagnosis — ICD-10 2nd Edition 2005</div>
+        <div class="coding-table-title" id="labelDiagTable">Diagnosis — ICD-10 2010 with Indonesian Modification</div>
         <div class="coding-count" id="diagCount">–</div>
       </div>
       <div id="diagList"></div>
@@ -254,11 +282,12 @@ textarea::placeholder { color: #b8b0a6; font-style: italic; }
         <div class="legend-item"><span style="color:var(--blue);font-size:13px">*</span> <span id="lgAsterisk">Asterisk = kode manifestasi (DS)</span></div>
         <div class="legend-item"><span style="background:var(--red);color:#fff;padding:1px 5px;border-radius:2px;font-size:9px">DU</span> <span id="lgDU">Diagnosis Utama</span></div>
         <div class="legend-item"><span style="background:var(--blue-light);color:var(--blue);padding:1px 5px;border-radius:2px;font-size:9px;border:1px solid #93c5fd">DS</span> <span id="lgDS">Diagnosis Sekunder</span></div>
+        <div class="legend-item"><span style="background:#4c1d95;color:#ddd6fe;padding:1px 5px;border-radius:2px;font-size:9px">IM</span> <span>Indonesian Modification</span></div>
       </div>
     </div>
     <div class="proc-table-wrap">
       <div class="proc-header">
-        <div class="proc-header-title" id="labelProcTable">Prosedur — ICD-9-CM Volume 3</div>
+        <div class="proc-header-title" id="labelProcTable">Prosedur — ICD-9-CM with Indonesian Modification</div>
         <div class="coding-count" id="procCount" style="color:#86efac">–</div>
       </div>
       <div id="procList"></div>
@@ -268,14 +297,16 @@ textarea::placeholder { color: #b8b0a6; font-style: italic; }
 
 <p class="disclaimer" id="disclaimerText">
   ⚠ Tools ini hanya untuk keperluan akademik / belajar coding.<br>
-  Selalu verifikasi dengan buku ICD-10 Vol.1, Vol.3 dan ICD-9-CM yang berlaku.<br>
-  Bukan pengganti penilaian coder profesional bersertifikat.
+  Selalu verifikasi dengan ICD-10 IM, ICD-9-CM IM, dan ICS v1 Kemenkes RI yang berlaku.<br>
+  Bukan pengganti penilaian coder profesional bersertifikat (PORMIKI).
 </p>
 
 <div class="footer-mark">
   <span class="footer-name">Created by Dimas Abimanyu</span>
   <span class="footer-sep">·</span>
   <span class="footer-powered">Powered by <span class="footer-groq">Groq AI</span></span>
+  <span class="footer-sep">·</span>
+  <span class="footer-powered">Referensi <span class="footer-ics">ICS v1 Kemenkes RI</span></span>
 </div>
 
 <script>
@@ -286,25 +317,26 @@ const T = {
     labelInput: 'Input Klinis',
     labelCardTitle: 'Catatan SOAP / Anamnesa / Resume Medis',
     labelHasil: 'Hasil Coding',
-    labelDiagTable: 'Diagnosis — ICD-10 2nd Edition 2005',
-    labelProcTable: 'Prosedur — ICD-9-CM Volume 3',
+    labelDiagTable: 'Diagnosis — ICD-10 2010 with Indonesian Modification',
+    labelProcTable: 'Prosedur — ICD-9-CM with Indonesian Modification',
     btnAnalyze: 'Analyze & Code',
     btnAnalyzing: 'Menganalisis...',
     btnClear: 'Clear',
-    emptyMsg: 'Masukkan catatan klinis untuk memulai coding',
+    emptyMsg: 'Masukkan catatan klinis untuk memulai coding iDRG',
     lgDagger: 'Dagger = kode etiologi (DU jika berpasangan)',
     lgAsterisk: 'Asterisk = kode manifestasi (DS)',
     lgDU: 'Diagnosis Utama',
     lgDS: 'Diagnosis Sekunder',
     labelSummary: 'Ringkasan Klinis',
-    labelDUReason: '⚖ Dasar Pemilihan DU (WHO ICD-10 Vol.2)',
+    labelDUReason: '⚖ Dasar Pemilihan DU (ICS v1 iDRG / WHO ICD-10 Vol.2)',
     labelValidasi: '⚠ Validasi Kaidah Coding',
+    labelMBRule: '📋 Rule MB diterapkan (ICS v1)',
     labelVol3: '▸ Volume 3 Index Path',
     labelVol3proc: '▸ ICD-9-CM Vol.3 Index Path',
     labelVol1: '▸ Volume 1 Tabular Notes',
     labelReasoning: '💬 Alasan: ',
     labelPasangan: 'pasangan',
-    disclaimerText: '⚠️ <strong>PERHATIAN</strong> — Tools ini hanya untuk keperluan <strong>akademik / belajar coding</strong>.<br>📚 Selalu verifikasi dengan buku <strong>ICD-10 Vol.1, Vol.3</strong> dan <strong>ICD-9-CM</strong> yang berlaku.<br>👨‍⚕️ Bukan pengganti penilaian <strong>coder profesional bersertifikat</strong>.',
+    disclaimerText: '⚠️ <strong>PERHATIAN</strong> — Tools ini hanya untuk keperluan <strong>akademik / belajar coding</strong>.<br>📚 Selalu verifikasi dengan <strong>ICD-10 IM, ICD-9-CM IM</strong>, dan <strong>ICS v1 Kemenkes RI</strong> yang berlaku.<br>👨‍⚕️ Bukan pengganti penilaian <strong>coder profesional bersertifikat (PORMIKI)</strong>.',
     placeholder: 'Paste catatan klinis di sini...\n\nContoh: Ny. X, G2P1A0 hamil 7 bulan, partus prematurus 32-33 minggu dengan SC ai gemelli anak ke 2 + TTTS + IUFD + bekas SC + kista ovarium bilateral. Tindakan: SCTP + kistektomi bilateral.',
     errorPrefix: 'Terjadi error: ',
   },
@@ -312,25 +344,26 @@ const T = {
     labelInput: 'Clinical Input',
     labelCardTitle: 'SOAP Note / Anamnesis / Medical Resume',
     labelHasil: 'Coding Results',
-    labelDiagTable: 'Diagnosis — ICD-10 2nd Edition 2005',
-    labelProcTable: 'Procedure — ICD-9-CM Volume 3',
+    labelDiagTable: 'Diagnosis — ICD-10 2010 with Indonesian Modification',
+    labelProcTable: 'Procedure — ICD-9-CM with Indonesian Modification',
     btnAnalyze: 'Analyze & Code',
     btnAnalyzing: 'Analyzing...',
     btnClear: 'Clear',
-    emptyMsg: 'Enter clinical notes to start coding',
+    emptyMsg: 'Enter clinical notes to start iDRG coding',
     lgDagger: 'Dagger = etiology code (PDx if paired)',
     lgAsterisk: 'Asterisk = manifestation code (SDx)',
     lgDU: 'Principal Diagnosis',
     lgDS: 'Secondary Diagnosis',
     labelSummary: 'Clinical Summary',
-    labelDUReason: '⚖ Principal Diagnosis Rationale (WHO ICD-10 Vol.2)',
+    labelDUReason: '⚖ Principal Diagnosis Rationale (ICS v1 iDRG / WHO ICD-10 Vol.2)',
     labelValidasi: '⚠ Coding Rules Validation',
+    labelMBRule: '📋 MB Rule Applied (ICS v1)',
     labelVol3: '▸ Volume 3 Index Path',
     labelVol3proc: '▸ ICD-9-CM Vol.3 Index Path',
     labelVol1: '▸ Volume 1 Tabular Notes',
     labelReasoning: '💬 Reasoning: ',
     labelPasangan: 'paired with',
-    disclaimerText: '⚠️ <strong>DISCLAIMER</strong> — This tool is for <strong>academic / learning purposes only</strong>.<br>📚 Always verify with <strong>ICD-10 Vol.1, Vol.3</strong> and <strong>ICD-9-CM</strong> official books.<br>👨‍⚕️ Not a substitute for <strong>certified professional coder</strong> judgment.',
+    disclaimerText: '⚠️ <strong>DISCLAIMER</strong> — This tool is for <strong>academic / learning purposes only</strong>.<br>📚 Always verify with <strong>ICD-10 IM, ICD-9-CM IM</strong>, and <strong>ICS v1 Ministry of Health Indonesia</strong>.<br>👨‍⚕️ Not a substitute for <strong>certified professional coder (PORMIKI)</strong> judgment.',
     placeholder: 'Paste clinical notes here...\n\nExample: Female, 37yo. Preterm labor 32-33 weeks via cesarean section due to twins + TTTS + IUFD + previous CS + bilateral ovarian cyst. Procedure: LSCS + bilateral cystectomy.',
     errorPrefix: 'Error occurred: ',
   }
@@ -364,11 +397,11 @@ Essential physical examination : T : 110 / 70, Hb : 9,1
 Diagnosis : P2 A0 partus prematurus 32-33 minggu dengan SC ai gemelli anak ke 2 + TTTS + IUFD + bekas SC + kista ovarium bilateral
 Tindakan : SCTP + kistektomi bilateral`,
   2: `Tn. A, 58 thn. Nyeri dada kiri menjalar ke lengan kiri sejak 3 jam, keringat dingin.
-EKG: ST elevasi lead II, III, aVF. Troponin I (+).
+EKG: ST elevasi lead II, III, aVF. Troponin I (+). Foto thorax: CTR 0.52.
 Diagnosis: STEMI inferior. Riwayat DM tipe 2.
-Tindakan: Primary PCI, pemasangan stent LAD.`,
+Tindakan: Primary PCI, pemasangan drug-eluting stent LAD, satu pembuluh darah.`,
   3: `Ny. B, 65 thn. Tiba-tiba tidak bisa bicara dan lemah separuh badan kanan, 2 jam lalu.
-TD 200/120. CT scan: hiperdensitas ganglia basalis kiri.
+TD 200/120. CT scan kepala: hiperdensitas ganglia basalis kiri.
 Diagnosis: Stroke hemoragik + Hipertensi stage 2.
 Tindakan: Rawat ICU, tidak ada tindakan operatif.`,
   4: `Tn. C, 52 thn. DM tipe 2 sejak 10 tahun, penglihatan kabur progresif 6 bulan.
@@ -378,7 +411,15 @@ Tindakan: Laser fotokoagulasi retina OD.`,
   5: `Tn. D, 42 thn. Kecelakaan lalu lintas, nyeri dan deformitas paha kiri.
 X-Ray: fraktur femur 1/3 tengah kiri, displaced.
 Diagnosis: Fraktur shaft femur sinistra.
-Tindakan: ORIF femur sinistra dengan nail intramedular.`
+Tindakan: ORIF femur sinistra dengan nail intramedular.`,
+  6: `Tn. E, 55 thn. Riwayat arthritis rheumatoid lama. Masuk RS dengan nyeri perut kanan bawah akut, mual, muntah.
+Dokter IGD menulis diagnosis utama: Arthritis rheumatoid. Diagnosis sekunder: Hernia femoralis terpuntir, Diabetes mellitus.
+Spesialisasi: Bedah umum. Tindakan: Herniorrhaphy.
+Pasien dirawat 1 minggu untuk penanganan hernia.`,
+  7: `Ny. F, 48 thn. Sesak napas, demam, batuk produktif 5 hari.
+Foto thorax: infiltrat lobus kanan atas. Dokter SpP mencatat: "pneumonia lobus kanan atas, community-acquired."
+Dokter TIDAK menyebut kuman spesifik. Kultur sputum belum ada hasil.
+DM tipe 2 terkontrol (GDS 145, HbA1c 7.2%). Rawat inap bangsal paru.`
 };
 
 function loadEx(n) { document.getElementById('clinicalInput').value = EXAMPLES[n]; }
@@ -466,6 +507,23 @@ function updateQuotaBar(quota) {
   }
 }
 
+// ── DETECT IM CODE ──
+const IM_CODES = new Set([
+  'I49.00','I49.01','I49.09','N93.00','N93.01','R51.0','G04.3',
+  'K01.17','94.270','94.271','57.13','G47.31'
+]);
+function isIMCode(code) {
+  return IM_CODES.has(code);
+}
+
+// ── DETECT MB RULE VALIDATIONS ──
+function extractMBRules(validations) {
+  if (!Array.isArray(validations)) return [];
+  return validations.filter(v =>
+    v.message && /rule mb[1-5]|mb1|mb2|mb3|mb4|mb5|reseleksi/i.test(v.message)
+  );
+}
+
 async function analyze() {
   const input = document.getElementById('clinicalInput').value.trim();
   if (!input) return;
@@ -475,22 +533,15 @@ async function analyze() {
     ? 'LANGUAGE RULES: (1) description and description_en fields MUST ALWAYS be in ENGLISH as per official ICD-10/ICD-9-CM nomenclature, never translate them. (2) summary, du_reasoning, reasoning, and validation message fields must be in BAHASA INDONESIA.'
     : 'LANGUAGE RULES: (1) description and description_en fields MUST ALWAYS be in ENGLISH as per official ICD-10/ICD-9-CM nomenclature, never translate them. (2) summary, du_reasoning, reasoning, and validation message fields must be in ENGLISH.';
 
-  // Prompt dibangun di server (claude.js) — browser hanya kirim teks klinis
-  // Hemat ~6000 token bandwidth per request
-
   try {
     const resp = await fetch("/api/claude", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        clinicalText: input,
-        langInstruction: langInstruction
-      })
+      body: JSON.stringify({ clinicalText: input, langInstruction: langInstruction })
     });
     if (!resp.ok) {
       const errData = await resp.json().catch(() => ({}));
       if (resp.status === 429) {
-        // Semua key rate limit → tampilkan cooldown
         startCooldown(60);
         throw new Error(errData.error || "Semua API key sedang rate limit. Tunggu 60 detik.");
       }
@@ -557,14 +608,14 @@ async function analyze() {
     result.diagnoses  = result.diagnoses.map(d => ({ ...d, confidence: fixConf(d.confidence) }));
     result.procedures = result.procedures.map(p => ({ ...p, confidence: fixConf(p.confidence) }));
 
-    // Inject Vol.1 notes dari known-paths.js (trusted source, bukan AI)
+    // Inject Vol.1 notes dari known-paths.js
     function injectVol1(items) {
       return items.map(item => {
         const entry = (typeof getKnownPath === 'function') ? getKnownPath(item.code) : null;
         if (entry && Array.isArray(entry.vol1) && entry.vol1.length > 0) {
           return { ...item, volume1_notes: entry.vol1 };
         }
-        return { ...item, volume1_notes: [] }; // selalu kosongkan AI vol1
+        return { ...item, volume1_notes: [] };
       });
     }
     result.diagnoses  = injectVol1(result.diagnoses);
@@ -666,15 +717,6 @@ function getCleanPath(pathStr, code, description) {
     return !(t.match(/^-+$/) || t.match(/^-+\s*$/));
   }).join('\n');
 
-  const pathLines = pathStr.split('\n');
-  const subtermLinesM = pathLines.filter(l => l.trim().startsWith('-'));
-  const hasMultiLevel = subtermLinesM.some(l => l.trim().startsWith('--'));
-  const isFlat = subtermLinesM.length >= 2 && !hasMultiLevel;
-  const hasStandaloneFinal = pathStr.split('\n').some(l => {
-    const t = l.trim();
-    return !t.startsWith('-') && /^([A-Z]\d{2}(\.\d+)?|\d{2}\.\d+)\s+\S+/.test(t);
-  });
-
   if (code && KNOWN_PATHS[code]) {
     const _entry = KNOWN_PATHS[code];
     pathStr = (typeof _entry === 'string') ? _entry : (_entry.path || pathStr);
@@ -695,18 +737,11 @@ function getCleanPath(pathStr, code, description) {
         }
       });
       pathStr = lines.join('\n');
-    } else {
-      const hasCode = /\b[A-Z]\d{2}(\.\d+)?\b/.test(pathStr);
-      if (!hasCode && (code || description))
-        pathStr = pathStr + '\n' + (description ? code + ' ' + description : code);
     }
   }
 
-  const rawLines = pathStr.split('\n')
-    .map(l => normalizeDashesShared(normalizeLine(l)))
-    .filter(l => l.trim());
+  const rawLines = pathStr.split('\n').map(l => normalizeDashesShared(normalizeLine(l))).filter(l => l.trim());
   const lines = normalizeLevelsShared(rawLines);
-
   const hasExplicitFinal = lines.some(l => !l.trim().startsWith('-') && isFinalLine(l.trim()));
   const subtermLines = lines.filter(l => l.trim().startsWith('-'));
   const lastSubterm = subtermLines[subtermLines.length - 1] || '';
@@ -730,7 +765,6 @@ function getCleanPath(pathStr, code, description) {
     const finalDesc = description || '';
     if (finalCode) result.push(finalDesc ? finalCode + ' ' + finalDesc : finalCode);
   }
-
   return result.join('\n');
 }
 
@@ -743,15 +777,6 @@ function renderLeadPath(pathStr, code, description) {
     const t = l.trim();
     return !(t.match(/^-+$/) || t.match(/^-+\s*$/));
   }).join('\n');
-
-  const pathLines = pathStr.split('\n');
-  const subtermLinesM = pathLines.filter(l => l.trim().startsWith('-'));
-  const hasMultiLevel = subtermLinesM.some(l => l.trim().startsWith('--'));
-  const isFlat = subtermLinesM.length >= 2 && !hasMultiLevel;
-  const hasStandaloneFinal = pathStr.split('\n').some(l => {
-    const t = l.trim();
-    return !t.startsWith('-') && /^([A-Z]\d{2}(\.\d+)?|\d{2}\.\d+)\s+\S+/.test(t);
-  });
 
   if (code && KNOWN_PATHS[code]) {
     const _entry = KNOWN_PATHS[code];
@@ -773,11 +798,6 @@ function renderLeadPath(pathStr, code, description) {
         }
       });
       pathStr = lines.join('\n');
-    } else {
-      const hasCode = /\b[A-Z]\d{2}(\.\d+)?\b/.test(pathStr);
-      if (!hasCode && (code || description)) {
-        pathStr = pathStr + '\n' + (description ? code + ' ' + description : code);
-      }
     }
   }
 
@@ -795,20 +815,13 @@ function renderLeadPath(pathStr, code, description) {
           if (ourCodeRe.test(t)) finalLine.push(line);
         } else if (!foundAnyCode) headerLines.push(line);
       }
-      const subtermWithOurCode = splitLines.filter(l => {
-        const t = l.trim();
-        return t.startsWith('-') && ourCodeRe.test(t.replace(/.*\s/, '')) && !headerLines.includes(l);
-      });
-      const rebuilt = [...headerLines, ...subtermWithOurCode, ...finalLine].filter(Boolean);
+      const rebuilt = [...headerLines, ...finalLine].filter(Boolean);
       if (rebuilt.length > 0) pathStr = rebuilt.join('\n');
     }
   }
 
-  const rawLines = pathStr.split('\n')
-    .map(l => normalizeDashesShared(normalizeLine(l)))
-    .filter(l => l.trim());
+  const rawLines = pathStr.split('\n').map(l => normalizeDashesShared(normalizeLine(l))).filter(l => l.trim());
   const lines = normalizeLevelsShared(rawLines);
-
   const hasExplicitFinal = lines.some(l => !l.trim().startsWith('-') && isFinalLine(l.trim()));
   const subtermLines = lines.filter(l => l.trim().startsWith('-'));
   const lastSubterm = subtermLines[subtermLines.length - 1] || '';
@@ -838,34 +851,51 @@ function renderLeadPath(pathStr, code, description) {
       rendered.push(`<span class="lp-final">${highlightCodes(finalText)}</span>`);
     }
   }
-
   return rendered.map(line => `<div class="lp-line">${line}</div>`).join('');
 }
 
 function renderVol1Notes(notes) {
   if (!Array.isArray(notes) || notes.length === 0) return '';
   const typeMap = {
-    includes:     { cls: 'vnt-includes',  label: 'Includes' },
-    excludes:     { cls: 'vnt-excludes',  label: 'Excludes' },
-    note:         { cls: 'vnt-note',      label: 'Note' },
-    use_additional: { cls: 'vnt-use',     label: 'Use additional code' },
-    code_first:   { cls: 'vnt-code-first',label: 'Code first' }
+    includes:       { cls: 'vnt-includes',   label: 'Includes' },
+    excludes:       { cls: 'vnt-excludes',   label: 'Excludes' },
+    note:           { cls: 'vnt-note',       label: 'Note' },
+    use_additional: { cls: 'vnt-use',        label: 'Use additional code' },
+    code_first:     { cls: 'vnt-code-first', label: 'Code first' }
   };
   const items = notes.map(n => {
     const t = typeMap[n.type] || { cls: 'vnt-note', label: n.type };
     return `<div class="vol1-note"><span class="vol1-note-type ${t.cls}">${t.label}</span><span>${n.text}</span></div>`;
   }).join('');
-  if (!items) return ''; // sembunyikan jika kosong
+  if (!items) return '';
   return `<div class="vol1-box"><div class="vol1-label">${T[currentLang].labelVol1}</div><div class="vol1-notes">${items}</div></div>`;
 }
 
 function renderValidations(validations) {
   if (!Array.isArray(validations) || validations.length === 0) return '';
+  // Pisahkan MB rule warnings dari validasi umum
+  const mbRules = extractMBRules(validations);
+  const otherVals = validations.filter(v => !extractMBRules([v]).length);
+
   const iconMap = { ERROR: '🔴', WARNING: '🟡', INFO: '🔵' };
-  const items = validations.map(v =>
-    `<div class="val-item"><span>${iconMap[v.type]||'ℹ'}</span><span><strong>${v.type}:</strong> ${v.message}</span></div>`
-  ).join('');
-  return `<div class="validation-banner"><strong>${T[currentLang].labelValidasi}</strong>${items}</div>`;
+  let html = '';
+
+  // Render MB Rule banner khusus (ungu)
+  if (mbRules.length > 0) {
+    const mbItems = mbRules.map(v =>
+      `<div class="val-item"><span>📋</span><span>${v.message}</span></div>`
+    ).join('');
+    html += `<div class="mb-rule-banner"><strong>${T[currentLang].labelMBRule}</strong>${mbItems}</div>`;
+  }
+
+  // Render validasi lainnya
+  if (otherVals.length > 0) {
+    const items = otherVals.map(v =>
+      `<div class="val-item"><span>${iconMap[v.type]||'ℹ'}</span><span><strong>${v.type}:</strong> ${v.message}</span></div>`
+    ).join('');
+    html += `<div class="validation-banner"><strong>${T[currentLang].labelValidasi}</strong>${items}</div>`;
+  }
+  return html;
 }
 
 function renderResults(result) {
@@ -889,16 +919,18 @@ function renderResults(result) {
   document.getElementById('diagList').innerHTML = diagnoses.map((d, i) => {
     const isDagger   = d.dagger_asterisk === 'dagger';
     const isAsterisk = d.dagger_asterisk === 'asterisk';
+    const isIM       = isIMCode(d.code);
     const badgeClass = d.role === 'DU' ? 'du' : 'ds';
     const dagMark    = isDagger   ? `<span class="dagger-mark" title="Etiology code">†</span>` : '';
     const astMark    = isAsterisk ? `<span class="asterisk-mark" title="Manifestation code">*</span>` : '';
+    const imBadge    = isIM       ? `<span class="im-badge" title="Indonesian Modification">IM</span>` : '';
     const pairNote   = d.paired_with ? `<span style="font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;"> → ${t.labelPasangan}: ${d.paired_with}</span>` : '';
     const descAlt    = currentLang === 'id' && d.description_id ? `<div class="diag-desc-alt">🇮🇩 ${d.description_id}</div>` : '';
     return `<div class="diag-item" style="animation-delay:${i*0.06}s">
       <div class="diag-main">
         <div><span class="du-badge ${badgeClass}">${d.role}</span></div>
         <div>
-          <div class="diag-code-row"><span class="diag-code">${d.code}</span>${dagMark}${astMark}${pairNote}</div>
+          <div class="diag-code-row"><span class="diag-code">${d.code}</span>${dagMark}${astMark}${imBadge}${pairNote}</div>
           <div class="diag-desc">${d.description}</div>
           ${descAlt}
           <div class="diag-category">${d.category}</div>
@@ -921,21 +953,18 @@ function renderResults(result) {
   const procedures = result.procedures;
   document.getElementById('procCount').textContent = `${procedures.length} ${currentLang === 'id' ? 'kode' : 'codes'}`;
 
-  // ── Render hallucination warnings sebelum list prosedur ──
+  // ── Render hallucination warnings ──
   if (_procWarnings && _procWarnings.length > 0) {
     const _warnHTML = `<div class="validation-banner proc-validator-banner" style="border-radius:0;border-left-width:4px;border-left-color:#f59e0b;background:#fffbeb;border-color:#fde68a;color:#92400e;margin-bottom:0">
       <strong>⚠ PROSEDUR TIDAK TERVERIFIKASI DI TEKS INPUT</strong>
       ${_procWarnings.map(w => `<div class="val-item"><span>🟡</span><span>${w.message}</span></div>`).join('')}
       <div style="font-size:10px;margin-top:6px;opacity:0.65;font-style:italic">Verifikasi manual — kemungkinan halusinasi AI karena kata kunci tidak ditemukan di teks</div>
     </div>`;
-    // Hapus banner lama dulu sebelum insert baru (cegah duplikat)
     const _oldBanner = document.querySelector('.proc-validator-banner');
     if (_oldBanner) _oldBanner.remove();
     document.querySelector('.proc-header').insertAdjacentHTML('afterend', _warnHTML);
   }
 
-  // Filter: hapus prosedur yang di-warning validator DAN confidence rendah (<80)
-  // Khusus 90.59: hapus kalau ada di warning list (artinya tidak ada bukti lab di teks)
   const _warnedCodes = new Set((_procWarnings || []).map(w => w.code));
   const _filteredProcs = procedures.filter(p => {
     if (p.code === '90.59' && _warnedCodes.has('90.59')) return false;
@@ -947,12 +976,14 @@ function renderResults(result) {
   }
 
   document.getElementById('procList').innerHTML = _filteredProcs.map((p, i) => {
+    const isIM    = isIMCode(p.code);
+    const imBadge = isIM ? `<span class="im-badge" title="Indonesian Modification">IM</span>` : '';
     const descAlt = currentLang === 'id' && p.description_id ? `<div class="diag-desc-alt">🇮🇩 ${p.description_id}</div>` : '';
     return `<div class="diag-item" style="animation-delay:${(diagnoses.length+i)*0.06}s">
       <div class="diag-main">
         <div><span class="du-badge proc">PROC</span></div>
         <div>
-          <div class="diag-code-row"><span class="diag-code">${p.code}</span></div>
+          <div class="diag-code-row"><span class="diag-code">${p.code}</span>${imBadge}</div>
           <div class="diag-desc">${p.description}</div>
           ${descAlt}
           <div class="diag-category">${p.category}</div>
