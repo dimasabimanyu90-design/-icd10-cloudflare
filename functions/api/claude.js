@@ -369,7 +369,9 @@ export async function onRequestPost(context) {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
         body: JSON.stringify({
-          model, temperature: 0.1, max_tokens: 4000,
+          model, temperature: 0.1, max_tokens: 6000,
+          response_format: { type: "json_object" },
+          reasoning_effort: "high",
           messages: [{ role: "user", content: fullPrompt }]
         })
       });
