@@ -343,7 +343,7 @@ export async function onRequestPost(context) {
     "Content-Type": "application/json"
   };
 
-  const MODELS = ["llama-3.3-70b-versatile"];
+  const MODELS = ["openai/gpt-oss-120b"];
   const API_KEYS = [
     context.env.GROQ_API_KEY,
     context.env.GROQ_API_KEY_2,
