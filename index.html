@@ -907,6 +907,8 @@ function renderResults(result) {
   const _inputText = document.getElementById('clinicalInput').value;
   const _procWarnings = (typeof validateProcedures === 'function')
     ? validateProcedures(result.procedures, _inputText) : [];
+  const _diagWarnings = (typeof validateDiagnoses === 'function')
+    ? validateDiagnoses(result.diagnoses) : [];
 
   document.getElementById('summaryBox').innerHTML = `
     <div class="summary-strip"><strong>${t.labelSummary}</strong>${result.summary || ''}</div>
@@ -916,6 +918,18 @@ function renderResults(result) {
 
   const diagnoses = result.diagnoses;
   document.getElementById('diagCount').textContent = `${diagnoses.length} ${currentLang === 'id' ? 'kode' : 'codes'}`;
+
+  // ── Render diagnosis hallucination/unverified warnings ──
+  const _oldDiagBanner = document.querySelector('.diag-validator-banner');
+  if (_oldDiagBanner) _oldDiagBanner.remove();
+  if (_diagWarnings && _diagWarnings.length > 0) {
+    const _diagWarnHTML = `<div class="validation-banner diag-validator-banner" style="border-radius:0;border-left-width:4px;border-left-color:#f59e0b;background:#fffbeb;border-color:#fde68a;color:#92400e;margin-bottom:0">
+      <strong>⚠ KODE DIAGNOSIS PERLU VERIFIKASI</strong>
+      ${_diagWarnings.map(w => `<div class="val-item"><span>🟡</span><span>${w.message}</span></div>`).join('')}
+      <div style="font-size:10px;margin-top:6px;opacity:0.65;font-style:italic">Format tidak valid = kemungkinan halusinasi AI. Belum terverifikasi + confidence rendah = cek manual ke ICD-10 IM.</div>
+    </div>`;
+    document.querySelector('.coding-table-header').insertAdjacentHTML('afterend', _diagWarnHTML);
+  }
   document.getElementById('diagList').innerHTML = diagnoses.map((d, i) => {
     const isDagger   = d.dagger_asterisk === 'dagger';
     const isAsterisk = d.dagger_asterisk === 'asterisk';

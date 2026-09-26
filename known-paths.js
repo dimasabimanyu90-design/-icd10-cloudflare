@@ -1254,3 +1254,46 @@ function getKnownPath(code) {
   if (typeof entry === "string") return { path: entry, vol1: [] };
   return entry;
 }
+
+// ── DIAGNOSIS CODE VALIDATOR ──
+// Cek eksistensi & format kode diagnosis ICD-10 hasil AI.
+// TIDAK mengklaim kode "salah" kalau tidak ada di KNOWN_PATHS — itu cuma
+// artinya belum diverifikasi manual, bukan invalid. Format check tetap
+// menangkap halusinasi paling jelas (kode ngawur / typo AI).
+function validateDiagnosisCode(code) {
+  if (!code || typeof code !== 'string') {
+    return { valid: false, verified: false, reason: 'empty_or_invalid_type' };
+  }
+  const trimmed = code.trim();
+  // Format ICD-10: 1 huruf + 2 digit + opsional .1-2 digit (mis. I61.0, E11.3, Z37.2)
+  const icd10Format = /^[A-Z]\d{2}(\.\d{1,2})?$/;
+  if (!icd10Format.test(trimmed)) {
+    return { valid: false, verified: false, reason: 'format_invalid', code: trimmed };
+  }
+  if (KNOWN_PATHS[trimmed]) {
+    return { valid: true, verified: true, code: trimmed };
+  }
+  return { valid: true, verified: false, code: trimmed };
+}
+
+// Validasi 1 batch diagnosis sekaligus, return warning list
+// (dipakai bareng validator.js punya validateProcedures)
+function validateDiagnoses(diagnoses) {
+  if (!diagnoses || diagnoses.length === 0) return [];
+  const warnings = [];
+  for (const d of diagnoses) {
+    const result = validateDiagnosisCode(d.code);
+    if (!result.valid) {
+      warnings.push({
+        code: d.code,
+        message: `<strong>${d.code} — ${d.description || ''}</strong> format kode tidak valid. Kemungkinan halusinasi AI — verifikasi manual!`
+      });
+    } else if (!result.verified && (d.confidence || 0) < 70) {
+      warnings.push({
+        code: d.code,
+        message: `<strong>${d.code} — ${d.description || ''}</strong> belum terverifikasi di database referensi dan confidence rendah (${d.confidence}%). Cek manual ke ICD-10 IM.`
+      });
+    }
+  }
+  return warnings;
+}
