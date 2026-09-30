@@ -11958,3 +11958,16 @@ INSERT OR REPLACE INTO icd9_paths (code, path, vol1) VALUES ('99.99', 'Other non
 - Other miscellaneous procedures
 -- Other 99.99
 99.99 Other', '[]');
+-- Ditambahkan manual: kode ini sebelumnya cuma ada di known-paths.js (client),
+-- gak pernah ke-load ke D1. Dipindah ke sini biar D1 jadi satu-satunya
+-- sumber lengkap buat lookup prosedur ICD-9-CM.
+INSERT OR REPLACE INTO icd9_paths (code, path, vol1) VALUES ('13.71', 'Extraction
+- lens
+-- extracapsular
+--- one-stage 13.71
+13.71 Extracapsular extraction of lens by temporal inferior route', '[]');
+INSERT OR REPLACE INTO icd9_paths (code, path, vol1) VALUES ('36.01', 'Bypass
+- coronary artery
+-- saphenous vein graft
+--- single 36.01
+36.01 Single coronary artery bypass using saphenous vein graft', '[]');
