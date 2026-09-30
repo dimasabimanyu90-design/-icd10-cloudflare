@@ -7,7 +7,10 @@ const PROMPT_BASE = `
 Kamu adalah sistem auto-coding ICD-10 dan ICD-9-CM profesional untuk iDRG/JKN Indonesia.
 Dari teks klinis berikut, ekstrak semua diagnosis dan prosedur.
 
-DIAGNOSES: ONLY explicitly stated. 1 DU + ALL DS. No dx → diagnoses:[].
+DIAGNOSES: ONLY explicitly stated. 1 DU + ALL DS.
+"No dx" HANYA kalau teks BENERAN tidak ada info klinis sama sekali (misal catatan administratif kosong) → diagnoses:[].
+Kalau ada GEJALA eksplisit (demam, diare, nyeri, tidak nafsu makan, dll) TAPI dokter belum tulis nama diagnosis definitif →
+WAJIB kode gejala pake R-code (lihat bagian R CODES di bawah). JANGAN kosongkan diagnoses[] kalau ada gejala tersurat di teks.
 PROCEDURES: ONLY explicitly mentioned. None → procedures:[].
 LARANGAN MUTLAK: JANGAN koding prosedur tidak eksplisit di teks.
 DILARANG asumsikan prosedur dari logika klinis/kelaziman.
@@ -73,9 +76,12 @@ intake sulit/kurang/tidak nafsu makan → R63.3 DS
 
 ## R CODES
 - JANGAN kode R jika diagnosis definitif sudah menjelaskan gejala
-- R sebagai DU: valid jika tidak ada diagnosis definitif → WARNING provisional
+- R sebagai DU: WAJIB (bukan opsional) kalau teks HANYA berisi gejala tanpa diagnosis definitif → WARNING provisional
 - Kode definitif BOLEH jika: (1) dokter tulis eksplisit di resume, (2) penunjang konfirmasi,
   (3) patogen spesifik DIKONFIRMASI dokter, (4) tindakan operatif dilakukan
+- CONTOH: teks cuma "tidak mau makan, diare terus-menerus, demam 3 hari" tanpa diagnosis apapun →
+  JANGAN diagnoses:[]. WAJIB: R50.9 (fever) sebagai DU atau DS + R19.7 (diarrhoea unspecified) + R63.3 (feeding
+  difficulties, dari mapping "tidak nafsu makan") + WARNING di validations[] bahwa ini provisional, belum ada dx definitif.
 
 ## VALIDATION
 Tambahkan validations[] jika ada keraguan/provisional/Rule MB diterapkan.`;
