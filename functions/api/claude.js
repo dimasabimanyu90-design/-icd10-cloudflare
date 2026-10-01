@@ -311,6 +311,65 @@ function buildPrompt(clinicalText, langInstruction) {
   return rules + '\n\n' + langInstruction + '\n\nTEKS KLINIS:\n' + clinicalText + '\n\n' + PROMPT_JSON;
 }
 
+
+// ── WHO ICD-10 2010 VALIDATION ──
+// WHO validator tetap menjadi Layer 1. Hasil AI tidak dianggap final
+// sebelum setiap diagnosis ICD-10 melewati WHO.
+async function validateDiagnosesWithWHO(diagnoses, request) {
+  if (!Array.isArray(diagnoses) || diagnoses.length === 0) {
+    return { diagnoses: diagnoses || [], validations: [], allValid: true, checked: 0 };
+  }
+
+  const results = [];
+  let allValid = true;
+
+  for (const diagnosis of diagnoses) {
+    const code = String(diagnosis?.code || '').trim().toUpperCase();
+    if (!code) continue;
+
+    try {
+      const whoUrl = new URL('/api/who-icd10', request.url);
+      const response = await fetch(whoUrl.toString(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code })
+      });
+
+      const data = await response.json().catch(() => ({}));
+      const valid = data.valid === true;
+
+      results.push({
+        code,
+        valid,
+        source: 'WHO',
+        version: 'ICD-10 2010',
+        title: data.entity?.title?.['@value'] || data.entity?.title || null,
+        parent: data.entity?.parent || null,
+        reason: data.reason || data.error || null
+      });
+
+      diagnosis.who_validation = results[results.length - 1];
+
+      if (!valid) {
+        allValid = false;
+      }
+    } catch (error) {
+      allValid = false;
+      const result = {
+        code,
+        valid: false,
+        source: 'WHO',
+        version: 'ICD-10 2010',
+        reason: error instanceof Error ? error.message : String(error)
+      };
+      results.push(result);
+      diagnosis.who_validation = result;
+    }
+  }
+
+  return { diagnoses, validations: results, allValid, checked: results.length };
+}
+
 // ── D1 LOOKUP ──
 async function enrichWithD1(items, db) {
   if (!db || !items || items.length === 0) return items;
@@ -440,6 +499,45 @@ export async function onRequestPost(context) {
       let enrichedText = text;
       try {
         const parsed = JSON.parse(text);
+
+        // Layer 1: WHO ICD-10 2010. Diagnosis belum dianggap final
+        // sebelum validasi WHO selesai.
+        const whoResult = await validateDiagnosesWithWHO(
+          Array.isArray(parsed.diagnoses) ? parsed.diagnoses : [],
+          context.request
+        );
+
+        if (!Array.isArray(parsed.validations)) parsed.validations = [];
+
+        for (const result of whoResult.validations) {
+          if (result.valid) {
+            parsed.validations.push({
+              type: 'WHO_VALID',
+              message: `ICD-10 <strong>${result.code}</strong> terdaftar di WHO ICD-10 2010: ${result.title || '-'}.`
+            });
+          } else {
+            parsed.validations.push({
+              type: 'WHO_INVALID',
+              message: `ICD-10 <strong>${result.code}</strong> tidak lolos validasi WHO ICD-10 2010. ${result.reason || 'Verifikasi manual diperlukan.'}`
+            });
+          }
+        }
+
+        parsed.validation_layers = {
+          who_icd10_2010: {
+            status: whoResult.allValid ? 'passed' : 'review_required',
+            checked: whoResult.checked
+          },
+          idrg: {
+            status: 'prompt_rules',
+            note: 'Aturan ICS/iDRG masih dijalankan oleh prompt; belum merupakan validator kode terpisah.'
+          }
+        };
+
+        // FINAL hanya boleh true jika seluruh diagnosis yang diperiksa
+        // lolos WHO. Jika tidak, UI menerima status review_required.
+        parsed.finalized = whoResult.allValid;
+
         if (parsed.procedures && parsed.procedures.length > 0) {
           const db = context.env.ICD9_DB || null;
           if (db) parsed.procedures = await enrichWithD1(parsed.procedures, db);
