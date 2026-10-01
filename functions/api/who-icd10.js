@@ -101,9 +101,9 @@ async function validateAgainstWHO(code, token) {
     method: "GET",
     headers: {
       "Authorization": "Bearer " + token,
-      "API-Version": "v1",
-      // WHO ICD API v1 documents JSON-LD as the entity representation.
-      "Accept": "application/ld+json, application/json",
+      // WHO ICD API v2 is the current supported API version.
+      "API-Version": "v2",
+      "Accept": "application/json, application/ld+json",
       "Accept-Language": "en"
     }
   });
@@ -160,9 +160,6 @@ export async function onRequestPost(context) {
     const result = await validateAgainstWHO(code, token);
 
     if (result.response.status === 404) {
-      // Do not silently classify every 404 as an invalid code.
-      // Returning the WHO body helps distinguish a true missing entity
-      // from an endpoint/access/content-negotiation problem.
       return json({
         valid: false,
         code,
