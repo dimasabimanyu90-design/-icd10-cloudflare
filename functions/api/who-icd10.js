@@ -33,8 +33,6 @@ function normalizeCode(value) {
 }
 
 function isReasonableICD10Code(code) {
-  // WHO ICD-10 codes are normally one letter + two digits,
-  // optionally followed by a decimal and 1-2 digits.
   return /^[A-Z][0-9]{2}(?:\.[0-9A-Z]{1,2})?$/.test(code);
 }
 
@@ -52,7 +50,9 @@ async function getWHOAccessToken(clientId, clientSecret) {
 
   if (!response.ok) {
     const detail = await response.text();
-    throw new Error("WHO OAuth failed (" + response.status + "): " + detail.slice(0, 300));
+    throw new Error(
+      "WHO OAuth failed (" + response.status + "): " + detail.slice(0, 300)
+    );
   }
 
   const data = await response.json();
@@ -70,9 +70,7 @@ function firstValue(value) {
 }
 
 function compactEntity(data, requestedCode) {
-  if (!data || typeof data !== "object") {
-    return null;
-  }
+  if (!data || typeof data !== "object") return null;
 
   const code = firstValue(data.code) ?? requestedCode;
   const title =
@@ -84,21 +82,45 @@ function compactEntity(data, requestedCode) {
   const parent = firstValue(data.parent) ?? null;
   const child = Array.isArray(data.child) ? data.child : [];
 
-  // ICD-10 uses note/codingHint in the WHO content model.
-  const note = data.note ?? null;
-  const codingHint = data.codingHint ?? null;
-  const inclusion = data.inclusion ?? null;
-  const exclusion = data.exclusion ?? null;
-
   return {
     code,
     title,
     parent,
     child,
-    note,
-    codingHint,
-    inclusion,
-    exclusion
+    note: data.note ?? null,
+    codingHint: data.codingHint ?? null,
+    inclusion: data.inclusion ?? null,
+    exclusion: data.exclusion ?? null
+  };
+}
+
+async function validateAgainstWHO(code, token) {
+  const url = WHO_BASE_URL + "/" + encodeURIComponent(code);
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      "Authorization": "Bearer " + token,
+      "API-Version": "v1",
+      // WHO ICD API v1 documents JSON-LD as the entity representation.
+      "Accept": "application/ld+json, application/json",
+      "Accept-Language": "en"
+    }
+  });
+
+  const detail = await response.text();
+
+  return {
+    response,
+    detail,
+    data: (() => {
+      if (!detail) return null;
+      try {
+        return JSON.parse(detail);
+      } catch {
+        return null;
+      }
+    })()
   };
 }
 
@@ -135,44 +157,47 @@ export async function onRequestPost(context) {
     }
 
     const token = await getWHOAccessToken(clientId, clientSecret);
+    const result = await validateAgainstWHO(code, token);
 
-    const url = WHO_BASE_URL + "/" + encodeURIComponent(code);
-
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Authorization": "Bearer " + token,
-        "API-Version": "v1",
-        "Accept": "application/json",
-        "Accept-Language": "en"
-      }
-    });
-
-    if (response.status === 404) {
+    if (result.response.status === 404) {
+      // Do not silently classify every 404 as an invalid code.
+      // Returning the WHO body helps distinguish a true missing entity
+      // from an endpoint/access/content-negotiation problem.
       return json({
         valid: false,
         code,
         version: "ICD-10 2010",
         source: "WHO",
-        reason: "Code not found in WHO ICD-10 2010"
+        reason: "WHO returned 404 for this ICD-10 entity",
+        http_status: 404,
+        detail: result.detail.slice(0, 500)
       });
     }
 
-    if (!response.ok) {
-      const detail = await response.text();
-
+    if (!result.response.ok) {
       return json({
         valid: false,
         code,
         version: "ICD-10 2010",
         source: "WHO",
         error: "WHO validation request failed",
-        http_status: response.status,
-        detail: detail.slice(0, 500)
+        http_status: result.response.status,
+        detail: result.detail.slice(0, 500)
       }, 502);
     }
 
-    const data = await response.json();
+    const data = result.data;
+
+    if (!data) {
+      return json({
+        valid: false,
+        code,
+        version: "ICD-10 2010",
+        source: "WHO",
+        error: "WHO returned a successful response that was not valid JSON"
+      }, 502);
+    }
+
     const entity = compactEntity(data, code);
 
     return json({
@@ -183,7 +208,6 @@ export async function onRequestPost(context) {
       entity,
       raw: data
     });
-
   } catch (error) {
     return json({
       valid: false,
@@ -205,7 +229,6 @@ export async function onRequestGet(context) {
     }, 400);
   }
 
-  // Reuse the same validation implementation through a synthetic POST request.
   const request = new Request(context.request.url, {
     method: "POST",
     headers: {
