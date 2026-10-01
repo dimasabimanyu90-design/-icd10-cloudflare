@@ -333,7 +333,9 @@ async function enrichWithD1(items, db) {
         return { ...item, lead_term_path: entry.path || item.lead_term_path,
           volume1_notes: (entry.vol1 && entry.vol1.length > 0) ? entry.vol1 : [] };
       }
-      return { ...item, volume1_notes: [] };
+      // Kode gak ketemu di D1 (3.646 kode resmi ICD-9-CM) → kemungkinan besar
+      // halusinasi AI (kode ngarang/typo), bukan cuma "belum ke-enrich".
+      return { ...item, volume1_notes: [], _d1_not_found: true };
     });
   } catch(e) {
     console.error('D1 lookup error:', e.message);
@@ -364,6 +366,16 @@ export async function onRequestPost(context) {
     const body = await context.request.json();
     const clinicalText    = body.clinicalText || '';
     const langInstruction = body.langInstruction || '';
+
+    const MIN_LEN = 10;
+    const MAX_LEN = 5000; // ~1200-1500 token, cukup buat resume medis panjang
+    if (typeof clinicalText !== 'string' || clinicalText.trim().length < MIN_LEN) {
+      return new Response(JSON.stringify({ error: `Teks klinis terlalu pendek (min ${MIN_LEN} karakter).` }), { status: 400, headers: corsHeaders });
+    }
+    if (clinicalText.length > MAX_LEN) {
+      return new Response(JSON.stringify({ error: `Teks klinis terlalu panjang (maks ${MAX_LEN} karakter, kamu kirim ${clinicalText.length}). Ringkas dulu resume medisnya.` }), { status: 400, headers: corsHeaders });
+    }
+
     const fullPrompt = buildPrompt(clinicalText, langInstruction);
 
     const model = MODELS[0];
@@ -431,6 +443,22 @@ export async function onRequestPost(context) {
         if (parsed.procedures && parsed.procedures.length > 0) {
           const db = context.env.ICD9_DB || null;
           if (db) parsed.procedures = await enrichWithD1(parsed.procedures, db);
+
+          // Kode yang gak ketemu di D1 (3.646 kode resmi ICD-9-CM) = kemungkinan
+          // besar halusinasi/typo AI. Surface sebagai validation warning biar
+          // kelihatan di UI, lalu bersihin flag internal sebelum dikirim.
+          const notFoundWarnings = parsed.procedures
+            .filter(p => p._d1_not_found)
+            .map(p => ({
+              type: 'WARNING',
+              message: `Kode prosedur <strong>${p.code}</strong> (${p.description || '-'}) tidak ditemukan di database resmi ICD-9-CM (D1, 3.646 kode). Kemungkinan besar halusinasi AI atau format kode salah — verifikasi manual.`
+            }));
+          if (notFoundWarnings.length > 0) {
+            if (!Array.isArray(parsed.validations)) parsed.validations = [];
+            parsed.validations.push(...notFoundWarnings);
+          }
+          parsed.procedures = parsed.procedures.map(({ _d1_not_found, ...rest }) => rest);
+
           enrichedText = JSON.stringify(parsed);
         }
       } catch(e) {}
