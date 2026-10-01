@@ -8,7 +8,7 @@
 // update icd9_paths.sql supaya D1 tetap jadi satu-satunya sumber kebenaran.
 // Total: 224 entries diagnosis, dengan sebagian ada Vol.1 notes.
 
-export const KNOWN_PATHS = {
+window.KNOWN_PATHS = {
   'O36.4': { path: `Death
 - fetus, fetal
 -- (near term) O36.4
