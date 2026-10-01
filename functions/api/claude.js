@@ -1,5 +1,3 @@
-import { KNOWN_PATHS } from '../../known-paths.js';
-
 // ── PROMPT RULES (server-side) ──
 // Browser hanya kirim teks klinis → hemat bandwidth
 // Target: max ~9000 token worst case, ~5500 typical case
