@@ -876,6 +876,45 @@ function renderVol1Notes(notes) {
   return `<div class="vol1-box"><div class="vol1-label">${T[currentLang].labelVol1}</div><div class="vol1-notes">${items}</div></div>`;
 }
 
+function renderWHOIndexPath(index) {
+  if (!index) return '';
+
+  if (index.status !== 'verified') {
+    return '<div class="vol1-box" style="margin-top:8px;border-left:3px solid #f59e0b">' +
+      '<div class="vol1-label">WHO Vol. 3 Index</div>' +
+      '<div class="vol1-notes"><div class="vol1-note"><span>🟡 Belum terverifikasi: ' +
+      (index.reason || 'WHO Index belum menemukan kecocokan kode.') +
+      '</span></div></div></div>';
+  }
+
+  const lines = Array.isArray(index.path) ? index.path : [];
+  const rendered = lines.map(line => {
+    const text = String(line || '');
+    if (!text) return '';
+    if (text.startsWith('- ')) {
+      return '<div class="lp-line"><span class="lp-indent">- </span>' + highlightCodes(text.slice(2)) + '</div>';
+    }
+    if (/^[A-Z]\\d{2}(?:\\.\\d+)?\\s/.test(text)) {
+      return '<div class="lp-line"><span class="lp-final">' + highlightCodes(text) + '</span></div>';
+    }
+    return '<div class="lp-line"><span class="lp-section">' + text + '</span></div>';
+  }).filter(Boolean).join('');
+
+  const tabular = Array.isArray(index.tabular_path_display) ? index.tabular_path_display : [];
+  const tabularHtml = tabular.length
+    ? '<div style="margin-top:7px;font-size:10px;opacity:.75">Tabular confirmation: ' +
+      tabular.map(x => (x.prefix || '-') + ' ' + (x.code || '') + ' ' + (x.title || '')).join(' → ') +
+      '</div>'
+    : '';
+
+  return '<div class="lead-term-box" style="margin-top:8px">' +
+    '<div class="lead-label"><span>WHO Vol. 3 Index ✓</span>' +
+    '<span style="font-size:10px;opacity:.7">code match verified</span></div>' +
+    '<div class="lead-path">' + rendered + '</div>' +
+    '<div style="font-size:10px;color:var(--muted);margin-top:6px">Index terms berasal dari WHO ICD-10 2010. Hierarki dash cetak Volume 3 tidak diklaim bila API tidak menyediakannya.</div>' +
+    tabularHtml +
+    '</div>';
+}
 function renderWHOGuidance(guidance) {
   if (!guidance) return '';
   const sections = [];
@@ -906,7 +945,8 @@ function renderValidations(validations) {
   // WHO_VALID dibuat ringkas agar tidak terlihat seperti log teknis.
   // Detail Inclusion/Exclusion/Note/Coding Hint tetap ditampilkan di kartu diagnosis.
   const whoValid = otherVals.filter(v => v.type === 'WHO_VALID');
-  const otherNonWho = otherVals.filter(v => v.type !== 'WHO_VALID');
+  const whoIndexValid = otherVals.filter(v => v.type === 'WHO_INDEX_VALID');
+  const otherNonWho = otherVals.filter(v => v.type !== 'WHO_VALID' && v.type !== 'WHO_INDEX_VALID');
 
   if (whoValid.length > 0) {
     const whoItems = whoValid.map(v => {
@@ -917,6 +957,13 @@ function renderValidations(validations) {
       return `<div class="val-item"><span>✅</span><span>${v.message}</span></div>`;
     }).join('');
     html += `<div class="validation-banner"><strong>WHO ICD-10 2010</strong>${whoItems}</div>`;
+  }
+
+  if (whoIndexValid.length > 0) {
+    const items = whoIndexValid.map(v =>
+      `<div class="val-item"><span>📚</span><span>${v.message}</span></div>`
+    ).join('');
+    html += `<div class="validation-banner"><strong>WHO Vol. 3 Index</strong>${items}</div>`;
   }
 
   if (otherNonWho.length > 0) {
@@ -984,11 +1031,11 @@ function renderResults(result) {
           <div class="conf-bar"><div class="conf-fill" style="width:${d.confidence}%"></div></div>
         </div>
       </div>
-      ${d.lead_term_path ? `<div class="lead-term-box">
+      ${d.who_index ? renderWHOIndexPath(d.who_index) : (d.lead_term_path ? `<div class="lead-term-box">
         <div class="lead-label"><span>${t.labelVol3}</span>
         <button class="copy-btn" onclick="copyPath(this,\`${getCleanPath(d.lead_term_path,d.code,d.description).replace(/`/g,"'")}\`)">📋 Copy</button></div>
         <div class="lead-path">${renderLeadPath(d.lead_term_path, d.code, d.description)}</div>
-      </div>` : ''}
+      </div>` : '')}
       ${renderVol1Notes(d.volume1_notes)}
       ${renderWHOGuidance(d.who_guidance)}
       ${d.reasoning ? `<div class="reasoning-box">${t.labelReasoning}${d.reasoning}</div>` : ''}
