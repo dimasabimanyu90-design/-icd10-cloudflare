@@ -434,15 +434,42 @@ function buildWHOIndexPath(indexResult, diagnosis) {
   });
   const matchedTerm = matchedWHOIndexTerm || terms[0] || aiLeadTerm;
 
-  // WHO indexTerm dapat berbentuk "Lead term, modifier, submodifier".
-  // Pecah berdasarkan koma agar Volume 3 dapat ditampilkan bertingkat.
-  // Ini hanya untuk struktur Index; Volume 1 tetap menggunakan parent chain WHO.
-  const hierarchyParts = String(matchedTerm || '')
-    .split(',')
-    .map(part => normalizeIndexLabel(part))
-    .filter(Boolean);
-  const leadTerm = hierarchyParts[0] || matchedTerm || aiLeadTerm;
-  const modifiers = hierarchyParts.slice(1);
+  // Volume 3 hierarchy mengikuti lead_term_path dari AI.
+  // WHO dipakai untuk memverifikasi kecocokan kode, bukan untuk
+  // membuat level hierarchy dari tanda koma.
+  const aiPath = String(diagnosis?.lead_term_path || '').trim();
+  const hierarchyLines = aiPath
+    ? aiPath.split(/\\r?\\n/).map(line => line.trimEnd()).filter(Boolean)
+    : [];
+  const parsedHierarchy = hierarchyLines.map(line => {
+    const match = line.match(/^(\\s*)(-+)?\\s*(.*)$/);
+    return {
+      level: (match?.[2] || '').length,
+      text: normalizeIndexLabel(match?.[3] || line)
+    };
+  }).filter(item => item.text);
+
+  let leadTerm = parsedHierarchy.find(item => item.level === 0)?.text || aiLeadTerm || matchedTerm;
+  let modifiers = parsedHierarchy
+    .filter(item => item.level > 0)
+    .map(item => ({ level: item.level, text: item.text }));
+
+  // AI kadang menaruh kode pada baris terakhir terpisah.
+  const codeLine = parsedHierarchy.find(item =>
+    item.text.toUpperCase().startsWith(code + ' ')
+  );
+  if (codeLine && modifiers.length > 0) {
+    const target = modifiers[modifiers.length - 1];
+    const remainder = codeLine.text.slice(code.length).trim();
+    target.text = remainder ? target.text + ' ' + code + ' ' + remainder : target.text + ' ' + code;
+  }
+
+  if (!aiPath) {
+    leadTerm = matchedTerm || aiLeadTerm;
+    modifiers = [];
+  }
+
+  const modifierTexts = modifiers.map(item => item.text);
 
   const title = String(match.title || diagnosis?.who_official_title || diagnosis?.description || '').trim();
 
@@ -455,7 +482,8 @@ function buildWHOIndexPath(indexResult, diagnosis) {
     index_terms: terms,
     index_path: {
       lead_term: leadTerm || null,
-      modifiers,
+      modifiers: modifierTexts,
+      modifier_levels: modifiers.map(item => item.level),
       code,
       title
     },
