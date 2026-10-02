@@ -876,6 +876,16 @@ function renderVol1Notes(notes) {
   return `<div class="vol1-box"><div class="vol1-label">${T[currentLang].labelVol1}</div><div class="vol1-notes">${items}</div></div>`;
 }
 
+function renderWHOGuidance(guidance) {
+  if (!guidance) return '';
+  const sections = [];
+  if (Array.isArray(guidance.inclusion) && guidance.inclusion.length) sections.push('<strong>Includes:</strong> ' + guidance.inclusion.join('; '));
+  if (Array.isArray(guidance.exclusion) && guidance.exclusion.length) sections.push('<strong>Excludes:</strong> ' + guidance.exclusion.map(x => x.term || '').filter(Boolean).join('; '));
+  if (Array.isArray(guidance.note) && guidance.note.length) sections.push('<strong>WHO Note:</strong> ' + guidance.note.join('; '));
+  if (Array.isArray(guidance.codingHint) && guidance.codingHint.length) sections.push('<strong>Coding Hint:</strong> ' + guidance.codingHint.join('; '));
+  if (!sections.length) return '';
+  return '<div class="vol1-box" style="margin-top:8px"><div class="vol1-label">WHO Coding Guidance</div><div class="vol1-notes">' + sections.map(s => '<div class="vol1-note"><span>' + s + '</span></div>').join('') + '</div></div>';
+}
 function renderValidations(validations) {
   if (!Array.isArray(validations) || validations.length === 0) return '';
   // Pisahkan MB rule warnings dari validasi umum
@@ -893,9 +903,24 @@ function renderValidations(validations) {
     html += `<div class="mb-rule-banner"><strong>${T[currentLang].labelMBRule}</strong>${mbItems}</div>`;
   }
 
-  // Render validasi lainnya
-  if (otherVals.length > 0) {
-    const items = otherVals.map(v =>
+  // WHO_VALID dibuat ringkas agar tidak terlihat seperti log teknis.
+  // Detail Inclusion/Exclusion/Note/Coding Hint tetap ditampilkan di kartu diagnosis.
+  const whoValid = otherVals.filter(v => v.type === 'WHO_VALID');
+  const otherNonWho = otherVals.filter(v => v.type !== 'WHO_VALID');
+
+  if (whoValid.length > 0) {
+    const whoItems = whoValid.map(v => {
+      const match = String(v.message || '').match(/ICD-10 <strong>([^<]+)<\\/strong> terdaftar di WHO ICD-10 2010: (.*?)(?: WHO Coding Hint tersedia.*)?(?: WHO Exclusion tersedia.*)?\\.$/);
+      if (match) {
+        return `<div class="val-item"><span>✅</span><span><strong>${match[1]}</strong> — ${match[2]}</span></div>`;
+      }
+      return `<div class="val-item"><span>✅</span><span>${v.message}</span></div>`;
+    }).join('');
+    html += `<div class="validation-banner"><strong>WHO ICD-10 2010</strong>${whoItems}</div>`;
+  }
+
+  if (otherNonWho.length > 0) {
+    const items = otherNonWho.map(v =>
       `<div class="val-item"><span>${iconMap[v.type]||'ℹ'}</span><span><strong>${v.type}:</strong> ${v.message}</span></div>`
     ).join('');
     html += `<div class="validation-banner"><strong>${T[currentLang].labelValidasi}</strong>${items}</div>`;
@@ -965,6 +990,7 @@ function renderResults(result) {
         <div class="lead-path">${renderLeadPath(d.lead_term_path, d.code, d.description)}</div>
       </div>` : ''}
       ${renderVol1Notes(d.volume1_notes)}
+      ${renderWHOGuidance(d.who_guidance)}
       ${d.reasoning ? `<div class="reasoning-box">${t.labelReasoning}${d.reasoning}</div>` : ''}
     </div>`;
   }).join('');
