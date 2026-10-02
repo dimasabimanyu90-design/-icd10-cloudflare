@@ -327,6 +327,36 @@ const IM_CODES_SKIP_WHO = new Set([
   'K01.17','94.270','94.271','57.13','G47.31'
 ]);
 
+function extractWHOOfficialTitle(entity) {
+  if (!entity) return null;
+
+  const value = entity.title || entity.prefLabel || entity.label || null;
+
+  function extract(value) {
+    if (!value) return null;
+    if (typeof value === 'string') return value.trim() || null;
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        const found = extract(item);
+        if (found) return found;
+      }
+      return null;
+    }
+    if (typeof value === 'object') {
+      return (
+        extract(value['@value']) ||
+        extract(value.value) ||
+        extract(value.label) ||
+        extract(value.term) ||
+        null
+      );
+    }
+    return null;
+  }
+
+  return extract(value);
+}
+
 async function validateDiagnosesWithWHO(diagnoses, request) {
   if (!Array.isArray(diagnoses) || diagnoses.length === 0) {
     return { diagnoses: diagnoses || [], validations: [], allValid: true, checked: 0, unverified: 0 };
@@ -364,15 +394,25 @@ async function validateDiagnosesWithWHO(diagnoses, request) {
       const data = await response.json().catch(() => ({}));
 
       if (response.ok && data.valid === true) {
+        const whoTitle = extractWHOOfficialTitle(data.entity);
         const result = {
           code,
           status: 'valid',
           valid: true,
           source: 'WHO',
           version: 'ICD-10 2010',
-          title: data.entity?.title?.['@value'] || data.entity?.title || null,
+          title: whoTitle,
           parent: data.entity?.parent || null
         };
+
+        // WHO menjadi sumber utama untuk nama resmi kode.
+        // AI tetap boleh memberi description_id/penjelasan Indonesia,
+        // tetapi description tidak boleh mengarang judul ICD-10.
+        if (whoTitle) {
+          diagnosis.description = whoTitle;
+          diagnosis.who_official_title = whoTitle;
+        }
+
         results.push(result);
         diagnosis.who_validation = result;
       } else if (response.status === 404 || data.http_status === 404) {
