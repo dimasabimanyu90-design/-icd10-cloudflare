@@ -295,6 +295,7 @@ export async function onRequestGet(context) {
         index_terms: [...new Set(indexTerms)],
         tabular_path: tabularPath,
         path_display: tabularPath.map((item, i) => ({
+          level: i + 1,
           prefix: "-".repeat(i + 1),
           code: item.code,
           title: item.title
@@ -308,7 +309,7 @@ export async function onRequestGet(context) {
       version: "ICD-10 2010",
       term,
       count: results.length,
-      note: "path_display adalah hierarki Tabular WHO; index_terms adalah istilah Index WHO. Keduanya dipisahkan agar tidak mengklaim hierarki Tabular sebagai literal path cetak Vol. 3.",
+      note: "index_terms berasal dari WHO Volume 3 Index API. path_display adalah hierarki Volume 1 Tabular dari parent entity WHO. API WHO tidak menyediakan level indentasi cetak Volume 3, sehingga aplikasi tidak mengarang --/--- untuk Index.",
       results
     });
   } catch (error) {

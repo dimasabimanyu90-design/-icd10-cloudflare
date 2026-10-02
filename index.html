@@ -881,37 +881,47 @@ function renderWHOIndexPath(index) {
 
   if (index.status !== 'verified') {
     return '<div class="vol1-box" style="margin-top:8px;border-left:3px solid #f59e0b">' +
-      '<div class="vol1-label">WHO Vol. 3 Index</div>' +
+      '<div class="vol1-label">WHO Vol. 3 Alphabetical Index</div>' +
       '<div class="vol1-notes"><div class="vol1-note"><span>🟡 Belum terverifikasi: ' +
       (index.reason || 'WHO Index belum menemukan kecocokan kode.') +
       '</span></div></div></div>';
   }
 
-  const lines = Array.isArray(index.path) ? index.path : [];
-  const rendered = lines.map(line => {
-    const text = String(line || '');
-    if (!text) return '';
-    if (text.startsWith('- ')) {
-      return '<div class="lp-line"><span class="lp-indent">- </span>' + highlightCodes(text.slice(2)) + '</div>';
-    }
-    if (/^[A-Z]\\d{2}(?:\\.\\d+)?\\s/.test(text)) {
-      return '<div class="lp-line"><span class="lp-final">' + highlightCodes(text) + '</span></div>';
-    }
-    return '<div class="lp-line"><span class="lp-section">' + text + '</span></div>';
-  }).filter(Boolean).join('');
+  const ip = index.index_path || {};
+  const lead = String(ip.lead_term || index.lead_term || '').trim();
+  const modifiers = Array.isArray(ip.modifiers) ? ip.modifiers : [];
+  const code = String(ip.code || index.code || '').trim();
+  const title = String(ip.title || '').trim();
+
+  let rendered = '';
+  if (lead) {
+    rendered += '<div class="lp-line"><span class="lp-section">' + highlightCodes(lead) + '</span></div>';
+  }
+  modifiers.forEach(term => {
+    rendered += '<div class="lp-line"><span class="lp-indent">- </span>' + highlightCodes(String(term)) + '</div>';
+  });
+  if (code) {
+    rendered += '<div class="lp-line"><span class="lp-final">' +
+      highlightCodes(code + (title ? ' ' + title : '')) + '</span></div>';
+  }
 
   const tabular = Array.isArray(index.tabular_path_display) ? index.tabular_path_display : [];
   const tabularHtml = tabular.length
-    ? '<div style="margin-top:7px;font-size:10px;opacity:.75">Tabular confirmation: ' +
-      tabular.map(x => (x.prefix || '-') + ' ' + (x.code || '') + ' ' + (x.title || '')).join(' → ') +
-      '</div>'
+    ? '<div class="vol1-box" style="margin-top:10px;background:#fafaf9">' +
+      '<div class="vol1-label">▸ Volume 1 Tabular</div>' +
+      '<div class="lead-path">' +
+      tabular.map(x => '<div class="lp-line"><span class="lp-indent">' +
+        String(x.prefix || '-') + ' </span>' +
+        highlightCodes(String(x.code || '') + (x.title ? ' ' + x.title : '')) +
+      '</div>').join('') +
+      '</div></div>'
     : '';
 
   return '<div class="lead-term-box" style="margin-top:8px">' +
-    '<div class="lead-label"><span>WHO Vol. 3 Index ✓</span>' +
+    '<div class="lead-label"><span>WHO Vol. 3 Alphabetical Index ✓</span>' +
     '<span style="font-size:10px;opacity:.7">code match verified</span></div>' +
     '<div class="lead-path">' + rendered + '</div>' +
-    '<div style="font-size:10px;color:var(--muted);margin-top:6px">Index terms berasal dari WHO ICD-10 2010. Hierarki dash cetak Volume 3 tidak diklaim bila API tidak menyediakannya.</div>' +
+    '<div style="font-size:10px;color:var(--muted);margin-top:6px">Index term berasal dari WHO ICD-10 2010. API WHO tidak menyediakan indentasi cetak Volume 3, jadi tanda "--/---" tidak dibuat-buat.</div>' +
     tabularHtml +
     '</div>';
 }
