@@ -142,6 +142,7 @@ export async function onRequestGet(context) {
   try {
     const url = new URL(context.request.url);
     const term = String(url.searchParams.get("term") || "").trim();
+    const requestedCode = String(url.searchParams.get("code") || "").trim().toUpperCase();
     const limit = Math.min(Math.max(Number(url.searchParams.get("limit") || 10), 1), 20);
 
     if (term.length < 2) {
@@ -186,6 +187,36 @@ export async function onRequestGet(context) {
     }
 
     const matches = extractSearchResults(data).slice(0, limit);
+
+    // Bila pencarian lead term tidak menempatkan kode target di hasil teratas,
+    // ambil entity kode secara langsung. Ini tetap aman karena kita hanya
+    // menerima fallback jika lead term benar-benar muncul sebagai WHO index term.
+    if (requestedCode && !matches.some(item => String(item.code || '').toUpperCase() === requestedCode)) {
+      const direct = await getEntity(requestedCode, token);
+      if (direct.ok && direct.data) {
+        const rawTerms = direct.data.indexTerm || direct.data.IndexTerm || [];
+        const directTerms = Array.isArray(rawTerms) ? rawTerms.map(labelOf).filter(Boolean) : [];
+        const normalize = value => String(value || '').toLowerCase().replace(/<[^>]*>/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+        const needle = normalize(term);
+        const directMatch = directTerms.some(item => {
+          const candidate = normalize(item);
+          return candidate === needle || candidate.includes(needle) || needle.includes(candidate);
+        });
+
+        if (directMatch) {
+          matches.unshift({
+            id: direct.data['@id'] || null,
+            code: requestedCode,
+            title: stripHtml(labelOf(direct.data.title) || labelOf(direct.data.prefLabel) || labelOf(direct.data.label) || ""),
+            score: null,
+            index_terms: directTerms,
+            title_is_search_result: false,
+            important: true
+          });
+        }
+      }
+    }
+
     const results = [];
 
     for (const match of matches) {
