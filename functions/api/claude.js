@@ -483,6 +483,7 @@ function buildWHOIndexPath(indexResult, diagnosis) {
     index_path: {
       lead_term: leadTerm || null,
       modifiers: modifierTexts,
+      modifier_levels: modifiers.map(item => item.level),
       code,
       title
     },
