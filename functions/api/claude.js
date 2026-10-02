@@ -40,6 +40,7 @@ Pilih kondisi yang PALING BANYAK menggunakan sumber daya.
 
 ## FIELDS
 description: HARUS dari baris terakhir lead_term_path tanpa kode. BUKAN dari memori.
+lead_term: lead term utama dari Volume 3 Index, terpisah dari path. HARUS berupa istilah yang benar-benar menjadi lead term, bukan diagnosis bebas.
   BENAR I61.0: "Nontraumatic intracerebral haemorrhage in hemisphere, subcortical"
   BENAR O82.1: "Delivery by emergency caesarean section"
   BENAR O43.0: "Placental transfusion syndromes"
@@ -285,7 +286,7 @@ S codes: wajib lokasi anatomi + open/closed. Multiple trauma → kode tiap injur
 Epilepsi + cedera saat serangan → cedera=DU, epilepsi=DS + kode eksternal (ICS).`;
 
 const PROMPT_JSON = `Return ONLY valid JSON:
-{"summary","du_reasoning","validations":[{"type","message"}],"diagnoses":[{"role","code","dagger_asterisk","description","description_id","category","confidence","lead_term_path","volume1_notes":[{"type","text"}],"paired_with","reasoning"}],"procedures":[{"code","description","description_id","category","confidence","lead_term_path","volume1_notes","reasoning"}]}`;
+{"summary","du_reasoning","validations":[{"type","message"}],"diagnoses":[{"role","code","dagger_asterisk","description","description_id","category","confidence","lead_term","lead_term_path","volume1_notes":[{"type","text"}],"paired_with","reasoning"}],"procedures":[{"code","description","description_id","category","confidence","lead_term_path","volume1_notes","reasoning"}]}`;
 
 // ── DETECT CASE TYPE & BUILD PROMPT ──
 function buildPrompt(clinicalText, langInstruction) {
@@ -390,6 +391,158 @@ function buildWHOGuidance(entity) {
   if (!inclusion.length && !exclusion.length && !note.length && !codingHint.length) return null;
 
   return { inclusion, exclusion, note, codingHint };
+}
+
+function extractLeadTerm(diagnosis) {
+  const explicit = String(diagnosis?.lead_term || '').trim();
+  if (explicit) return explicit;
+
+  const path = diagnosis?.lead_term_path;
+  if (Array.isArray(path)) {
+    const first = path.find(line => String(line).trim() && !String(line).trim().startsWith('-'));
+    if (first) return String(first).trim().replace(/^CODE\\s+/i, '');
+  }
+
+  if (typeof path === 'string') {
+    const first = path.split(/\\r?\\n/).find(line => line.trim() && !line.trim().startsWith('-'));
+    if (first) return first.trim().replace(/^CODE\\s+/i, '');
+  }
+
+  return String(diagnosis?.description || '').trim();
+}
+
+function normalizeIndexLabel(value) {
+  return String(value || '').replace(/<[^>]*>/g, '').replace(/\\s+/g, ' ').trim();
+}
+
+function buildWHOIndexPath(indexResult, diagnosis) {
+  if (!indexResult || !Array.isArray(indexResult.results)) return null;
+
+  const code = String(diagnosis?.code || '').trim().toUpperCase();
+  const match = indexResult.results.find(item => String(item?.code || '').trim().toUpperCase() === code);
+  if (!match) return null;
+
+  const leadTerm = extractLeadTerm(diagnosis);
+  const terms = [...new Set((match.index_terms || []).map(normalizeIndexLabel).filter(Boolean))];
+
+  const path = [];
+  if (leadTerm) path.push(leadTerm);
+
+  // WHO API exposes the index terms attached to the matched entity.
+  // They are search/index terms, not a guaranteed reproduction of the
+  // printed Volume 3 indentation, so we keep them explicitly labelled.
+  for (const term of terms) {
+    if (term.toLowerCase() !== String(leadTerm || '').toLowerCase()) {
+      path.push('- ' + term);
+    }
+  }
+
+  const title = String(match.title || diagnosis?.who_official_title || diagnosis?.description || '').trim();
+  if (code) path.push(title ? code + ' ' + title : code);
+
+  return {
+    status: 'verified',
+    source: 'WHO',
+    version: 'ICD-10 2010',
+    code,
+    lead_term: leadTerm || null,
+    index_terms: terms,
+    path,
+    tabular_path: Array.isArray(match.tabular_path) ? match.tabular_path : [],
+    tabular_path_display: Array.isArray(match.path_display) ? match.path_display : [],
+    note: 'Index terms berasal dari WHO ICD-10 2010. Indentasi cetak Volume 3 tidak diklaim dari API; Tabular path disediakan sebagai konfirmasi hierarki.'
+  };
+}
+
+async function validateDiagnosesWithWHOIndex(diagnoses, request) {
+  if (!Array.isArray(diagnoses) || diagnoses.length === 0) {
+    return { validations: [], checked: 0, unverified: 0 };
+  }
+
+  const validations = [];
+  let unverified = 0;
+
+  for (const diagnosis of diagnoses) {
+    const code = String(diagnosis?.code || '').trim().toUpperCase();
+    if (!code || IM_CODES_SKIP_WHO.has(code)) continue;
+
+    const term = extractLeadTerm(diagnosis);
+    if (!term || term.length < 2) {
+      const result = {
+        code,
+        status: 'unverified',
+        source: 'WHO_INDEX',
+        version: 'ICD-10 2010',
+        reason: 'Lead term Volume 3 tidak tersedia untuk pencarian WHO Index.'
+      };
+      unverified++;
+      validations.push(result);
+      diagnosis.who_index = result;
+      continue;
+    }
+
+    try {
+      const url = new URL('/api/who-index', request.url);
+      url.searchParams.set('term', term);
+      url.searchParams.set('limit', '12');
+
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        headers: { Accept: 'application/json' }
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok || data.valid !== true) {
+        const result = {
+          code,
+          status: 'unverified',
+          source: 'WHO_INDEX',
+          version: 'ICD-10 2010',
+          reason: data.error || data.detail || `WHO Index HTTP ${response.status}`
+        };
+        unverified++;
+        validations.push(result);
+        diagnosis.who_index = result;
+        continue;
+      }
+
+      const result = buildWHOIndexPath(data, diagnosis);
+      if (!result) {
+        const fallback = {
+          code,
+          status: 'unverified',
+          source: 'WHO_INDEX',
+          version: 'ICD-10 2010',
+          lead_term: term,
+          reason: 'WHO Index tidak mengembalikan kandidat dengan kode yang sama dengan kode AI.',
+          candidates: Array.isArray(data.results)
+            ? data.results.slice(0, 5).map(item => ({ code: item.code, title: item.title, index_terms: item.index_terms }))
+            : []
+        };
+        unverified++;
+        validations.push(fallback);
+        diagnosis.who_index = fallback;
+        continue;
+      }
+
+      validations.push(result);
+      diagnosis.who_index = result;
+      diagnosis.who_index_path = result.path;
+    } catch (error) {
+      const result = {
+        code,
+        status: 'unverified',
+        source: 'WHO_INDEX',
+        version: 'ICD-10 2010',
+        reason: error instanceof Error ? error.message : String(error)
+      };
+      unverified++;
+      validations.push(result);
+      diagnosis.who_index = result;
+    }
+  }
+
+  return { validations, checked: validations.length, unverified };
 }
 
 async function validateDiagnosesWithWHO(diagnoses, request) {
@@ -634,9 +787,14 @@ export async function onRequestPost(context) {
       try {
         const parsed = JSON.parse(text);
 
-        // Layer 1: WHO ICD-10 2010. Diagnosis belum dianggap final
-        // sebelum validasi WHO selesai.
+        // Layer 1A: WHO ICD-10 2010 code/title validation.
         const whoResult = await validateDiagnosesWithWHO(
+          Array.isArray(parsed.diagnoses) ? parsed.diagnoses : [],
+          context.request
+        );
+
+        // Layer 1B: WHO Volume 3 Index lookup + code match.
+        const whoIndexResult = await validateDiagnosesWithWHOIndex(
           Array.isArray(parsed.diagnoses) ? parsed.diagnoses : [],
           context.request
         );
@@ -666,10 +824,30 @@ export async function onRequestPost(context) {
           }
         }
 
+        for (const result of whoIndexResult.validations) {
+          if (result.status === 'verified') {
+            parsed.validations.push({
+              type: 'WHO_INDEX_VALID',
+              message: `WHO Vol. 3 Index cocok untuk <strong>${result.code}</strong> melalui lead term "${result.lead_term || '-'}".`
+            });
+          } else {
+            parsed.validations.push({
+              type: 'WHO_INDEX_UNVERIFIED',
+              message: `WHO Vol. 3 Index untuk <strong>${result.code}</strong> belum terverifikasi. ${result.reason || 'Verifikasi manual diperlukan.'}`
+            });
+          }
+        }
+
         parsed.validation_layers = {
           who_icd10_2010: {
             status: whoResult.allValid ? 'passed' : 'review_required',
             checked: whoResult.checked
+          },
+          who_vol3_index: {
+            status: whoIndexResult.unverified === 0 ? 'passed' : 'unverified',
+            checked: whoIndexResult.checked,
+            unverified: whoIndexResult.unverified,
+            note: 'WHO Index digunakan sebagai verifikasi lead term dan kecocokan kode; hierarki cetak Volume 3 tidak diinventasikan oleh AI.'
           },
           idrg: {
             status: 'prompt_rules',
@@ -680,7 +858,10 @@ export async function onRequestPost(context) {
         // WHO adalah Layer 1. Unverified bukan berarti invalid, tetapi juga
         // belum boleh dianggap final. iDRG masih berupa prompt rules, jadi
         // finalisasi penuh belum diklaim di sini.
-        parsed.finalized = whoResult.allValid && whoResult.unverified === 0;
+        parsed.finalized =
+          whoResult.allValid &&
+          whoResult.unverified === 0 &&
+          whoIndexResult.unverified === 0;
         parsed.validation_layers.who_icd10_2010.unverified = whoResult.unverified;
         if (whoResult.unverified > 0) {
           parsed.validation_layers.who_icd10_2010.status = 'unverified';
