@@ -315,17 +315,37 @@ function buildPrompt(clinicalText, langInstruction) {
 // ── WHO ICD-10 2010 VALIDATION ──
 // WHO validator tetap menjadi Layer 1. Hasil AI tidak dianggap final
 // sebelum setiap diagnosis ICD-10 melewati WHO.
+const IM_CODES_SKIP_WHO = new Set([
+  'I49.00','I49.01','I49.09','N93.00','N93.01','R51.0','G04.3',
+  'K01.17','94.270','94.271','57.13','G47.31'
+]);
+
 async function validateDiagnosesWithWHO(diagnoses, request) {
   if (!Array.isArray(diagnoses) || diagnoses.length === 0) {
-    return { diagnoses: diagnoses || [], validations: [], allValid: true, checked: 0 };
+    return { diagnoses: diagnoses || [], validations: [], allValid: true, checked: 0, unverified: 0 };
   }
 
   const results = [];
-  let allValid = true;
+  let hasInvalid = false;
+  let unverified = 0;
 
   for (const diagnosis of diagnoses) {
     const code = String(diagnosis?.code || '').trim().toUpperCase();
     if (!code) continue;
+
+    if (IM_CODES_SKIP_WHO.has(code)) {
+      const result = {
+        code,
+        status: 'valid',
+        valid: true,
+        source: 'LOCAL_IM',
+        version: 'ICD-10 Indonesian Modification',
+        reason: 'Kode IM Indonesia tidak divalidasi terhadap WHO ICD-10 base.'
+      };
+      results.push(result);
+      diagnosis.who_validation = result;
+      continue;
+    }
 
     try {
       const whoUrl = new URL('/api/who-icd10', request.url);
@@ -334,30 +354,51 @@ async function validateDiagnosesWithWHO(diagnoses, request) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code })
       });
-
       const data = await response.json().catch(() => ({}));
-      const valid = data.valid === true;
 
-      results.push({
-        code,
-        valid,
-        source: 'WHO',
-        version: 'ICD-10 2010',
-        title: data.entity?.title?.['@value'] || data.entity?.title || null,
-        parent: data.entity?.parent || null,
-        reason: data.reason || data.error || null
-      });
-
-      diagnosis.who_validation = results[results.length - 1];
-
-      if (!valid) {
-        allValid = false;
+      if (response.ok && data.valid === true) {
+        const result = {
+          code,
+          status: 'valid',
+          valid: true,
+          source: 'WHO',
+          version: 'ICD-10 2010',
+          title: data.entity?.title?.['@value'] || data.entity?.title || null,
+          parent: data.entity?.parent || null
+        };
+        results.push(result);
+        diagnosis.who_validation = result;
+      } else if (response.status === 404 || data.http_status === 404) {
+        hasInvalid = true;
+        const result = {
+          code,
+          status: 'invalid',
+          valid: false,
+          source: 'WHO',
+          version: 'ICD-10 2010',
+          reason: data.reason || 'Kode tidak ditemukan di WHO ICD-10 2010.'
+        };
+        results.push(result);
+        diagnosis.who_validation = result;
+      } else {
+        unverified++;
+        const result = {
+          code,
+          status: 'unverified',
+          valid: null,
+          source: 'WHO',
+          version: 'ICD-10 2010',
+          reason: data.error || data.detail || data.reason || `WHO HTTP ${response.status}`
+        };
+        results.push(result);
+        diagnosis.who_validation = result;
       }
     } catch (error) {
-      allValid = false;
+      unverified++;
       const result = {
         code,
-        valid: false,
+        status: 'unverified',
+        valid: null,
         source: 'WHO',
         version: 'ICD-10 2010',
         reason: error instanceof Error ? error.message : String(error)
@@ -367,7 +408,13 @@ async function validateDiagnosesWithWHO(diagnoses, request) {
     }
   }
 
-  return { diagnoses, validations: results, allValid, checked: results.length };
+  return {
+    diagnoses,
+    validations: results,
+    allValid: !hasInvalid,
+    unverified,
+    checked: results.length
+  };
 }
 
 // ── D1 LOOKUP ──
