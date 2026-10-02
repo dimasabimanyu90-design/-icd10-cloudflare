@@ -432,7 +432,17 @@ function buildWHOIndexPath(indexResult, diagnosis) {
       normalized.includes(normalizedAI) ||
       normalizedAI.includes(normalized);
   });
-  const leadTerm = matchedWHOIndexTerm || terms[0] || aiLeadTerm;
+  const matchedTerm = matchedWHOIndexTerm || terms[0] || aiLeadTerm;
+
+  // WHO indexTerm dapat berbentuk "Lead term, modifier, submodifier".
+  // Pecah berdasarkan koma agar Volume 3 dapat ditampilkan bertingkat.
+  // Ini hanya untuk struktur Index; Volume 1 tetap menggunakan parent chain WHO.
+  const hierarchyParts = String(matchedTerm || '')
+    .split(',')
+    .map(part => normalizeIndexLabel(part))
+    .filter(Boolean);
+  const leadTerm = hierarchyParts[0] || matchedTerm || aiLeadTerm;
+  const modifiers = hierarchyParts.slice(1);
 
   const title = String(match.title || diagnosis?.who_official_title || diagnosis?.description || '').trim();
 
@@ -445,7 +455,7 @@ function buildWHOIndexPath(indexResult, diagnosis) {
     index_terms: terms,
     index_path: {
       lead_term: leadTerm || null,
-      modifiers: terms.filter(term => term.toLowerCase() !== String(leadTerm || '').toLowerCase()),
+      modifiers,
       code,
       title
     },

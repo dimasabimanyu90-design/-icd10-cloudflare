@@ -897,11 +897,15 @@ function renderWHOIndexPath(index) {
   if (lead) {
     rendered += '<div class="lp-line"><span class="lp-section">' + highlightCodes(lead) + '</span></div>';
   }
-  modifiers.forEach(term => {
-    rendered += '<div class="lp-line"><span class="lp-indent">- </span>' + highlightCodes(String(term)) + '</div>';
+  modifiers.forEach((term, index) => {
+    const indent = '  '.repeat(index + 1);
+    rendered += '<div class="lp-line"><span class="lp-indent" style="padding-left:' +
+      (12 + index * 22) + 'px">' + (index === 0 ? '└─ ' : '└─ ') +
+      '</span>' + highlightCodes(String(term)) + '</div>';
   });
   if (code) {
-    rendered += '<div class="lp-line"><span class="lp-final">' +
+    rendered += '<div class="lp-line"><span class="lp-final" style="margin-left:' +
+      (modifiers.length * 22) + 'px">' +
       highlightCodes(code + (title ? ' ' + title : '')) + '</span></div>';
   }
 
@@ -921,7 +925,7 @@ function renderWHOIndexPath(index) {
     '<div class="lead-label"><span>WHO Vol. 3 Alphabetical Index ✓</span>' +
     '<span style="font-size:10px;opacity:.7">code match verified</span></div>' +
     '<div class="lead-path">' + rendered + '</div>' +
-    '<div style="font-size:10px;color:var(--muted);margin-top:6px">Index term berasal dari WHO ICD-10 2010. API WHO tidak menyediakan indentasi cetak Volume 3, jadi tanda "--/---" tidak dibuat-buat.</div>' +
+    '<div style="font-size:10px;color:var(--muted);margin-top:6px">Hierarchy Volume 3 dibentuk dari struktur lead term dan modifier yang dikembalikan WHO Index. Volume 1 tetap ditampilkan terpisah.</div>' +
     tabularHtml +
     '</div>';
 }
