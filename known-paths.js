@@ -882,15 +882,22 @@ function validateDiagnosisCode(code) {
     return { valid: false, verified: false, reason: 'empty_or_invalid_type' };
   }
   const trimmed = code.trim();
-  // Format ICD-10: 1 huruf + 2 digit + opsional .1-2 digit (mis. I61.0, E11.3, Z37.2)
-  const icd10Format = /^[A-Z]\d{2}(\.\d{1,2})?$/;
+  // Format dasar ICD-10: 1 huruf + 2 digit + opsional .1-3 digit.
+  // Extended/IM references dapat memakai karakter tambahan setelah kategori WHO.
+  // Jadi 3 digit setelah titik tidak boleh langsung dianggap "format invalid".
+  const icd10Format = /^[A-Z]\d{2}(\.\d{1,3})?$/;
   if (!icd10Format.test(trimmed)) {
     return { valid: false, verified: false, reason: 'format_invalid', code: trimmed };
   }
   if (KNOWN_PATHS[trimmed]) {
     return { valid: true, verified: true, code: trimmed };
   }
-  return { valid: true, verified: false, code: trimmed };
+  return {
+    valid: true,
+    verified: false,
+    code: trimmed,
+    extended: /^[A-Z]\d{2}\.\d{3}$/.test(trimmed)
+  };
 }
 
 // Validasi 1 batch diagnosis sekaligus, return warning list
@@ -905,11 +912,19 @@ function validateDiagnoses(diagnoses) {
         code: d.code,
         message: `<strong>${d.code} — ${d.description || ''}</strong> format kode tidak valid. Kemungkinan halusinasi AI — verifikasi manual!`
       });
-    } else if (!result.verified && (d.confidence || 0) < 70) {
-      warnings.push({
-        code: d.code,
-        message: `<strong>${d.code} — ${d.description || ''}</strong> belum terverifikasi di database referensi dan confidence rendah (${d.confidence}%). Cek manual ke ICD-10 IM.`
-      });
+    } else if (!result.verified) {
+      const confidence = Number(d.confidence || 0);
+      if (result.extended) {
+        warnings.push({
+          code: d.code,
+          message: `<strong>${d.code} — ${d.description || ''}</strong> format kode valid, tetapi merupakan kode extended/3-digit dan belum terverifikasi di database ICD-10 IM. Verifikasi title dan laterality secara manual.`
+        });
+      } else if (confidence < 70) {
+        warnings.push({
+          code: d.code,
+          message: `<strong>${d.code} — ${d.description || ''}</strong> belum terverifikasi di database referensi dan confidence rendah (${confidence}%). Cek manual ke ICD-10 IM.`
+        });
+      }
     }
   }
   return warnings;
