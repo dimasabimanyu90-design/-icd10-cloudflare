@@ -253,10 +253,17 @@ B95-B96: additional code (bukan dagger/asterisk)
 RESPIRATORY:
 SpO2<95% akut→J96.0 DS | kronik→J96.1 DS | unspec→J96.9 DS
 
-PNEUMONIA:
-J18.1=bronchopneumonia (tanpa organisme spesifik)
-J15.x HANYA jika kuman spesifik DIKONFIRMASI dokter di resume medis (bukan hanya hasil lab)
-Kultur positif tanpa konfirmasi dokter → tetap J18.x
+PNEUMONIA & INFLUENZA:
+- JANGAN otomatis memilih J18.x bila teks secara klinis menghubungkan pneumonia dengan influenza.
+- Jika dokter mendokumentasikan "influenza dengan pneumonia" / "pneumonia akibat influenza" dan virus influenza lain teridentifikasi → J10.0 sebagai kode kombinasi. J18.x TIDAK dikoding terpisah.
+- Jika influenza dengan pneumonia tetapi jenis/virus influenza TIDAK teridentifikasi → gunakan J11.0 sesuai WHO ICD-10 2010. J18.x TIDAK dikoding terpisah.
+- Jika influenza yang teridentifikasi adalah influenza avian tertentu → ikuti J09 sesuai dokumentasi.
+- HANYA gunakan J18.x bila pneumonia memang tidak ditetapkan sebagai manifestasi/akibat influenza atau etiologinya tidak dikaitkan dengan influenza.
+- Jika teks hanya menyebut "pneumonia dan influenza" tanpa hubungan sebab-akibat yang jelas, jangan mengarang hubungan. Gunakan klarifikasi/validasi klinis; jangan otomatis membuat J18.9 + kode influenza.
+- Jangan menggunakan J10/J11 hanya karena kata "influenza" muncul. Pilih subkategori berdasarkan dokumentasi dan aturan WHO.
+- J18.1=bronchopneumonia (tanpa organisme spesifik dan tidak terkait influenza)
+- J15.x HANYA jika kuman spesifik DIKONFIRMASI dokter di resume medis (bukan hanya hasil lab)
+- Kultur positif tanpa konfirmasi dokter → tetap J18.x
 
 APPENDIX: K35.2=perforasi+peritonitis | K35.3=perforasi+abses | K35.8=lain | K37=unspec
 
