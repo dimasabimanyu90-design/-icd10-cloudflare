@@ -76,28 +76,30 @@ function parseIndexHierarchy(term, code = "") {
   let text = stripHtml(term);
   if (!text) return [];
 
+  // WHO dapat mengirim dash sebagai ASCII maupun Unicode dash.
+  // Samakan semuanya agar separator "- / -- / ---" bisa diproses konsisten.
+  text = text.replace(/[‐‑‒–—−]/g, "-");
+
   const normalizedCode = String(code || "").trim().toUpperCase();
   if (normalizedCode) {
-    text = text.replace(new RegExp("^" + normalizedCode + "\\s*[-–—:]?\\s*", "i"), "").trim();
+    text = text.replace(new RegExp("^" + normalizedCode + "\\s*[-:]?\\s*", "i"), "").trim();
   }
 
-  const parts = [];
-  const re = /\s+(-{1,3})\s+/g;
-  let cursor = 0;
-  let level = 0;
-  let match;
-
-  while ((match = re.exec(text))) {
-    const before = text.slice(cursor, match.index).trim();
-    if (before) parts.push({ level, text: before });
-    level = match[1].length;
-    cursor = re.lastIndex;
+  // Contoh:
+  // "Diabetes mellitus - type 2 -- with ophthalmic complication"
+  // menjadi level 0, level 1, level 2.
+  const chain = text.split(/\\s+(-{1,3})\\s+/).map(x => x.trim()).filter(Boolean);
+  if (chain.length > 1) {
+    const result = [{ level: 0, text: chain[0] }];
+    for (let i = 1; i < chain.length; i += 2) {
+      const separator = chain[i];
+      const value = chain[i + 1];
+      if (value) result.push({ level: String(separator).length, text: value });
+    }
+    return result;
   }
 
-  const tail = text.slice(cursor).trim();
-  if (tail) parts.push({ level, text: tail });
-
-  return parts;
+  return text ? [{ level: 0, text }] : [];
 }
 
 function chooseIndexHierarchy(indexTerms, code = "") {
