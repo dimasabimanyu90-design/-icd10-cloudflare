@@ -425,9 +425,6 @@ function buildWHOIndexPath(indexResult, diagnosis) {
   const aiLeadTerm = extractLeadTerm(diagnosis);
   const terms = [...new Set((match.index_terms || []).map(normalizeIndexLabel).filter(Boolean))];
 
-  // Untuk hasil direct lookup, WHO menjadi sumber lead term. Jika search
-  // cocok, gunakan istilah WHO yang paling dekat dengan query; jika tidak,
-  // gunakan indexTerm WHO pertama sebagai representasi resmi.
   const normalizedAI = normalizeIndexLabel(aiLeadTerm).toLowerCase();
   const matchedWHOIndexTerm = terms.find(term => {
     const normalized = term.toLowerCase();
@@ -435,24 +432,9 @@ function buildWHOIndexPath(indexResult, diagnosis) {
       normalized.includes(normalizedAI) ||
       normalizedAI.includes(normalized);
   });
-  const leadTerm = match.direct_lookup
-    ? (matchedWHOIndexTerm || terms[0] || aiLeadTerm)
-    : (matchedWHOIndexTerm || aiLeadTerm);
-
-  const path = [];
-  if (leadTerm) path.push(leadTerm);
-
-  // WHO API exposes the index terms attached to the matched entity.
-  // They are search/index terms, not a guaranteed reproduction of the
-  // printed Volume 3 indentation, so we keep them explicitly labelled.
-  for (const term of terms) {
-    if (term.toLowerCase() !== String(leadTerm || '').toLowerCase()) {
-      path.push('- ' + term);
-    }
-  }
+  const leadTerm = matchedWHOIndexTerm || terms[0] || aiLeadTerm;
 
   const title = String(match.title || diagnosis?.who_official_title || diagnosis?.description || '').trim();
-  if (code) path.push(title ? code + ' ' + title : code);
 
   return {
     status: 'verified',
@@ -461,10 +443,15 @@ function buildWHOIndexPath(indexResult, diagnosis) {
     code,
     lead_term: leadTerm || null,
     index_terms: terms,
-    path,
+    index_path: {
+      lead_term: leadTerm || null,
+      modifiers: terms.filter(term => term.toLowerCase() !== String(leadTerm || '').toLowerCase()),
+      code,
+      title
+    },
     tabular_path: Array.isArray(match.tabular_path) ? match.tabular_path : [],
     tabular_path_display: Array.isArray(match.path_display) ? match.path_display : [],
-    note: 'Index terms berasal dari WHO ICD-10 2010. Indentasi cetak Volume 3 tidak diklaim dari API; Tabular path disediakan sebagai konfirmasi hierarki.'
+    note: 'WHO API menyediakan indexTerm Volume 3 dan parent hierarchy Volume 1. API tidak menyediakan level indentasi cetak Volume 3, sehingga level modifier tidak dibuat-buat.'
   };
 }
 
