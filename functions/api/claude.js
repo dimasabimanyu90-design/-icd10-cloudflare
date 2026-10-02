@@ -464,6 +464,29 @@ function buildWHOIndexPath(indexResult, diagnosis) {
   }
 
   if (modifiers.length === 0) {
+    // Fallback utama: WHO IndexTerm sendiri dapat berisi hierarchy cetak
+    // seperti "Diabetes mellitus - type 2 -- with ...". Jangan biarkan
+    // seluruh string tersebut menjadi satu lead term.
+    const whoTermHierarchy = String(matchedTerm || '').trim()
+      .split(/\\s+(-{1,3})\\s+/)
+      .map(part => part.trim())
+      .filter(Boolean);
+
+    if (whoTermHierarchy.length > 1) {
+      leadTerm = whoTermHierarchy[0];
+      modifiers = [];
+      for (let i = 1; i < whoTermHierarchy.length; i += 2) {
+        const separator = whoTermHierarchy[i];
+        const text = whoTermHierarchy[i + 1];
+        if (text) modifiers.push({
+          level: String(separator || '-').length,
+          text
+        });
+      }
+    }
+  }
+
+  if (modifiers.length === 0) {
     const aiPath = String(diagnosis?.lead_term_path || '').trim();
     const hierarchyLines = aiPath
       ? aiPath.split(/\\r?\\n/).map(line => line.trimEnd()).filter(Boolean)
