@@ -82,7 +82,7 @@ function parseIndexHierarchy(term, code = "") {
   }
 
   const parts = [];
-  const re = /\\s+(-{1,3})\\s+/g;
+  const re = /\s+(-{1,3})\s+/g;
   let cursor = 0;
   let level = 0;
   let match;
