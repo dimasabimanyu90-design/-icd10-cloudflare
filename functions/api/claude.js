@@ -557,15 +557,22 @@ export async function onRequestPost(context) {
         if (!Array.isArray(parsed.validations)) parsed.validations = [];
 
         for (const result of whoResult.validations) {
-          if (result.valid) {
+          if (result.status === 'valid') {
             parsed.validations.push({
-              type: 'WHO_VALID',
-              message: `ICD-10 <strong>${result.code}</strong> terdaftar di WHO ICD-10 2010: ${result.title || '-'}.`
+              type: result.source === 'LOCAL_IM' ? 'IM_VALID' : 'WHO_VALID',
+              message: result.source === 'LOCAL_IM'
+                ? `ICD-10 IM <strong>${result.code}</strong> dilewati dari validasi WHO karena merupakan kode Indonesian Modification.`
+                : `ICD-10 <strong>${result.code}</strong> terdaftar di WHO ICD-10 2010: ${result.title || '-'}.`
+            });
+          } else if (result.status === 'invalid') {
+            parsed.validations.push({
+              type: 'WHO_INVALID',
+              message: `ICD-10 <strong>${result.code}</strong> tidak ditemukan di WHO ICD-10 2010. ${result.reason || 'Verifikasi manual diperlukan.'}`
             });
           } else {
             parsed.validations.push({
-              type: 'WHO_INVALID',
-              message: `ICD-10 <strong>${result.code}</strong> tidak lolos validasi WHO ICD-10 2010. ${result.reason || 'Verifikasi manual diperlukan.'}`
+              type: 'WHO_UNVERIFIED',
+              message: `ICD-10 <strong>${result.code}</strong> belum dapat diverifikasi ke WHO. ${result.reason || 'Verifikasi manual diperlukan.'}`
             });
           }
         }
@@ -581,9 +588,14 @@ export async function onRequestPost(context) {
           }
         };
 
-        // FINAL hanya boleh true jika seluruh diagnosis yang diperiksa
-        // lolos WHO. Jika tidak, UI menerima status review_required.
-        parsed.finalized = whoResult.allValid;
+        // WHO adalah Layer 1. Unverified bukan berarti invalid, tetapi juga
+        // belum boleh dianggap final. iDRG masih berupa prompt rules, jadi
+        // finalisasi penuh belum diklaim di sini.
+        parsed.finalized = whoResult.allValid && whoResult.unverified === 0;
+        parsed.validation_layers.who_icd10_2010.unverified = whoResult.unverified;
+        if (whoResult.unverified > 0) {
+          parsed.validation_layers.who_icd10_2010.status = 'unverified';
+        }
 
         if (parsed.procedures && parsed.procedures.length > 0) {
           const db = context.env.ICD9_DB || null;
