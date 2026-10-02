@@ -82,13 +82,13 @@ function parseIndexHierarchy(term, code = "") {
 
   const normalizedCode = String(code || "").trim().toUpperCase();
   if (normalizedCode) {
-    text = text.replace(new RegExp("^" + normalizedCode + "\\s*[-:]?\\s*", "i"), "").trim();
+    text = text.replace(new RegExp("^" + normalizedCode + "\s*[-:]?\s*", "i"), "").trim();
   }
 
   // Contoh:
   // "Diabetes mellitus - type 2 -- with ophthalmic complication"
   // menjadi level 0, level 1, level 2.
-  const chain = text.split(/\\s+(-{1,3})\\s+/).map(x => x.trim()).filter(Boolean);
+  const chain = text.split(/\s+(-{1,3})\s+/).map(x => x.trim()).filter(Boolean);
   if (chain.length > 1) {
     const result = [{ level: 0, text: chain[0] }];
     for (let i = 1; i < chain.length; i += 2) {
