@@ -484,6 +484,7 @@ async function validateDiagnosesWithWHOIndex(diagnoses, request) {
     try {
       const url = new URL('/api/who-index', request.url);
       url.searchParams.set('term', term);
+      url.searchParams.set('code', code);
       url.searchParams.set('limit', '12');
 
       const response = await fetch(url.toString(), {
