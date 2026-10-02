@@ -174,19 +174,80 @@ export async function onRequestGet(context) {
     let data = null;
     try { data = detail ? JSON.parse(detail) : null; } catch {}
 
-    if (!response.ok) {
-      return json({
-        valid: false,
-        source: "WHO",
-        version: "ICD-10 2010",
-        status: "unverified",
-        error: "WHO index search failed",
-        http_status: response.status,
-        detail: detail.slice(0, 500)
-      }, 502);
-    }
+    let matches = extractSearchResults(data).slice(0, limit);
 
-    const matches = extractSearchResults(data).slice(0, limit);
+    // Search WHO bisa gagal sementara/berubah perilakunya. Kalau kode target
+    // tersedia, jangan langsung menganggap Index tidak terverifikasi.
+    // Endpoint entity ICD-10 tetap dapat dipakai untuk mengambil indexTerm.
+    if (!response.ok) {
+      if (!requestedCode) {
+        return json({
+          valid: false,
+          source: "WHO",
+          version: "ICD-10 2010",
+          status: "unverified",
+          error: "WHO index search failed",
+          http_status: response.status,
+          detail: detail.slice(0, 500)
+        }, 502);
+      }
+
+      const direct = await getEntity(requestedCode, token);
+      if (!direct.ok || !direct.data) {
+        return json({
+          valid: false,
+          source: "WHO",
+          version: "ICD-10 2010",
+          status: "unverified",
+          error: "WHO index search and direct code lookup failed",
+          search_http_status: response.status,
+          direct_http_status: direct.status,
+          detail: detail.slice(0, 300)
+        }, 502);
+      }
+
+      const rawTerms = direct.data.indexTerm || direct.data.IndexTerm || [];
+      const directTerms = Array.isArray(rawTerms) ? rawTerms.map(labelOf).filter(Boolean) : [];
+      const normalize = value => String(value || "")
+        .toLowerCase()
+        .replace(/<[^>]*>/g, "")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+      const needle = normalize(term);
+      const directMatch = directTerms.some(item => {
+        const candidate = normalize(item);
+        return candidate === needle || candidate.includes(needle) || needle.includes(candidate);
+      });
+
+      if (!directMatch) {
+        return json({
+          valid: true,
+          source: "WHO",
+          version: "ICD-10 2010",
+          status: "unverified",
+          term,
+          count: 0,
+          results: [],
+          reason: `WHO search gagal dan kode ${requestedCode} tidak memiliki indexTerm yang cocok dengan "${term}".`,
+          search_http_status: response.status
+        });
+      }
+
+      matches = [{
+        id: direct.data["@id"] || null,
+        code: requestedCode,
+        title: stripHtml(
+          labelOf(direct.data.title) ||
+          labelOf(direct.data.prefLabel) ||
+          labelOf(direct.data.label) ||
+          ""
+        ),
+        score: null,
+        index_terms: directTerms,
+        title_is_search_result: false,
+        important: true
+      }];
+    }
 
     // Bila pencarian lead term tidak menempatkan kode target di hasil teratas,
     // ambil entity kode secara langsung. Ini tetap aman karena kita hanya
