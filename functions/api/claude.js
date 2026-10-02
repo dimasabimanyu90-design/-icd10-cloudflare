@@ -422,8 +422,22 @@ function buildWHOIndexPath(indexResult, diagnosis) {
   const match = indexResult.results.find(item => String(item?.code || '').trim().toUpperCase() === code);
   if (!match) return null;
 
-  const leadTerm = extractLeadTerm(diagnosis);
+  const aiLeadTerm = extractLeadTerm(diagnosis);
   const terms = [...new Set((match.index_terms || []).map(normalizeIndexLabel).filter(Boolean))];
+
+  // Untuk hasil direct lookup, WHO menjadi sumber lead term. Jika search
+  // cocok, gunakan istilah WHO yang paling dekat dengan query; jika tidak,
+  // gunakan indexTerm WHO pertama sebagai representasi resmi.
+  const normalizedAI = normalizeIndexLabel(aiLeadTerm).toLowerCase();
+  const matchedWHOIndexTerm = terms.find(term => {
+    const normalized = term.toLowerCase();
+    return normalized === normalizedAI ||
+      normalized.includes(normalizedAI) ||
+      normalizedAI.includes(normalized);
+  });
+  const leadTerm = match.direct_lookup
+    ? (matchedWHOIndexTerm || terms[0] || aiLeadTerm)
+    : (matchedWHOIndexTerm || aiLeadTerm);
 
   const path = [];
   if (leadTerm) path.push(leadTerm);
