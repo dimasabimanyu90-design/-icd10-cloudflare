@@ -219,20 +219,10 @@ export async function onRequestGet(context) {
         return candidate === needle || candidate.includes(needle) || needle.includes(candidate);
       });
 
-      if (!directMatch) {
-        return json({
-          valid: true,
-          source: "WHO",
-          version: "ICD-10 2010",
-          status: "unverified",
-          term,
-          count: 0,
-          results: [],
-          reason: `WHO search gagal dan kode ${requestedCode} tidak memiliki indexTerm yang cocok dengan "${term}".`,
-          search_http_status: response.status
-        });
-      }
-
+      // Kode target adalah anchor utama. Jika entity WHO berhasil ditemukan,
+      // gunakan indexTerm milik entity tersebut walaupun lead term AI tidak
+      // identik dengan salah satu istilah WHO. Ini menghindari false-unverified
+      // akibat perbedaan istilah/ranking search.
       matches = [{
         id: direct.data["@id"] || null,
         code: requestedCode,
@@ -245,7 +235,9 @@ export async function onRequestGet(context) {
         score: null,
         index_terms: directTerms,
         title_is_search_result: false,
-        important: true
+        important: true,
+        direct_lookup: true,
+        search_term_match: directMatch
       }];
     }
 
@@ -264,17 +256,17 @@ export async function onRequestGet(context) {
           return candidate === needle || candidate.includes(needle) || needle.includes(candidate);
         });
 
-        if (directMatch) {
-          matches.unshift({
-            id: direct.data['@id'] || null,
-            code: requestedCode,
-            title: stripHtml(labelOf(direct.data.title) || labelOf(direct.data.prefLabel) || labelOf(direct.data.label) || ""),
-            score: null,
-            index_terms: directTerms,
-            title_is_search_result: false,
-            important: true
-          });
-        }
+        matches.unshift({
+          id: direct.data['@id'] || null,
+          code: requestedCode,
+          title: stripHtml(labelOf(direct.data.title) || labelOf(direct.data.prefLabel) || labelOf(direct.data.label) || ""),
+          score: null,
+          index_terms: directTerms,
+          title_is_search_result: false,
+          important: true,
+          direct_lookup: true,
+          search_term_match: directMatch
+        });
       }
     }
 
