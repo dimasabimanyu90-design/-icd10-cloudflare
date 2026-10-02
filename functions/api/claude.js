@@ -357,6 +357,41 @@ function extractWHOOfficialTitle(entity) {
   return extract(value);
 }
 
+function extractWHOText(value) {
+  if (!value) return [];
+  if (typeof value === 'string') return value.trim() ? [value.trim()] : [];
+  if (Array.isArray(value)) return value.flatMap(extractWHOText);
+  if (typeof value === 'object') {
+    return extractWHOText(value['@value'] ?? value.value ?? value.label ?? value.term ?? value.title ?? null);
+  }
+  return [];
+}
+
+function extractWHOCrossReferences(value) {
+  if (!Array.isArray(value)) return [];
+  return value.map(item => {
+    if (typeof item === 'string') return { term: item.trim() };
+    if (!item || typeof item !== 'object') return null;
+    return {
+      term: extractWHOText(item.label ?? item.term ?? item.title ?? item)[0] || null,
+      foundationReference: item.foundationReference || null,
+      linearizationReference: item.linearizationReference || null
+    };
+  }).filter(item => item && item.term);
+}
+
+function buildWHOGuidance(entity) {
+  if (!entity) return null;
+  const inclusion = extractWHOText(entity.inclusion);
+  const exclusion = extractWHOCrossReferences(entity.exclusion);
+  const note = extractWHOText(entity.note);
+  const codingHint = extractWHOText(entity.codingHint);
+
+  if (!inclusion.length && !exclusion.length && !note.length && !codingHint.length) return null;
+
+  return { inclusion, exclusion, note, codingHint };
+}
+
 async function validateDiagnosesWithWHO(diagnoses, request) {
   if (!Array.isArray(diagnoses) || diagnoses.length === 0) {
     return { diagnoses: diagnoses || [], validations: [], allValid: true, checked: 0, unverified: 0 };
@@ -402,7 +437,8 @@ async function validateDiagnosesWithWHO(diagnoses, request) {
           source: 'WHO',
           version: 'ICD-10 2010',
           title: whoTitle,
-          parent: data.entity?.parent || null
+          parent: data.entity?.parent || null,
+          who_guidance: buildWHOGuidance(data.entity)
         };
 
         // WHO menjadi sumber utama untuk nama resmi kode.
@@ -411,6 +447,10 @@ async function validateDiagnosesWithWHO(diagnoses, request) {
         if (whoTitle) {
           diagnosis.description = whoTitle;
           diagnosis.who_official_title = whoTitle;
+        }
+
+        if (result.who_guidance) {
+          diagnosis.who_guidance = result.who_guidance;
         }
 
         results.push(result);
@@ -609,7 +649,9 @@ export async function onRequestPost(context) {
               type: result.source === 'LOCAL_IM' ? 'IM_VALID' : 'WHO_VALID',
               message: result.source === 'LOCAL_IM'
                 ? `ICD-10 IM <strong>${result.code}</strong> dilewati dari validasi WHO karena merupakan kode Indonesian Modification.`
-                : `ICD-10 <strong>${result.code}</strong> terdaftar di WHO ICD-10 2010: ${result.title || '-'}.`
+                : `ICD-10 <strong>${result.code}</strong> terdaftar di WHO ICD-10 2010: ${result.title || '-'}.` +
+                  (result.who_guidance?.codingHint?.length ? ` WHO Coding Hint tersedia (${result.who_guidance.codingHint.length}).` : '') +
+                  (result.who_guidance?.exclusion?.length ? ` WHO Exclusion tersedia (${result.who_guidance.exclusion.length}).` : '')
             });
           } else if (result.status === 'invalid') {
             parsed.validations.push({
