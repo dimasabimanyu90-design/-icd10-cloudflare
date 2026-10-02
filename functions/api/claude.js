@@ -434,39 +434,65 @@ function buildWHOIndexPath(indexResult, diagnosis) {
   });
   const matchedTerm = matchedWHOIndexTerm || terms[0] || aiLeadTerm;
 
-  // Volume 3 hierarchy mengikuti lead_term_path dari AI.
-  // WHO dipakai untuk memverifikasi kecocokan kode, bukan untuk
-  // membuat level hierarchy dari tanda koma.
-  const aiPath = String(diagnosis?.lead_term_path || '').trim();
-  const hierarchyLines = aiPath
-    ? aiPath.split(/\\r?\\n/).map(line => line.trimEnd()).filter(Boolean)
+  // Volume 3 hierarchy harus memakai struktur IndexTerm WHO bila tersedia.
+  // WHO IndexTerm dapat membawa separator " - ", " -- ", " --- " yang
+  // merepresentasikan level modifier pada Alphabetical Index.
+  // lead_term_path AI hanya dipakai sebagai fallback jika WHO tidak
+  // mengembalikan hierarchy terstruktur.
+  let leadTerm = aiLeadTerm || matchedTerm;
+  let modifiers = [];
+
+  const whoHierarchy = Array.isArray(match.index_hierarchy)
+    ? match.index_hierarchy
     : [];
-  const parsedHierarchy = hierarchyLines.map(line => {
-    const match = line.match(/^(\\s*)(-+)?\\s*(.*)$/);
-    return {
-      level: (match?.[2] || '').length,
-      text: normalizeIndexLabel(match?.[3] || line)
-    };
-  }).filter(item => item.text);
 
-  let leadTerm = parsedHierarchy.find(item => item.level === 0)?.text || aiLeadTerm || matchedTerm;
-  let modifiers = parsedHierarchy
-    .filter(item => item.level > 0)
-    .map(item => ({ level: item.level, text: item.text }));
+  if (whoHierarchy.length > 0) {
+    const normalizedHierarchy = whoHierarchy
+      .map(item => ({
+        level: Number(item?.level || 0),
+        text: normalizeIndexLabel(item?.text || '')
+      }))
+      .filter(item => item.text);
 
-  // AI kadang menaruh kode pada baris terakhir terpisah.
-  const codeLine = parsedHierarchy.find(item =>
-    item.text.toUpperCase().startsWith(code + ' ')
-  );
-  if (codeLine && modifiers.length > 0) {
-    const target = modifiers[modifiers.length - 1];
-    const remainder = codeLine.text.slice(code.length).trim();
-    target.text = remainder ? target.text + ' ' + code + ' ' + remainder : target.text + ' ' + code;
+    const root = normalizedHierarchy.find(item => item.level === 0);
+    if (root) {
+      leadTerm = root.text;
+      modifiers = normalizedHierarchy
+        .filter(item => item.level > 0)
+        .map(item => ({ level: item.level, text: item.text }));
+    }
   }
 
-  if (!aiPath) {
-    leadTerm = matchedTerm || aiLeadTerm;
-    modifiers = [];
+  if (modifiers.length === 0) {
+    const aiPath = String(diagnosis?.lead_term_path || '').trim();
+    const hierarchyLines = aiPath
+      ? aiPath.split(/\\r?\\n/).map(line => line.trimEnd()).filter(Boolean)
+      : [];
+
+    const parsedHierarchy = hierarchyLines.map(line => {
+      const lineMatch = line.match(/^(\\s*)(-+)?\\s*(.*)$/);
+      return {
+        level: (lineMatch?.[2] || '').length,
+        text: normalizeIndexLabel(lineMatch?.[3] || line)
+      };
+    }).filter(item => item.text);
+
+    const aiRoot = parsedHierarchy.find(item => item.level === 0);
+    if (aiRoot) leadTerm = aiRoot.text;
+    modifiers = parsedHierarchy
+      .filter(item => item.level > 0)
+      .map(item => ({ level: item.level, text: item.text }));
+
+    const codeLine = parsedHierarchy.find(item =>
+      item.text.toUpperCase().startsWith(code + ' ')
+    );
+    if (codeLine && modifiers.length > 0) {
+      const target = modifiers[modifiers.length - 1];
+      const remainder = codeLine.text.slice(code.length).trim();
+      target.text = remainder
+        ? target.text + ' ' + code + ' ' + remainder
+        : target.text + ' ' + code;
+    }
   }
 
   const modifierTexts = modifiers.map(item => item.text);

@@ -69,6 +69,56 @@ function stripHtml(value) {
   return String(value ?? "").replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
 }
 
+// WHO IndexTerm dapat mengembalikan struktur Volume 3 dalam satu string,
+// misalnya "Arthritis, arthritic - rheumatoid" atau
+// "type 2 diabetes mellitus -- ophthalmic complications".
+function parseIndexHierarchy(term, code = "") {
+  let text = stripHtml(term);
+  if (!text) return [];
+
+  const normalizedCode = String(code || "").trim().toUpperCase();
+  if (normalizedCode) {
+    text = text.replace(new RegExp("^" + normalizedCode + "\\s*[-–—:]?\\s*", "i"), "").trim();
+  }
+
+  const parts = [];
+  const re = /\s+(-{1,3})\s+/g;
+  let cursor = 0;
+  let level = 0;
+  let match;
+
+  while ((match = re.exec(text))) {
+    const before = text.slice(cursor, match.index).trim();
+    if (before) parts.push({ level, text: before });
+    level = match[1].length;
+    cursor = re.lastIndex;
+  }
+
+  const tail = text.slice(cursor).trim();
+  if (tail) parts.push({ level, text: tail });
+
+  return parts;
+}
+
+function chooseIndexHierarchy(indexTerms, code = "") {
+  const candidates = (Array.isArray(indexTerms) ? indexTerms : [])
+    .map(term => ({
+      term: String(term || "").trim(),
+      hierarchy: parseIndexHierarchy(term, code)
+    }))
+    .filter(item => item.term && item.hierarchy.length);
+
+  if (!candidates.length) return [];
+
+  candidates.sort((a, b) => {
+    const maxA = Math.max(...a.hierarchy.map(x => x.level));
+    const maxB = Math.max(...b.hierarchy.map(x => x.level));
+    return (maxB - maxA) || (b.hierarchy.length - a.hierarchy.length);
+  });
+
+  return candidates[0].hierarchy;
+}
+
 function extractSearchResults(data) {
   const raw = data?.destinationEntities || data?.DestinationEntities || [];
   if (!Array.isArray(raw)) return [];
@@ -290,9 +340,13 @@ export async function onRequestGet(context) {
 
       const tabularPath = await buildParentChain(match.code, token);
 
+      const uniqueIndexTerms = [...new Set(indexTerms)];
+      const indexHierarchy = chooseIndexHierarchy(uniqueIndexTerms, match.code);
+
       results.push({
         ...match,
-        index_terms: [...new Set(indexTerms)],
+        index_terms: uniqueIndexTerms,
+        index_hierarchy: indexHierarchy,
         tabular_path: tabularPath,
         path_display: tabularPath.map((item, i) => ({
           level: i + 1,
@@ -309,7 +363,7 @@ export async function onRequestGet(context) {
       version: "ICD-10 2010",
       term,
       count: results.length,
-      note: "index_terms berasal dari WHO Volume 3 Index API. path_display adalah hierarki Volume 1 Tabular dari parent entity WHO. API WHO tidak menyediakan level indentasi cetak Volume 3, sehingga aplikasi tidak mengarang --/--- untuk Index.",
+      note: "index_terms dan index_hierarchy berasal dari WHO Volume 3 Index API; path_display tetap merupakan hierarki Volume 1 Tabular.",
       results
     });
   } catch (error) {
