@@ -468,7 +468,7 @@ function buildWHOIndexPath(indexResult, diagnosis) {
     // seperti "Diabetes mellitus - type 2 -- with ...". Jangan biarkan
     // seluruh string tersebut menjadi satu lead term.
     const whoTermHierarchy = String(matchedTerm || '').trim()
-      .split(/\\s+(-{1,3})\\s+/)
+      .split(/\s+(-{1,3})\s+/)
       .map(part => part.trim())
       .filter(Boolean);
 
