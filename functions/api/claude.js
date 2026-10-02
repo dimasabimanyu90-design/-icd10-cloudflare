@@ -859,8 +859,7 @@ export async function onRequestPost(context) {
             status: whoIndexResult.unverified === 0 ? 'passed' : 'unverified',
             checked: whoIndexResult.checked,
             unverified: whoIndexResult.unverified,
-            note: 'WHO Index digunakan sebagai verifikasi lead term dan kecocokan kode; hierarki cetak Volume 3 tidak diinventasikan oleh AI.'
-          },
+                      },
           idrg: {
             status: 'prompt_rules',
             note: 'Aturan ICS/iDRG masih dijalankan oleh prompt; belum merupakan validator kode terpisah.'
