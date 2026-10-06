@@ -449,13 +449,13 @@ async function resolveWHOIndexReferences(diagnosis, request, lookup) {
 // Targeted contradiction checks; this is not a complete clinical coding engine.
 function auditClinicalCoding(parsed, clinicalText) {
   const input = String(clinicalText || '');
-  const normalize = value => String(value || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const normalize = value => String(value || '').normalize('NFKC').toLowerCase().replace(/[‐‑‒–—−]/g, '-').replace(/\s+/g, ' ').trim();
   const warnings = [];
   for (const diagnosis of parsed.diagnoses || []) {
     const quote = String(diagnosis.documentation_quote || '');
     const supportedQuote = quote && normalize(input).includes(normalize(quote));
     const issues = [];
-    const unspecifiedOrganism = /(?:tidak ada|tanpa) (?:kuman|organisme) spesifik|(?:kuman|organisme)(?: penyebab)? (?:belum|tidak) (?:diketahui|teridentifikasi)|organism (?:unknown|unspecified)/i.test(input);
+    const unspecifiedOrganism = /(?:tidak ada|tanpa) (?:kuman|organisme) spesifik|(?:kuman|organisme)(?: penyebab)? (?:belum|tidak) (?:diketahui|teridentifikasi)|(?:tidak|belum) (?:menyebut(?:kan)?|mencantumkan|mengidentifikasi|menentukan) (?:kuman|organisme|patogen)(?: spesifik)?|organism (?:unknown|unspecified)/i.test(normalize(input));
     const unsupportedPattern = diagnosis.code === 'J18.0'
       ? !/bronchopneumonia|bronkopneumonia|bronchial pneumonia/i.test(quote)
       : diagnosis.code === 'J18.1' && !/\b(?:lobar|lobaris)\b/i.test(quote);

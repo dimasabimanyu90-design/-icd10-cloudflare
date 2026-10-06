@@ -27,5 +27,27 @@ const fs = require('node:fs');
  assert.equal(ambiguous.diagnoses[0].code,'J18.9');
  assert.equal(ambiguous.diagnoses[0].coding_adjustment.original_code,'J18.1');
  assert.ok(correction.some(x=>x.message.includes('dikoreksi sementara')));
+ const html = fs.readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');
+ const preset = html.match(/7: `([\s\S]*?)`\s*\n};/)[1];
+ const fromPreset = {diagnoses:[{role:'DU',code:'J18.1',documentation_quote:'pneumonia lobus kanan atas, community-acquired.'}],procedures:[]};
+ rules.auditClinicalCoding(fromPreset,preset);
+ assert.equal(fromPreset.diagnoses[0].code,'J18.9', 'Actual Pneumonia iDRG button must normalize unsupported J18.1');
+ for (const wording of ['Dokter TIDAK menyebut kuman spesifik.', 'Dokter tidak menyebutkan organisme spesifik.', 'Patogen belum diketahui. Kuman belum teridentifikasi.', 'Tidak ada kuman spesifik.']) {
+  const item = {diagnoses:[{code:'J18.1',documentation_quote:'pneumonia lobus kanan atas, community-acquired.'}],procedures:[]};
+  rules.auditClinicalCoding(item, 'Diagnosis pneumonia lobus kanan atas, community-acquired. '+wording);
+  assert.equal(item.diagnoses[0].code,'J18.9',wording);
+ }
+ const unicodeQuote = {diagnoses:[{code:'J18.1',documentation_quote:'pneumonia lobus kanan atas, community-acquired.'}],procedures:[]};
+ rules.auditClinicalCoding(unicodeQuote, preset.replace('community-acquired','community‑acquired'));
+ assert.equal(unicodeQuote.diagnoses[0].code,'J18.9');
+ for (const [quote,expected] of [['pneumonia lobaris','J18.1'],['bronkopneumonia','J18.0']]) {
+  const valid={diagnoses:[{code:expected,documentation_quote:quote}],procedures:[]};
+  rules.auditClinicalCoding(valid, quote+'. Dokter TIDAK menyebut kuman spesifik.');
+  assert.equal(valid.diagnoses[0].code,expected);
+ }
+ const knownCause={diagnoses:[{code:'J18.1',documentation_quote:'pneumonia lobus kanan atas, community-acquired.'}],procedures:[]};
+ rules.auditClinicalCoding(knownCause,'pneumonia lobus kanan atas, community-acquired. Dokter menyebut kuman spesifik.');
+ assert.equal(knownCause.diagnoses[0].code,'J18.1');
+ assert.equal(knownCause.diagnoses[0].clinical_validation.status,'review_required');
  console.log('PASS: pneumonia documentation, essential source branches, wrong-code block, laboratory evidence');
 })();
