@@ -40,47 +40,47 @@ const PROC_KEYWORDS = {
   '00.66': ['pci','angioplasti','balloon','ptca','kateterisasi intervensi','primary pci','percutaneous coronary','angioplasty'],
   '36.06': ['bare metal stent','bms','stent bms'],
   '36.07': ['drug eluting stent','des','stent des','drug-eluting stent','stent koroner','pemasangan stent','stent lad','stent rca','stent lcx'],
-  '36.01': ['cabg','bypass','coronary artery bypass','bpas'],
+
   '37.21': ['kateterisasi jantung kanan','right heart cath'],
   '37.22': ['kateterisasi jantung kiri','left heart cath','coronary angiography','angiografi koroner'],
-  '87.62': ['angiografi koroner','coronary angiography','kateterisasi jantung'],
+
   '54.11': ['laparotomi','laparotomy','eksplorasi laparotomi'],
   '54.19': ['laparotomi','laparotomy'],
   '47.01': ['appendektomi laparoskopik','laparoscopic appendectomy','apendektomi laparoskopik'],
   '47.09': ['appendektomi','apendektomi','appendectomy','operasi usus buntu'],
-  '51.22': ['kolesistektomi laparoskopik','laparoscopic cholecystectomy','lap chole'],
-  '51.23': ['kolesistektomi','cholecystectomy','angkat kantung empedu'],
+  '51.23': ['kolesistektomi laparoskopik','laparoscopic cholecystectomy','lap chole'],
+  '51.22': ['kolesistektomi','cholecystectomy','angkat kantung empedu'],
   '53.00': ['herniorrafi','hernia repair','repair hernia','herniorafi'],
-  '53.05': ['hernia laparoskopik','laparoscopic hernia','repair hernia laparoskopik'],
+
   '46.10': ['kolostomi','colostomy'],
   '46.13': ['kolostomi permanen','permanent colostomy'],
   '45.73': ['hemikolektomi kanan','right hemicolectomy'],
   '45.75': ['hemikolektomi kiri','left hemicolectomy'],
   '52.7':  ['whipple','pancreaticoduodenectomy','pankreatikoduodenektomi'],
   '44.13': ['gastroskopi','gastroscopy','endoskopi atas','upper endoscopy','ugie'],
-  '45.13': ['kolonoskopi','colonoscopy'],
-  '45.23': ['endoskopi usus halus','small bowel endoscopy'],
+  '45.23': ['kolonoskopi','colonoscopy'],
+  '45.13': ['endoskopi usus halus','small bowel endoscopy'],
   '52.14': ['ercp','endoscopic retrograde'],
   '51.11': ['ercp','erc','cholangiography'],
   '57.6':  ['sistektomi total','total cystectomy'],
-  '60.5':  ['turp','transurethral prostatectomy','prostatektomi transurethral'],
+
   '60.29': ['prostatektomi','prostatectomy'],
   '79.05': ['reduksi tertutup','closed reduction'],
-  '79.15': ['orif','open reduction internal fixation','fiksasi interna'],
+
   '79.35': ['nail intramedular','intramedullary nail','im nail','nailing femur'],
   '79.36': ['nail tibia','tibia nail','im nail tibia'],
-  '81.54': ['total hip replacement','thr','hip replacement','ganti sendi panggul'],
-  '81.55': ['total knee replacement','tkr','knee replacement','ganti sendi lutut'],
+  '81.51': ['total hip replacement','thr','hip replacement','ganti sendi panggul'],
+  '81.54': ['total knee replacement','tkr','knee replacement','ganti sendi lutut'],
   '77.35': ['osteotomi femur','osteotomy femur'],
   '74.1':  ['sc','sectio','cesar','caesarean','operasi cesar','sctp','seksio sesarea'],
   '65.29': ['kistektomi','cystectomy','eksisi kista','angkat kista','buang kista','reseksi kista ovarium'],
-  '65.31': ['salpingo-oophorectomy bilateral','bilateral oophorectomy','angkat kedua ovarium tuba'],
+
   '65.39': ['oophorectomy unilateral','angkat ovarium unilateral'],
   '65.51': ['bilateral oophorectomy','angkat kedua ovarium'],
   '65.61': ['bilateral salpingo-oophorectomy','angkat kedua ovarium dan tuba bilateral'],
   '13.72': ['fakoemulsifikasi','phacoemulsification','phaco','iol','intraocular lens','lensa tanam'],
   '13.41': ['fakoemulsifikasi','phacoemulsification','phaco'],
-  '13.71': ['ecce','extracapsular','ekstrakapsular'],
+
   '14.24': ['laser fotokoagulasi','photocoagulation','laser retina','laser fotokoagulasi retina','laser photocoagulation','destruction of chorioretinal'],
   '14.25': ['fotokoagulasi tipe tidak spesifik','photocoagulation unspecified type'],
   '16.49': ['enukleasi','enucleation','angkat bola mata'],
@@ -88,12 +88,7 @@ const PROC_KEYWORDS = {
   '01.24': ['kraniotomi','craniotomy','trepanasi','bur hole'],
   '02.12': ['kraniektomi','craniectomy','dekompresi kranial','decompressive craniectomy'],
   '03.09': ['laminektomi','laminectomy','eksplorasi spinal','dekompresi spinal'],
-  '39.61': ['endarterektomi','endarterectomy','karotis','carotid'],
 
-  '37.23': ['pacemaker','pacu jantung','pemasangan pacemaker','implant pacemaker','ppm'],
-  '37.80': ['icd','implantable cardioverter','defibrilator'],
-  '37.61': ['perikardiektomi','pericardiectomy','perikardiektomi'],
-  '39.25': ['bypass vena safena','saphenous vein bypass','cabg'],
 
   '34.04': ['chest tube','wsd','water seal drainage','selang dada','torakostomi','thoracostomy','pungsi pleura','pleural tap'],
   '34.09': ['torakoskopi','thoracoscopy','vats','video assisted thoracoscopy'],
@@ -110,15 +105,14 @@ const PROC_KEYWORDS = {
   '56.0':  ['nefrostomi','nephrostomy','pielostomi','pyelostomy'],
   '59.8':  ['dj stent','double j','stent ureter','ureteral stent','pemasangan stent ureter'],
 
-  '75.34': ['versi luar','external cephalic version','ecv','versi kepala'],
-  '73.59': ['forseps','forceps','vakum','vacuum extraction','ekstraksi vakum'],
 
   '90.09': ['pcr darah','blood pcr','pemeriksaan darah lain'],
   '91.71': ['analisa cairan pleura','pleural fluid','pungsi pleura','torakosentesis','thoracocentesis'],
   '91.61': ['lumbal pungsi','lumbar puncture','lp ','cairan serebrospinal','csf','pungsi lumbal'],
 
   '99.04': ['transfusi','transfusion','prc','wbc transfusi','transfusi darah','packed red cell'],
-  '99.15': ['injeksi insulin','insulin injection','insulin drip','infus insulin'],
+  '99.17': ['injeksi insulin','insulin injection','insulin drip','infus insulin'],
+  '99.15': ['nutrisi parenteral','parenteral nutrition','tpn'],
   '57.94': ['kateter urin','foley catheter','foley','pemasangan kateter','dauer catheter','dc '],
   '38.93': ['cvp','cvc','central venous','pemasangan cvp','pemasangan cvc','central line'],
   '89.11': ['konsultasi neurologi','neurology consult','penilaian neurologis'],
@@ -139,7 +133,7 @@ function validateProcedures(procedures, inputText) {
 
   for (const proc of procedures) {
     const keywords = PROC_KEYWORDS[proc.code];
-    if (!keywords) continue; // kode tidak ada di map → skip, tidak bisa divalidasi
+    if (!keywords) continue; // kode tidak ada di map → tidak dapat dinilai oleh pemeriksaan kata kunci
     if (proc.code === '90.59') {
       const hasLabKeyword = keywords.some(kw => lowerInput.includes(kw.toLowerCase()));
       if (hasLabNumeric || hasLabKeyword) continue;
@@ -156,3 +150,4 @@ function validateProcedures(procedures, inputText) {
   }
   return warnings;
 }
+
