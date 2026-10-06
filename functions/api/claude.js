@@ -16,7 +16,7 @@ LARANGAN MUTLAK: JANGAN koding prosedur tidak eksplisit di teks.
 DILARANG asumsikan prosedur dari logika klinis/kelaziman.
 
 LAB vs TTV:
-- Nilai lab numerik (Hb, leukosit, GDS, kreatinin, troponin) → WAJIB koding 90.59
+- Nilai lab numerik saja bukan bukti otomatis untuk kode prosedur; gunakan dokumentasi pemeriksaan dan tabular list
 - TTV saja (TD, nadi, suhu, RR, SpO2) tanpa nilai lab → JANGAN koding 90.59
 - PCR/swab nasofaring → 90.41 | Rapid test → 90.59 | Kultur darah → 90.54
 
@@ -28,7 +28,7 @@ PROSEDUR yang DILARANG tanpa kata kunci eksplisit:
 
 CHECKLIST PROSEDUR sebelum finalisasi:
 1. Kata kunci prosedur ada di teks? Tidak → hapus
-2. Ada nilai lab numerik? Ya → wajib 90.59. Hanya TTV? → hapus 90.59
+2. Kode pemeriksaan laboratorium harus didukung dokumentasi pemeriksaan, bukan hanya angka hasil atau TTV
 
 ## DU SELECTION (WHO ICD-10 Vol.2 + ICS iDRG)
 Pilih kondisi yang PALING BANYAK menggunakan sumber daya.
@@ -105,12 +105,11 @@ MB3: DU=gejala dari kondisi DS → reseleksi DS definitif jadi DU.
 MB4: DU=umum, DS=lebih spesifik → pilih spesifik jadi DU.
   Ex: DU=CVA, DS=Perdarahan otak → DU=I61.9
 MB5: Diagnosis alternatif → kode gejala. Dua dx bersamaan → PERTAMA ditulis DPJP.
-  Ex: "kolesistitis atau pankreatitis" → DU=K81.0
+  Diagnosis alternatif wajib ditinjau menurut aturan MB5 dan dokumentasi; jangan memilih kode spesifik tanpa bukti.
 WAJIB WARNING di validations[] jika Rule MB diterapkan.
 
 ### PROSEDUR OMIT CODE (tidak dikoding jika diikuti prosedur utama):
-Craniotomy, Laparotomy, Laminectomy, Sternotomy, Thoracotomy, Arthrotomy = pendekatan operasi.
-KECUALI jika itu SATU-SATUNYA tindakan. Ex: Laparotomy+appendektomi → kode appendektomi saja.
+Jangan otomatis menghapus kode pendekatan operasi. Periksa catatan omit code pada indeks/tabular dan dokumentasi tindakan; bila tidak tersedia, tandai untuk tinjau manual.
 
 ### URUTAN PROSEDUR iDRG: DU dulu → komplikasi → komorbid. Prioritas KLINIS bukan waktu.
 
@@ -323,11 +322,6 @@ function buildPrompt(clinicalText, langInstruction) {
 // ── WHO ICD-10 2010 VALIDATION ──
 // WHO validator tetap menjadi Layer 1. Hasil AI tidak dianggap final
 // sebelum setiap diagnosis ICD-10 melewati WHO.
-const IM_CODES_SKIP_WHO = new Set([
-  'I49.00','I49.01','I49.09','N93.00','N93.01','R51.0','G04.3',
-  'K01.17','94.270','94.271','57.13','G47.31'
-]);
-
 function extractWHOOfficialTitle(entity) {
   if (!entity) return null;
 
@@ -552,7 +546,7 @@ async function validateDiagnosesWithWHOIndex(diagnoses, request) {
 
   for (const diagnosis of diagnoses) {
     const code = String(diagnosis?.code || '').trim().toUpperCase();
-    if (!code || IM_CODES_SKIP_WHO.has(code)) continue;
+    if (!code || diagnosis.im_reference?.local_extension) continue;
 
     const term = extractLeadTerm(diagnosis);
     if (!term || term.length < 2) {
@@ -647,15 +641,16 @@ async function validateDiagnosesWithWHO(diagnoses, request) {
     const code = String(diagnosis?.code || '').trim().toUpperCase();
     if (!code) continue;
 
-    if (IM_CODES_SKIP_WHO.has(code)) {
+    if (diagnosis.im_reference?.local_extension) {
       const result = {
         code,
-        status: 'valid',
-        valid: true,
+        status: 'unverified',
+        valid: false,
         source: 'LOCAL_IM',
         version: 'ICD-10 Indonesian Modification',
-        reason: 'Kode IM Indonesia tidak divalidasi terhadap WHO ICD-10 base.'
+        reason: 'Kode ditemukan di referensi IM draft; kesesuaian klinis dan aturan coding perlu ditinjau.'
       };
+      unverified++;
       results.push(result);
       diagnosis.who_validation = result;
       continue;
@@ -748,7 +743,8 @@ async function validateDiagnosesWithWHO(diagnoses, request) {
 
 // ── D1 LOOKUP ──
 async function enrichWithD1(items, db) {
-  if (!db || !items || items.length === 0) return items;
+  if (!items || items.length === 0) return items;
+  if (!db) return items.map(i => ({ ...i, _d1_unavailable: true }));
   try {
     const codes = items.map(i => i.code).filter(Boolean);
     if (codes.length === 0) return items;
@@ -774,8 +770,61 @@ async function enrichWithD1(items, db) {
     });
   } catch(e) {
     console.error('D1 lookup error:', e.message);
-    return items.map(i => ({ ...i, volume1_notes: [] }));
+    return items.map(i => ({ ...i, volume1_notes: [], _d1_unavailable: true }));
   }
+}
+
+// Exact-code reference lookup. Draft PDF extraction is not clinical validation.
+async function attachIMReferences(items, db, table, system) {
+  const list = Array.isArray(items) ? items : [];
+  if (!list.length) return { items: list, status: 'not_applicable', matched: 0 };
+  if (!db) return { items: list, status: 'unavailable', matched: 0 };
+  try {
+    const codes = [...new Set(list.map(x => String(x.code || '').trim().toUpperCase()).filter(Boolean))];
+    const rows = [];
+    for (let offset = 0; offset < codes.length; offset += 50) {
+      const batch = codes.slice(offset, offset + 50);
+      const result = await db.prepare(`SELECT code,kind,title_extracted,source_file,pdf_page,review_status,entry_id FROM ${table} WHERE code IN (${batch.map(() => '?').join(',')}) ORDER BY code,pdf_page,entry_id`).bind(...batch).all();
+      rows.push(...(result.results || []));
+    }
+    let matched = 0;
+    const enriched = list.map(item => {
+      const code = String(item.code || '').trim().toUpperCase();
+      const matches = rows.filter(row => row.code === code);
+      if (!matches.length) return { ...item, code };
+      matched++;
+      return { ...item, code, im_reference: {
+        system, status: 'reference_found', coding_validity: 'not_assessed',
+        local_extension: system === 'ICD9' ? /^\d{2}\.\d{3}$/.test(code) : /^[A-Z]\d{2}\.\d{2,3}$/.test(code),
+        ambiguous: matches.length > 1, entries: matches
+      } };
+    });
+    return { items: enriched, status: 'available', matched };
+  } catch {
+    return { items: list, status: 'unavailable', matched: 0 };
+  }
+}
+
+function referenceWarnings(result, label) {
+  if (result.status === 'unavailable') return [{ type: 'WARNING', message: `${label}: referensi IM tidak tersedia; verifikasi manual diperlukan.` }];
+  return result.items.filter(x => x.im_reference).map(x => ({
+    type: 'WARNING', message: `${label} ${x.code}: ditemukan ${x.im_reference.entries.length} entri referensi PDF (halaman ${x.im_reference.entries.map(e => e.pdf_page).join(', ')}). Data draft, kesesuaian coding belum dinilai.${x.im_reference.ambiguous ? ' Ada deskripsi berbeda untuk kode yang sama; wajib tinjau sumber.' : ''}`
+  }));
+}
+
+function validateCodingStructure(parsed) {
+  const warnings = [];
+  for (const [key, pattern] of [['diagnoses', /^[A-Z]\d{2}(?:\.\d{1,3})?$/], ['procedures', /^\d{2}(?:\.\d{1,3})?$/]]) {
+    const seen = new Set();
+    for (const item of (Array.isArray(parsed[key]) ? parsed[key] : [])) {
+      const code = String(item.code || '').trim().toUpperCase();
+      if (!pattern.test(code)) warnings.push({ type: 'WARNING', message: `${key}: format kode tidak sesuai; verifikasi manual.` });
+      if (seen.has(code)) warnings.push({ type: 'WARNING', message: `${key}: kode ${code} berulang; periksa duplikasi.` });
+      seen.add(code);
+      if (key === 'procedures' && /^\d{2}(?:\.\d)?$/.test(code)) warnings.push({ type: 'WARNING', message: `Prosedur ${code}: periksa apakah kategori ini memerlukan subkode lebih rinci.` });
+    }
+  }
+  return warnings;
 }
 
 export async function onRequestPost(context) {
@@ -875,6 +924,10 @@ export async function onRequestPost(context) {
       let enrichedText = text;
       try {
         const parsed = JSON.parse(text);
+        const diagnosisIM = await attachIMReferences(parsed.diagnoses, context.env.ICD10_IM_DB, 'icd10_im_entries', 'ICD10');
+        parsed.diagnoses = diagnosisIM.items;
+        const procedureIM = await attachIMReferences(parsed.procedures, context.env.ICD9_IM_DB, 'icd9_im_entries', 'ICD9');
+        parsed.procedures = procedureIM.items;
 
         // Layer 1A: WHO ICD-10 2010 code/title validation.
         const whoResult = await validateDiagnosesWithWHO(
@@ -889,6 +942,7 @@ export async function onRequestPost(context) {
         );
 
         if (!Array.isArray(parsed.validations)) parsed.validations = [];
+        parsed.validations.push(...referenceWarnings(diagnosisIM, 'ICD-10 IM'), ...referenceWarnings(procedureIM, 'ICD-9-CM IM'), ...validateCodingStructure(parsed));
 
         for (const result of whoResult.validations) {
           if (result.status === 'valid') {
@@ -928,6 +982,8 @@ export async function onRequestPost(context) {
         }
 
         parsed.validation_layers = {
+          icd10_im: { status: diagnosisIM.status, matched: diagnosisIM.matched, coding_validity: 'not_assessed' },
+          icd9_im: { status: procedureIM.status, matched: procedureIM.matched, coding_validity: 'not_assessed' },
           who_icd10_2010: {
             status: whoResult.allValid ? 'passed' : 'review_required',
             checked: whoResult.checked
@@ -946,10 +1002,8 @@ export async function onRequestPost(context) {
         // WHO adalah Layer 1. Unverified bukan berarti invalid, tetapi juga
         // belum boleh dianggap final. iDRG masih berupa prompt rules, jadi
         // finalisasi penuh belum diklaim di sini.
-        parsed.finalized =
-          whoResult.allValid &&
-          whoResult.unverified === 0 &&
-          whoIndexResult.unverified === 0;
+        parsed.reference_checks_passed = whoResult.allValid && whoResult.unverified === 0 && whoIndexResult.unverified === 0;
+        parsed.finalized = false; // Clinical MB/iDRG sequencing still requires review.
         parsed.validation_layers.who_icd10_2010.unverified = whoResult.unverified;
         if (whoResult.unverified > 0) {
           parsed.validation_layers.who_icd10_2010.status = 'unverified';
@@ -957,26 +1011,29 @@ export async function onRequestPost(context) {
 
         if (parsed.procedures && parsed.procedures.length > 0) {
           const db = context.env.ICD9_DB || null;
-          if (db) parsed.procedures = await enrichWithD1(parsed.procedures, db);
+          parsed.procedures = await enrichWithD1(parsed.procedures, db);
 
           // Kode yang gak ketemu di D1 (3.646 kode resmi ICD-9-CM) = kemungkinan
           // besar halusinasi/typo AI. Surface sebagai validation warning biar
           // kelihatan di UI, lalu bersihin flag internal sebelum dikirim.
           const notFoundWarnings = parsed.procedures
-            .filter(p => p._d1_not_found)
+            .filter(p => p._d1_not_found && !p.im_reference)
             .map(p => ({
               type: 'WARNING',
-              message: `Kode prosedur <strong>${p.code}</strong> (${p.description || '-'}) tidak ditemukan di database resmi ICD-9-CM (D1, 3.646 kode). Kemungkinan besar halusinasi AI atau format kode salah — verifikasi manual.`
+              message: `Kode prosedur <strong>${p.code}</strong> (${p.description || '-'}) tidak ditemukan pada lookup ICD-9-CM yang tersedia. Kelengkapan dataset belum tervalidasi — verifikasi manual.`
             }));
           if (notFoundWarnings.length > 0) {
             if (!Array.isArray(parsed.validations)) parsed.validations = [];
             parsed.validations.push(...notFoundWarnings);
           }
-          parsed.procedures = parsed.procedures.map(({ _d1_not_found, ...rest }) => rest);
+          if (parsed.procedures.some(p => p._d1_unavailable)) parsed.validations.push({ type: 'WARNING', message: 'Lookup ICD-9-CM dasar tidak tersedia; verifikasi manual.' });
+          parsed.procedures = parsed.procedures.map(({ _d1_not_found, _d1_unavailable, ...rest }) => rest);
 
-          enrichedText = JSON.stringify(parsed);
         }
-      } catch(e) {}
+        enrichedText = JSON.stringify(parsed);
+      } catch(e) {
+        enrichedText = JSON.stringify({ diagnoses: [], procedures: [], finalized: false, validations: [{ type: 'ERROR', message: 'Hasil tidak dapat diproses atau divalidasi; coba ulang dan verifikasi manual.' }] });
+      }
 
       return new Response(JSON.stringify({ text: enrichedText, model_used: model, quota }), { status: 200, headers: corsHeaders });
     }
@@ -994,3 +1051,4 @@ export async function onRequestOptions() {
     headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Allow-Methods": "POST, OPTIONS" }
   });
 }
+
