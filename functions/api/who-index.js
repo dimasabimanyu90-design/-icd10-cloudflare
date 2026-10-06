@@ -364,7 +364,7 @@ export async function onRequestGet(context) {
     const results = [];
 
     for (const match of matches) {
-      if (!match.code) {
+      if (!match.code || (requestedCode && String(match.code).toUpperCase() !== requestedCode)) {
         results.push({ ...match, tabular_path: [], path_display: [] });
         continue;
       }
