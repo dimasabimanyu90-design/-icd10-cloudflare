@@ -1,0 +1,24 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const root=path.resolve(__dirname,'..');
+(async()=>{
+ const source=fs.readFileSync(path.join(root,'coding-rules.js'),'utf8');
+ const rules=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+ assert.equal(typeof rules.buildPrompt,'function');assert.equal(typeof rules.auditICSContext,'function');
+ assert.equal(rules.validateProcedures([{code:'45.23'}],'kolonoskopi').length,0);
+ assert.equal(rules.validateProcedures([{code:'90.59'}],'Hb 13 leukosit 8000').length,1);
+ assert.equal(rules.validateProcedures([{code:'90.59'}],'pemeriksaan darah').length,0);
+ assert.equal(rules.validateDiagnosisCode('A15.0',{'A15.0':{}}).verified,false,'reference cache must not certify clinical coding');
+ assert.equal(rules.isIMCode('I49.00'),false,'badge must not use a static code allowlist');
+ assert.equal(rules.isIMCode({im_reference:{local_extension:true}}),true);
+ assert.equal(rules.isIMCode({im_reference:{entries:[{title_extracted:'Headache (IM)'}]}}),true);
+ assert.equal(rules.auditICSContext({diagnoses:[],procedures:[]},'').status,'not_applicable');
+ const endpoint=fs.readFileSync(path.join(root,'functions/api/claude.js'),'utf8');
+ assert.ok(endpoint.includes('from "../../coding-rules.js"'));assert.ok(!endpoint.includes('const PROMPT_'));
+ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+ assert.ok(html.includes("from './coding-rules.js'"));assert.ok(!html.includes('validator.js'));assert.ok(!html.includes('const IM_CODES'));
+ assert.ok(!fs.readFileSync(path.join(root,'known-paths.js'),'utf8').includes('function validateDiagnosisCode'));
+ const prompt=rules.buildPrompt('kolesistektomi laparoskopik, THR, kolonoskopi','');
+ assert.ok(prompt.includes('laparoskopik → 51.23'));assert.ok(prompt.includes('THR→81.51'));assert.ok(prompt.includes('Kolonoskopi→45.23'));
+ assert.ok(!prompt.includes('90.59 jika lab numerik'));assert.ok(!prompt.includes('Primary PCI → WAJIB:'));
+ console.log('PASS: native ES-module import, shared browser/server policy, source-backed badges, no clinical approval from cache, corrected legacy shortcuts');
+})().catch(e=>{console.error(e);process.exitCode=1});
