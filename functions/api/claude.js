@@ -89,40 +89,23 @@ Tambahkan validations[] jika ada keraguan/provisional/Rule MB diterapkan.`;
 
 // ── ICS CORE: MB Rules + DU iDRG (selalu aktif, ringkas) ──
 const PROMPT_IDRG_CORE = `
-## ICS v1 KEMENKES RI — CORE RULES
+## PROFIL REFERENSI ICS DRAFT V1 (25-07-2025) — BUKAN PENGESAHAN KLAIM
+Gunakan diagnosis final DPJP dan dokumentasi; semua penerapan/konflik perlu tinjau koder.
+DU (ICS §2.1.1, hal cetak 23–24/PDF 24–25): satu diagnosis final, alasan utama perawatan; jangan pilih kondisi baru selama perawatan sebagai DU. Bila beberapa penyakit menjadi fokus, pertimbangkan keparahan dahulu lalu sumber daya bila tingkat keparahan sama. Jangan menebak diagnosis dari biaya, resep atau angka lab saja.
+MB1 (hal 33/PDF34): kondisi minor/lama/insidental dicatat sebagai DU tetapi kondisi sekunder lebih bermakna dan relevan pengobatan/prosedur/spesialisasi → ajukan reseleksi dengan bukti.
+MB2 (hal34/PDF35): beberapa kondisi dicatat sebagai DU yang tidak dapat dikode bersamaan → pilih alasan utama pelayanan; jika tidak dapat ditentukan, pertimbangkan spesialisasi. Jangan menjadikan spesialisasi satu-satunya bukti.
+MB3 (hal35/PDF36): DU berupa gejala/tanda/masalah dari kondisi sekunder yang telah didiagnosis DAN diobati → ajukan kondisi tersebut sebagai DU.
+MB4 (hal36/PDF37): rincian anatomi/penyebab dari kondisi DU yang sama tersedia dalam resume → gunakan rincian. Penyakit sekunder yang tidak berkaitan tidak boleh otomatis menjadi DU.
+MB5 (hal37/PDF38), DUA CABANG BERBEDA:
+- Gejala utama disertai beberapa kemungkinan penyebab → pilih gejalanya (contoh dokumen: sakit kepala mungkin karena stres/tegangan otot/sinusitis → R51).
+- Dua atau lebih diagnosis alternatif ditulis sebagai DU → menurut profil DRAFT ini pilih yang pertama ditulis DPJP (contoh kolesistitis akut atau pankreatitis akut → K81.0). Ini aturan profil draft, perlu verifikasi dokumentasi dan tinjau; bukan otomatis kode gejala untuk seluruh diagnosis alternatif.
+Catat mb_rule dan mb_trigger_quote. Jangan mengklaim penerapan MB telah diverifikasi otomatis.
+Gejala (hal38/PDF39): jangan rutin menambah gejala yang sudah dijelaskan penyakit terdiagnosis; pengecualian perlu dokumentasi dan aturan spesifik.
+Prosedur (hal53–55/PDF54–56): see/see also harus ditelusuri; omit code berlaku bila indeks menyatakannya dan tindakan sebagai akses untuk tindakan definitif. Bila akses merupakan satu-satunya tindakan, jangan otomatis menghapusnya. Code also hanya ditambahkan jika tindakan terkait benar-benar dilakukan; jangan menganggap semuanya wajib dilakukan.
+Pendokumentasian: tulis documentation_quote untuk SETIAP diagnosis dan tindakan, kutipan singkat persis dari TEKS KLINIS. Jika bukti tidak ada, nyatakan belum terdokumentasi; jangan buat kutipan.
+Isi ics_context: documented_du_quote (DU yang dicatat DPJP, jika ada), mb_rule (MB1–MB5 atau null), mb_trigger_quote, mb5_mode (symptom_with_possible_causes/alternative_diagnoses atau null), first_alternative_code (hanya bila urutan DPJP jelas).
+`;
 
-### DU iDRG: Diagnosis AKHIR/FINAL setelah perawatan selesai.
-Prioritas: parah/mengancam jiwa → sumber daya terbesar (operasi>ICU>bangsal)
-BUKAN penyakit yang muncul SAAT perawatan. Gunakan diagnosis akhir, bukan masuk.
-
-### RULE MB1-MB5 (reseleksi DU jika dokter tidak sesuai kaidah):
-MB1: DU=minor, DS=bermakna+relevan tindakan → reseleksi DS jadi DU.
-  Ex: DU=Sinusitis, DS=Ca endoserviks, tindakan=histerektomi → DU=C53.0
-MB2: Beberapa kondisi sebagai DU → pilih sesuai alasan utama/spesialisasi.
-  Ex: DU=Katarak+Meningitis, Spesialis=Neurologi → DU=G00.3
-MB3: DU=gejala dari kondisi DS → reseleksi DS definitif jadi DU.
-  Ex: DU=Hematuria, DS=Papillomata buli, prosedur=eksisi → DU=D41.4
-MB4: DU=umum, DS=lebih spesifik → pilih spesifik jadi DU.
-  Ex: DU=CVA, DS=Perdarahan otak → DU=I61.9
-MB5: Diagnosis alternatif → kode gejala. Dua dx bersamaan → PERTAMA ditulis DPJP.
-  Diagnosis alternatif wajib ditinjau menurut aturan MB5 dan dokumentasi; jangan memilih kode spesifik tanpa bukti.
-WAJIB WARNING di validations[] jika Rule MB diterapkan.
-
-### PROSEDUR OMIT CODE (tidak dikoding jika diikuti prosedur utama):
-Jangan otomatis menghapus kode pendekatan operasi. Periksa catatan omit code pada indeks/tabular dan dokumentasi tindakan; bila tidak tersedia, tandai untuk tinjau manual.
-
-### URUTAN PROSEDUR iDRG: DU dulu → komplikasi → komorbid. Prioritas KLINIS bukan waktu.
-
-### BUKTI KODING VALID: resume medis dokter, laporan radiologi spesialis, laporan PA, lab diinterpretasi dokter.
-TIDAK VALID: spekulasi dari resep/obat, kultur/lab tanpa konfirmasi dokter di resume.
-
-### CHECKLIST AKHIR:
-□ DU = diagnosis akhir (bukan diagnosis masuk)?
-□ Rule MB diperiksa? □ Omit code prosedur dieliminasi?
-□ Z37.- ada sebagai DS terakhir pada kasus obstetri?
-□ Dagger-asterisk lengkap berpasangan? □ Bukti koding valid?`;
-
-// ── ICS MDC SIRKULASI (MDC 15) ──
 const PROMPT_IDRG_SIRKULASI = `
 ## ICS MDC 15 — SIRKULASI
 - Primary PCI → 00.66 + stent (36.07 DES atau 36.06 BMS) + vessel count (00.40 single/00.41 two/00.42 three/00.43 four+)
@@ -284,12 +267,20 @@ External cause: V01-V99=transport | W=falls | X=environmental | X60-X84=self-har
 S codes: wajib lokasi anatomi + open/closed. Multiple trauma → kode tiap injury terpisah.
 Epilepsi + cedera saat serangan → cedera=DU, epilepsi=DS + kode eksternal (ICS).`;
 
+const PROMPT_ICS_SOURCE_OVERLAY = `
+PRIORITAS REFERENSI: bagian ini dan CORE bersumber dari ICS DRAFT Juli2025 dan presentasi iDRG April2025; keduanya referensi unggahan pengguna, status berlaku saat ini belum diverifikasi. Jika aturan ringkas sebelumnya bertentangan, ikuti CORE/overlay ini untuk profil referensi dan beri warning, jangan sembunyikan konflik.
+Presentasi iDRG hal8: kode harus didukung dokumentasi medis; keberadaan diagnosis/prosedur dalam database tidak membuktikan bahwa tindakan dilakukan atau DU tepat.
+Kemoterapi/Radioterapi RAWAT JALAN saja (presentasi hal46–47): kunjungan kemoterapi → Z51.1 + keganasan; injeksi kemoterapi yang dilakukan → tambahkan 99.25; kemoterapi oral jangan otomatis diberi 99.25. Kunjungan radioterapi → Z51.0 + keganasan + tindakan yang benar-benar diberikan. Jangan memperluas aturan rawat jalan ke semua kasus rawat inap atau semua pasien kanker.
+ICS hal54–55: craniotomy sebagai akses ditambah reseksi tumor → omit akses jika didukung indeks; craniotomy tanpa tindakan definitif lanjutan → jangan otomatis omit.
+Tidak ada diagnosis final/bukti urutan/setting perawatan → minta klarifikasi, jangan mengarang untuk mengisi rules.
+`;
+
 const PROMPT_JSON = `
 REFERENSI INDEKS: ikuti see (wajib), see also (bila informasi terkait belum tercakup), dan see condition (cari nama kondisi yang terdokumentasi).
 Jangan mengarang rujukan atau menandai jalur terverifikasi. condition_term hanya diisi dengan nama kondisi yang ada dalam teks klinis.
 Untuk kondisi multi-modifier, setiap modifier harus diperiksa di indeks dan kode akhir di tabular. Sistem akan memberi tanda unverified bila sumber tidak membuktikan jalur.
 Return ONLY valid JSON:
-{"summary","du_reasoning","validations":[{"type","message"}],"diagnoses":[{"role","code","dagger_asterisk","description","description_id","category","confidence","lead_term","condition_term","lead_term_path","volume1_notes":[{"type","text"}],"paired_with","reasoning"}],"procedures":[{"code","description","description_id","category","confidence","lead_term_path","volume1_notes","reasoning"}]}`;
+{"summary","du_reasoning","ics_context":{"documented_du_quote","mb_rule","mb_trigger_quote","mb5_mode","first_alternative_code"},"validations":[{"type","message"}],"diagnoses":[{"role","code","dagger_asterisk","description","description_id","category","confidence","lead_term","condition_term","lead_term_path","volume1_notes":[{"type","text"}],"paired_with","documentation_quote","reasoning"}],"procedures":[{"code","description","description_id","category","confidence","lead_term_path","volume1_notes","documentation_quote","reasoning"}]}`;
 
 // ── DETECT CASE TYPE & BUILD PROMPT ──
 function buildPrompt(clinicalText, langInstruction) {
@@ -319,7 +310,7 @@ function buildPrompt(clinicalText, langInstruction) {
   if (isSpesialis) rules += '\n' + PROMPT_SPESIALIS;
   if (isTrauma)    rules += '\n' + PROMPT_TRAUMA;
 
-  return rules + '\n\n' + langInstruction + '\n\nTEKS KLINIS:\n' + clinicalText + '\n\n' + PROMPT_JSON;
+  return rules + '\n' + PROMPT_ICS_SOURCE_OVERLAY + '\n\n' + langInstruction + '\n\nTEKS KLINIS:\n' + clinicalText + '\n\n' + PROMPT_JSON;
 }
 
 
@@ -737,6 +728,59 @@ function validateCodingStructure(parsed) {
   return warnings;
 }
 
+const ICS_REFERENCE_PROFILE = {
+  id: 'uploaded-ics-draft-v1-20250725', status: 'draft_reference', clinical_validity: 'not_assessed',
+  sources: [
+    { file: 'ICS Version 1_25072025.pdf', status: 'DRAFT V1', sections: '2.1.1; 2.2.1–2.2.5; 2.3.1', printed_pages: '23–24, 33–38, 53–55', pdf_pages: '24–25, 34–39, 54–56' },
+    { file: '20250414-pedoman-koding-idrg_compress.pdf', status: 'presentation_reference', pdf_pages: '8, 46–47', date: '2025-04-14' }
+  ]
+};
+
+function auditICSContext(parsed, clinicalText) {
+  const normalize = value => String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
+  const original = normalize(clinicalText);
+  const hasQuote = value => normalize(value).length >= 8 && original.includes(normalize(value));
+  const checks = [];
+  const warnings = [];
+  function check(id, passed, message, source) {
+    checks.push({ id, status: passed ? 'evidence_present' : 'review_required', source });
+    if (!passed) warnings.push({ type: 'WARNING', message: `${message} [${source}; profil referensi draft]` });
+  }
+  const diagnoses = Array.isArray(parsed.diagnoses) ? parsed.diagnoses : [];
+  const procedures = Array.isArray(parsed.procedures) ? parsed.procedures : [];
+  const primary = diagnoses.filter(d => d.role === 'DU');
+  if (diagnoses.length) check('single_primary', primary.length === 1, 'Harus ada satu diagnosis utama; periksa pemilihan DU.', 'ICS §2.1.1, hal23–24');
+  for (const [kind, items] of [['diagnosis', diagnoses], ['prosedur', procedures]]) {
+    for (const [index, item] of items.entries()) check(`${kind}_documentation_${index}`, hasQuote(item.documentation_quote),
+      `Bukti tertulis untuk ${kind} nomor ${index + 1} belum cocok dengan teks klinis; verifikasi dokumentasi.`, 'Pedoman iDRG April2025, hal8');
+  }
+  const context = parsed.ics_context && typeof parsed.ics_context === 'object' ? parsed.ics_context : {};
+  if (diagnoses.length) check('documented_primary', hasQuote(context.documented_du_quote),
+    'DU yang dicatat DPJP belum dapat dibuktikan dari teks input; usulan AI perlu ditinjau.', 'ICS §2.1.1, hal23–24');
+  if (context.mb_rule) {
+    const mb = String(context.mb_rule).toUpperCase();
+    const recognized = /^MB[1-5]$/.test(mb);
+    check('mb_rule_identity', recognized, 'Identitas aturan reseleksi tidak dikenali.', 'ICS §2.2, hal33–37');
+    check('mb_trigger_documentation', hasQuote(context.mb_trigger_quote), 'Dasar tertulis reseleksi MB belum cocok dengan teks input.', 'ICS §2.2, hal33–37');
+    if (recognized) {
+      warnings.push({ type: 'WARNING', message: `Usulan Rule ${mb}: bukti kutipan tidak membuktikan ketepatan reseleksi klinis; tinjau diagnosis, hubungan dan pengobatan. [ICS §2.2, hal${32 + Number(mb[2])}; draft]` });
+      if (mb === 'MB5') {
+        const mode = context.mb5_mode;
+        check('mb5_branch', ['symptom_with_possible_causes', 'alternative_diagnoses'].includes(mode), 'MB5 perlu dibedakan antara gejala dengan dugaan penyebab dan diagnosis alternatif.', 'ICS §2.2.5, hal37');
+        if (mode === 'alternative_diagnoses') check('mb5_first_alternative', primary.length === 1 && Boolean(context.first_alternative_code) && context.first_alternative_code === primary[0].code,
+          'Pilihan DU belum cocok dengan diagnosis alternatif pertama yang dilaporkan; verifikasi urutan penulisan DPJP.', 'ICS §2.2.5, hal37');
+      }
+    }
+  }
+  // Bounded, explicit setting checks; never infer outpatient status or delivery route.
+  if (original.includes('rawat jalan') && /kemoterapi\s+(?:injeksi|suntik)/.test(original)) {
+    check('outpatient_chemo_primary', primary.some(d => d.code === 'Z51.1'), 'Kunjungan kemoterapi rawat jalan: periksa DU Z51.1 sesuai tujuan kunjungan.', 'Pedoman iDRG April2025, hal46');
+    check('documented_chemo_injection', procedures.some(p => p.code === '99.25' && hasQuote(p.documentation_quote)), 'Injeksi kemoterapi rawat jalan tercantum: periksa tindakan 99.25 beserta bukti pelaksanaannya.', 'Pedoman iDRG April2025, hal46');
+  }
+  return { profile: ICS_REFERENCE_PROFILE, status: checks.some(c => c.status === 'review_required') ? 'review_required' : 'documentation_checks_passed',
+    clinical_review_required: true, checks, warnings };
+}
+
 export async function onRequestPost(context) {
   const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
@@ -856,6 +900,9 @@ export async function onRequestPost(context) {
         );
 
         if (!Array.isArray(parsed.validations)) parsed.validations = [];
+        const icsAudit = auditICSContext(parsed, clinicalText);
+        parsed.ics_policy = { ...icsAudit, warnings: undefined };
+        parsed.validations.push({ type: 'INFO', message: 'Referensi aturan: ICS DRAFT V1 Juli2025 dan pedoman iDRG April2025; perlu tinjauan koder.' }, ...icsAudit.warnings);
         parsed.validations.push(...referenceWarnings(diagnosisIM, 'ICD-10 IM'), ...referenceWarnings(procedureIM, 'ICD-9-CM IM'), ...validateCodingStructure(parsed));
 
         for (const result of whoResult.validations) {
@@ -909,8 +956,10 @@ export async function onRequestPost(context) {
             unverified: whoIndexResult.unverified,
                       },
           idrg: {
-            status: 'prompt_rules',
-            note: 'Aturan ICS/iDRG masih dijalankan oleh prompt; belum merupakan validator kode terpisah.'
+            status: 'reference_rules_with_documentation_checks',
+            reference_profile: ICS_REFERENCE_PROFILE.id,
+            documentation_status: icsAudit.status,
+            note: 'Pemeriksaan struktur dan kecocokan kutipan berjalan di server; ketepatan MB/DU klinis tetap perlu tinjau manual.'
           }
         };
 
@@ -969,5 +1018,6 @@ export async function onRequestOptions() {
     headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Allow-Methods": "POST, OPTIONS" }
   });
 }
+
 
 
