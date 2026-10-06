@@ -234,7 +234,7 @@ ORIF femur→79.35 | ORIF tibia/fibula→79.36 | THR→81.51 | TKR→81.54
 B95-B96: additional code (bukan dagger/asterisk)
 
 RESPIRATORY:
-SpO2<95% akut→J96.0 DS | kronik→J96.1 DS | unspec→J96.9 DS
+J96.x hanya bila gagal napas didiagnosis dokter. SpO2 rendah saja tidak membuktikan gagal napas.
 
 PNEUMONIA & INFLUENZA:
 - JANGAN otomatis memilih J18.x bila teks secara klinis menghubungkan pneumonia dengan influenza.
@@ -244,7 +244,10 @@ PNEUMONIA & INFLUENZA:
 - HANYA gunakan J18.x bila pneumonia memang tidak ditetapkan sebagai manifestasi/akibat influenza atau etiologinya tidak dikaitkan dengan influenza.
 - Jika teks hanya menyebut "pneumonia dan influenza" tanpa hubungan sebab-akibat yang jelas, jangan mengarang hubungan. Gunakan klarifikasi/validasi klinis; jangan otomatis membuat J18.9 + kode influenza.
 - Jangan menggunakan J10/J11 hanya karena kata "influenza" muncul. Pilih subkategori berdasarkan dokumentasi dan aturan WHO.
-- J18.1=bronchopneumonia (tanpa organisme spesifik dan tidak terkait influenza)
+- J18.0 = bronchopneumonia, unspecified; hanya bila bronchopneumonia/bronkopneumonia tertulis sebagai diagnosis.
+- J18.1 = lobar pneumonia, unspecified; hanya bila dokter menegaskan lobar/lobaris pneumonia, bukan sekadar lokasi lobus pada foto thorax.
+- Pneumonia lobus kanan atas/CAP tanpa pernyataan pola lobar atau broncho dan tanpa organisme → kandidat J18.9; beri catatan klarifikasi pola pneumonia. Jangan menebak bronchopneumonia dari lokasi/infiltrat.
+- Kuman tidak diketahui tidak otomatis berarti pneumonia bakterial (J15.9).
 - J15.x HANYA jika kuman spesifik DIKONFIRMASI dokter di resume medis (bukan hanya hasil lab)
 - Kultur positif tanpa konfirmasi dokter → tetap J18.x
 
@@ -372,9 +375,9 @@ function buildWHOIndexPath(indexResult, diagnosis, term = extractLeadTerm(diagno
   const code = String(diagnosis?.code || '').trim().toUpperCase();
   const candidates = Array.isArray(indexResult?.results) ? indexResult.results : [];
   const match = candidates.find(item => String(item.code || '').toUpperCase() === code &&
-    (item.index_terms || []).some(label => indexTermMatches(label, term) && !parseIndexReference(label)));
+    (item.index_terms || []).some(label => indexTermMatches(label, term) && !parseIndexReference(label) && !/\s+-{1,3}\s+/.test(normalizeIndexLabel(label))));
   if (!match) return null;
-  const sourceTerm = match.index_terms.find(label => indexTermMatches(label, term) && !parseIndexReference(label));
+  const sourceTerm = match.index_terms.find(label => indexTermMatches(label, term) && !parseIndexReference(label) && !/\s+-{1,3}\s+/.test(normalizeIndexLabel(label)));
   // Only source text supplies the hierarchy; AI modifiers are never certified.
   const parts = normalizeIndexLabel(sourceTerm).split(/\s+(-{1,3})\s+/);
   const modifiers = [], levels = [];
@@ -399,6 +402,7 @@ async function resolveWHOIndexReferences(diagnosis, request, lookup) {
   const pending = [];
   const fail = reason => ({ code, status: 'unverified', source: 'WHO_INDEX', lead_term: initial,
     reason, cross_reference_trace: trace, cross_reference_status: 'unverified' });
+  if (diagnosis.clinical_validation?.status === 'review_required') return fail('Kode bertentangan dengan dokumentasi diagnosis; tinjau kecocokan klinis sebelum memvalidasi indeks.');
   // Includes all branches: max four source queries per diagnosis, not per branch.
   for (let step = 0; step < 4; step++) {
     const key = normalizeIndexLabel(term).toLowerCase();
@@ -426,7 +430,7 @@ async function resolveWHOIndexReferences(diagnosis, request, lookup) {
       continue;
     }
     const resolved = buildWHOIndexPath(data, diagnosis, term);
-    if (!resolved) return fail('Tujuan indeks tidak mengarah ke kode hasil coding.');
+    if (!resolved) return fail('Kode hanya ditemukan pada cabang indeks yang modifiernya belum dibuktikan, atau tujuan indeks tidak cocok dengan kode.');
     trace.push({ term, code, source: 'WHO_INDEX', source_text: resolved.index_terms[0], status: 'code_match' });
     if (pending.length) { term = pending.shift(); continue; }
     // AI-proposed directives must be evidenced by the source, not accepted as facts.
@@ -442,6 +446,34 @@ async function resolveWHOIndexReferences(diagnosis, request, lookup) {
 
 
 // ── STRUCTURE AND ICS DOCUMENTATION CHECKS ──
+// Targeted contradiction checks; this is not a complete clinical coding engine.
+function auditClinicalCoding(parsed, clinicalText) {
+  const input = String(clinicalText || '');
+  const normalize = value => String(value || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const warnings = [];
+  for (const diagnosis of parsed.diagnoses || []) {
+    const quote = String(diagnosis.documentation_quote || '');
+    const supportedQuote = quote && normalize(input).includes(normalize(quote));
+    const issues = [];
+    if (!supportedQuote) issues.push('Kutipan diagnosis belum terbukti di input.');
+    if (diagnosis.code === 'J18.0' && (!supportedQuote || !/\b(?:broncho(?:pneumonia)?|bronko(?:pneumonia)?|bronchial pneumonia)\b/i.test(quote)))
+      issues.push('J18.0 memerlukan diagnosis bronchopneumonia/bronkopneumonia; lokasi lobus atau infiltrat saja tidak cukup.');
+    if (diagnosis.code === 'J18.1' && (!supportedQuote || !/\b(?:lobar|lobaris)\b/i.test(quote)))
+      issues.push('J18.1 memerlukan dokumentasi lobar/lobaris pneumonia; lokasi lobus saja perlu klarifikasi.');
+    if (/^J96\./.test(diagnosis.code) && (!supportedQuote || !/gagal napas|respiratory failure/i.test(quote)))
+      issues.push('SpO2 saja tidak membuktikan diagnosis gagal napas.');
+    diagnosis.clinical_validation = {status: issues.length ? 'review_required' : 'no_targeted_contradiction',
+      clinical_validity: 'not_certified', issues};
+    for (const issue of issues) warnings.push({type:'WARNING',message: `Ketidaksesuaian dokumentasi ${diagnosis.code}: ${issue}`});
+  }
+  for (const procedure of parsed.procedures || []) {
+    const quote = String(procedure.documentation_quote || '');
+    if (!quote || !normalize(input).includes(normalize(quote))) warnings.push({type:'WARNING', message:`Prosedur ${procedure.code}: kutipan tindakan belum terbukti; jangan menyimpulkan tindakan dari hasil lab atau kelaziman.`});
+    if (procedure.code === '90.59' && !/pemeriksaan darah|blood examination|mikroskop|microscop/i.test(quote)) warnings.push({type:'WARNING',message:'90.59 tidak dibuktikan oleh nilai GDS/HbA1c saja; periksa tindakan dan deskripsi tabular.'});
+  }
+  return warnings;
+}
+
 function referenceWarnings(result, label) {
   if (result.status === 'unavailable') return [{ type: 'WARNING', message: `${label}: referensi IM tidak tersedia; verifikasi manual diperlukan.` }];
   return result.items.filter(x => x.im_reference).map(x => ({
@@ -729,4 +761,4 @@ function isIMCode(item) {
   return Boolean(ref && (ref.local_extension || (ref.entries || []).some(entry => /\(IM\)/i.test(entry.title_extracted || ''))));
 }
 
-export { buildPrompt, extractLeadTerm, normalizeIndexLabel, parseIndexReference, formatIndexTrace, indexTermMatches, buildWHOIndexPath, resolveWHOIndexReferences, referenceWarnings, validateCodingStructure, ICS_REFERENCE_PROFILE, auditICSContext, validateProcedures, validateDiagnosisCode, validateDiagnoses, isIMCode };
+export { auditClinicalCoding, buildPrompt, extractLeadTerm, normalizeIndexLabel, parseIndexReference, formatIndexTrace, indexTermMatches, buildWHOIndexPath, resolveWHOIndexReferences, referenceWarnings, validateCodingStructure, ICS_REFERENCE_PROFILE, auditICSContext, validateProcedures, validateDiagnosisCode, validateDiagnoses, isIMCode };

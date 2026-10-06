@@ -1,4 +1,4 @@
-import { buildPrompt, extractLeadTerm, normalizeIndexLabel, parseIndexReference, formatIndexTrace, indexTermMatches, buildWHOIndexPath, resolveWHOIndexReferences, referenceWarnings, validateCodingStructure, ICS_REFERENCE_PROFILE, auditICSContext } from "../../coding-rules.js";
+import { auditClinicalCoding, buildPrompt, extractLeadTerm, normalizeIndexLabel, parseIndexReference, formatIndexTrace, indexTermMatches, buildWHOIndexPath, resolveWHOIndexReferences, referenceWarnings, validateCodingStructure, ICS_REFERENCE_PROFILE, auditICSContext } from "../../coding-rules.js";
 
 // HTTP/model and database adapters. Coding policy is in coding-rules.js.
 function extractWHOOfficialTitle(entity) {
@@ -369,6 +369,7 @@ export async function onRequestPost(context) {
       let enrichedText = text;
       try {
         const parsed = JSON.parse(text);
+        const clinicalWarnings = auditClinicalCoding(parsed, clinicalText);
         const diagnosisIM = await attachIMReferences(parsed.diagnoses, context.env.ICD10_IM_DB, 'icd10_im_entries', 'ICD10');
         parsed.diagnoses = diagnosisIM.items;
         for (const diagnosis of parsed.diagnoses) {
@@ -391,6 +392,7 @@ export async function onRequestPost(context) {
         );
 
         if (!Array.isArray(parsed.validations)) parsed.validations = [];
+        parsed.validations.push(...clinicalWarnings);
         const icsAudit = auditICSContext(parsed, clinicalText);
         parsed.ics_policy = { ...icsAudit, warnings: undefined };
         parsed.validations.push({ type: 'INFO', message: 'Referensi aturan: ICS DRAFT V1 Juli2025 dan pedoman iDRG April2025; perlu tinjauan koder.' }, ...icsAudit.warnings);
@@ -402,7 +404,7 @@ export async function onRequestPost(context) {
               type: result.source === 'LOCAL_IM' ? 'IM_VALID' : 'WHO_VALID',
               message: result.source === 'LOCAL_IM'
                 ? `ICD-10 IM <strong>${result.code}</strong> dilewati dari validasi WHO karena merupakan kode Indonesian Modification.`
-                : `ICD-10 <strong>${result.code}</strong> terdaftar di WHO ICD-10 2010: ${result.title || '-'}.` +
+                : `Kode <strong>${result.code}</strong> ditemukan pada tabular WHO ICD-10 2010 (bukan pengesahan kecocokan klinis): ${result.title || '-'}.` +
                   (result.who_guidance?.codingHint?.length ? ` WHO Coding Hint tersedia (${result.who_guidance.codingHint.length}).` : '') +
                   (result.who_guidance?.exclusion?.length ? ` WHO Exclusion tersedia (${result.who_guidance.exclusion.length}).` : '')
             });
@@ -457,7 +459,7 @@ export async function onRequestPost(context) {
         // WHO adalah Layer 1. Unverified bukan berarti invalid, tetapi juga
         // belum boleh dianggap final. iDRG masih berupa prompt rules, jadi
         // finalisasi penuh belum diklaim di sini.
-        parsed.reference_checks_passed = whoResult.allValid && whoResult.unverified === 0 && whoIndexResult.unverified === 0;
+        parsed.reference_checks_passed = clinicalWarnings.length === 0 && whoResult.allValid && whoResult.unverified === 0 && whoIndexResult.unverified === 0;
         parsed.finalized = false; // Clinical MB/iDRG sequencing still requires review.
         parsed.validation_layers.who_icd10_2010.unverified = whoResult.unverified;
         if (whoResult.unverified > 0) {
@@ -482,6 +484,7 @@ export async function onRequestPost(context) {
             }));
           if (notFoundWarnings.length > 0) {
             if (!Array.isArray(parsed.validations)) parsed.validations = [];
+        parsed.validations.push(...clinicalWarnings);
             parsed.validations.push(...notFoundWarnings);
           }
           if (parsed.procedures.some(p => p._d1_unavailable)) parsed.validations.push({ type: 'WARNING', message: 'Lookup ICD-9-CM dasar tidak tersedia; verifikasi manual.' });

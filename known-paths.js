@@ -680,7 +680,7 @@ J15.0 Pneumonia due to Klebsiella pneumoniae`, vol1: [] },
 J15.2 Pneumonia due to staphylococcus`, vol1: [] },
   'J18.1': { path: `Pneumonia
 - lobar J18.1
-J18.1 Lobar pneumonia, unspecified`, vol1: [{"type": "includes", "text": "Bronchopneumonia NOS"}] },
+J18.1 Lobar pneumonia, unspecified`, vol1: [] },
   'J18.9': { path: `Pneumonia
 - unspecified J18.9
 J18.9 Pneumonia, unspecified`, vol1: [] },
