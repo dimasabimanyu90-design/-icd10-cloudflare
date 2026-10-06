@@ -1,0 +1,23 @@
+{
+  "source": "list-of-icd-10im-terbaru_compress.pdf",
+  "entries": 1524,
+  "unique_codes": 1523,
+  "diagnosis_entries": 1352,
+  "morphology_entries": 172,
+  "explicitly_marked_im": 1165,
+  "review_status": "draft",
+  "limitations": [
+    "Not the complete WHO ICD-10 list.",
+    "PDF colors and layout are not retained.",
+    "Titles, notes, code references and page continuations require human review.",
+    "An IM marker is a source label, not proof of coding validity."
+  ],
+  "comparison": {
+    "source": "4a496a26f98c9845.pdf",
+    "entries": 1524,
+    "unique_codes": 1523,
+    "only_primary": [],
+    "only_comparison": [],
+    "note": "Compared extracted code sets only; does not establish document equivalence."
+  }
+}
