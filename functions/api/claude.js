@@ -75,7 +75,7 @@ async function validateDiagnosesWithWHOIndex(diagnoses, request) {
     if (!cache.has(key)) cache.set(key, (async () => {
       const url = new URL('/api/who-index', request.url);
       url.searchParams.set('term', term); url.searchParams.set('code', code); url.searchParams.set('limit', '12');
-      const response = await fetch(url.toString(), { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(10000) });
+      const response = await fetch(url.toString(), { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(20000) });
       return response.ok ? response.json() : null;
     })());
     return cache.get(key);
