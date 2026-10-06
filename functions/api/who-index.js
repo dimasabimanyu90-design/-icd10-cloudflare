@@ -146,6 +146,36 @@ function extractSearchResults(data) {
   }).filter((item) => item.code || item.id);
 }
 
+// The public WHO ICD-10 browser exposes its index matches separately from titles.
+// Accept only detailed terms carrying an explicit destination code, not title hits.
+function extractBrowserIndexResults(html) {
+  const results = [];
+  for (const chunk of String(html).split(/(?=<div[^>]*class="oneentity\b)/)) {
+    const id = chunk.match(/data-stemid="(http:\/\/id\.who\.int\/icd\/release\/10\/2010\/([^"/]+))"/);
+    if (!id) continue;
+    const code = id[2];
+    const terms = [...chunk.matchAll(/<li\s+class="pv elink"[^>]*>([\s\S]*?)<\/li>/g)]
+      .map(m => stripHtml(m[1]).replace(/&amp;/g, '&').replace(/&#39;/g, "'"))
+      .filter(text => text.toUpperCase().endsWith(' ' + code.toUpperCase()))
+      .map(text => text.slice(0, -(code.length + 1)).trim().split('|')
+        .map((part, i) => (i ? '-'.repeat(Math.min(i, 3)) + ' ' : '') + part.trim()).join(' '));
+    if (!terms.length) continue;
+    const title = chunk.match(/<span class="titlelabel[^">]*">([\s\S]*?)<\/span>/);
+    results.push({id: id[1], code, title: stripHtml(title?.[1] || ''), index_terms: terms,
+      index_source: 'WHO_ICD10_BROWSER', source_url: 'https://icd.who.int/browse10/2010/en'});
+  }
+  return results;
+}
+
+async function searchBrowserIndex(term) {
+  const response = await fetch('https://icd.who.int/browse10/2010/en/ACSearch', {
+    method: 'POST', signal: AbortSignal.timeout(12000), headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: new URLSearchParams({q: term}).toString()
+  });
+  return {ok: response.ok, status: response.status,
+    results: response.ok ? extractBrowserIndexResults(await response.text()) : []};
+}
+
 async function getEntity(code, token) {
   const response = await fetch(WHO_BASE_URL + "/" + encodeURIComponent(code), {
     headers: {
@@ -226,12 +256,21 @@ export async function onRequestGet(context) {
     let data = null;
     try { data = detail ? JSON.parse(detail) : null; } catch {}
 
-    let matches = extractSearchResults(data).slice(0, limit);
+    let matches = extractSearchResults(data);
+    let browserStatus = null;
+    if (!response.ok || !matches.some(item => item.index_terms.length &&
+        (!requestedCode || String(item.code).toUpperCase() === requestedCode))) {
+      const browser = await searchBrowserIndex(term).catch(() => ({status: 0, results: []}));
+      browserStatus = browser.status;
+      matches = [...browser.results, ...matches];
+    }
+    matches.sort((a, b) => Number(String(b.code).toUpperCase() === requestedCode) - Number(String(a.code).toUpperCase() === requestedCode));
+    matches = matches.slice(0, limit);
 
     // Search WHO bisa gagal sementara/berubah perilakunya. Kalau kode target
     // tersedia, jangan langsung menganggap Index tidak terverifikasi.
     // Endpoint entity ICD-10 tetap dapat dipakai untuk mengambil indexTerm.
-    if (!response.ok) {
+    if (!response.ok && !matches.length) {
       if (!requestedCode) {
         return json({
           valid: false,
@@ -336,7 +375,7 @@ export async function onRequestGet(context) {
       if (entityResult.ok && entityResult.data) {
         const rawTerms = entityResult.data.indexTerm || entityResult.data.IndexTerm || [];
         if (Array.isArray(rawTerms)) {
-          indexTerms = rawTerms.map(labelOf).filter(Boolean);
+          indexTerms = [...indexTerms, ...rawTerms.map(labelOf).filter(Boolean)];
         }
       }
 
@@ -365,7 +404,9 @@ export async function onRequestGet(context) {
       version: "ICD-10 2010",
       term,
       count: results.length,
-      note: "index_terms dan index_hierarchy berasal dari WHO Volume 3 Index API; path_display tetap merupakan hierarki Volume 1 Tabular.",
+      search_http_status: response.status,
+      browser_http_status: browserStatus,
+      note: "index_terms dan index_hierarchy berasal dari istilah indeks API atau browser ICD-10 resmi WHO; path_display tetap merupakan hierarki Volume 1 Tabular.",
       results
     });
   } catch (error) {
@@ -379,3 +420,4 @@ export async function onRequestGet(context) {
     }, 500);
   }
 }
+
