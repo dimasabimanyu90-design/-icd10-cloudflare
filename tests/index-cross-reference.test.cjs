@@ -1,7 +1,7 @@
 const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path'),assert=require('node:assert/strict');
 const root=path.resolve(__dirname,'..');
 const src=fs.existsSync(path.join(root,'functions/api/claude.js'))?path.join(root,'functions/api/claude.js'):path.join(root,'claude.js');
-const ctx=vm.createContext({Response,URL,AbortSignal,console});vm.runInContext(fs.readFileSync(src,'utf8').replace(/export /g,''),ctx);
+const ctx=vm.createContext({Response,URL,AbortSignal,console});require('./load-coding.cjs')(ctx, root);
 const diagnosis=(extra={})=>({code:'A00.0',lead_term:'Alpha',who_validation:{valid:true},...extra});
 const source=(terms,code='A00.0')=>({valid:true,results:[{code,index_terms:terms,title:'Source title'}]});
 const query=(mapping)=>async(term)=>mapping[term]||{valid:false};
@@ -24,3 +24,4 @@ const request={url:'https://example.test/api/claude'};
  assert.equal(ctx.extractLeadTerm({lead_term_path:'Alpha\n- Beta'}),'Alpha');
  console.log('PASS: source-only hierarchy, term mismatch, see/see also/see condition, missing condition, loops, wrong target code, AI-only referral, tabular failure, ambiguity, bounded traversal, newline parsing');
 })().catch(e=>{console.error(e);process.exitCode=1});
+

@@ -6,12 +6,12 @@ const root = path.resolve(__dirname, '..');
 const read = (repo, local) => fs.readFileSync(fs.existsSync(path.join(root, repo)) ? path.join(root, repo) : path.join(root, local), 'utf8');
 let modelResult;
 const calls=[];
-const ctx=vm.createContext({Response, Request, URL, console, setTimeout, fetch:async(url)=>{
+const ctx=vm.createContext({Response, Request, URL, AbortSignal, console, setTimeout, fetch:async(url)=>{
  calls.push(String(url));
  if(String(url).includes('groq.com')) return Response.json({choices:[{message:{content:JSON.stringify(modelResult)}}]});
  return Response.json({valid:true,entity:{title:'Official title'}});
 }});
-vm.runInContext(read('functions/api/claude.js','functions_api_claude.js').replace(/export /g,''),ctx);
+require('./load-coding.cjs')(ctx, root);
 const db=(rows)=>({prepare:()=>({bind:()=>({all:async()=>({results:rows})})})});
 async function run(result,env={}) {
  modelResult=result;
@@ -35,7 +35,7 @@ async function run(result,env={}) {
  assert.ok(!out.validations.some(x=>x.message.includes('tidak ditemukan pada lookup')));
  out=await run({diagnoses:[],procedures:[{code:'99.17'}]});
  assert.ok(out.validations.some(x=>x.message.includes('dasar tidak tersedia')));
- vm.runInContext(read('validator.js','validator.js'),ctx);
+
  for (const [code,input] of [['51.23','kolesistektomi laparoskopik'],['45.23','kolonoskopi'],['45.13','endoskopi usus halus'],['99.17','injeksi insulin'],['99.15','nutrisi parenteral'],['81.51','total hip replacement'],['81.54','total knee replacement']]) assert.equal(ctx.validateProcedures([{code}],input).length,0);
  assert.equal(ctx.validateProcedures([{code:'99.15'}],'injeksi insulin').length,1);
  const endpoint=vm.createContext({Response,URL});
@@ -44,3 +44,4 @@ async function run(result,env={}) {
  assert.equal((await endpoint.onRequestGet({request:new Request('https://example.test/api/icd9-im?code=BAD'),env:{ICD9_IM_DB:db([])}})).status,400);
  console.log('PASS: diagnosis-only persistence, IM draft handling, missing bindings, duplicate IM codes, mapping corrections, ICD9 endpoint');
 })().catch(e=>{console.error(e);process.exitCode=1});
+

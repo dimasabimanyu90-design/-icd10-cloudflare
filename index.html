@@ -161,7 +161,12 @@ textarea::placeholder { color: #b8b0a6; font-style: italic; }
 }
 </style>
 <script src="known-paths.js"></script>
-<script src="validator.js"></script>
+<script type="module">
+import { validateProcedures, validateDiagnoses as checkDiagnoses, isIMCode } from './coding-rules.js';
+window.validateProcedures = validateProcedures;
+window.validateDiagnoses = diagnoses => checkDiagnoses(diagnoses, window.KNOWN_PATHS || {});
+window.isIMCode = isIMCode;
+</script>
 <!-- prompt rules now server-side in claude.js -->
 </head>
 <body>
@@ -505,15 +510,6 @@ function updateQuotaBar(quota) {
   if (quota.tpm_reset) {
     document.getElementById('qResetInfo').textContent = `reset: ${quota.tpm_reset}`;
   }
-}
-
-// ── DETECT IM CODE ──
-const IM_CODES = new Set([
-  'I49.00','I49.01','I49.09','N93.00','N93.01','R51.0','G04.3',
-  'K01.17','94.270','94.271','57.13','G47.31'
-]);
-function isIMCode(code) {
-  return IM_CODES.has(code);
 }
 
 // ── DETECT MB RULE VALIDATIONS ──
@@ -1068,7 +1064,7 @@ function renderResults(result) {
   document.getElementById('diagList').innerHTML = diagnoses.map((d, i) => {
     const isDagger   = d.dagger_asterisk === 'dagger';
     const isAsterisk = d.dagger_asterisk === 'asterisk';
-    const isIM       = isIMCode(d.code);
+    const isIM       = isIMCode(d);
     const badgeClass = d.role === 'DU' ? 'du' : 'ds';
     const dagMark    = isDagger   ? `<span class="dagger-mark" title="Etiology code">†</span>` : '';
     const astMark    = isAsterisk ? `<span class="asterisk-mark" title="Manifestation code">*</span>` : '';
@@ -1126,7 +1122,7 @@ function renderResults(result) {
   }
 
   document.getElementById('procList').innerHTML = _filteredProcs.map((p, i) => {
-    const isIM    = isIMCode(p.code);
+    const isIM    = isIMCode(p);
     const imBadge = isIM ? `<span class="im-badge" title="Indonesian Modification">IM</span>` : '';
     const descAlt = currentLang === 'id' && p.description_id ? `<div class="diag-desc-alt">🇮🇩 ${p.description_id}</div>` : '';
     return `<div class="diag-item" style="animation-delay:${(diagnoses.length+i)*0.06}s">
@@ -1156,3 +1152,4 @@ function renderResults(result) {
 </script>
 </body>
 </html>
+

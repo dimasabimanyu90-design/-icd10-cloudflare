@@ -1,7 +1,7 @@
 const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path'),assert=require('node:assert/strict');
 const root=path.resolve(__dirname,'..');
 const ctx=vm.createContext({Response,URL,AbortSignal,console});
-vm.runInContext(fs.readFileSync(path.join(root,'functions/api/claude.js'),'utf8').replace(/export /g,''),ctx);
+require('./load-coding.cjs')(ctx, root);
 const audit=(parsed,text)=>ctx.auditICSContext(parsed,text);
 let out=audit({diagnoses:[{role:'DU',code:'C53.0',documentation_quote:'Karsinoma endoserviks'}],ics_context:{documented_du_quote:'Diagnosis utama: sinusitis akut',mb_rule:'MB1',mb_trigger_quote:'Histerektomi dilakukan'}},'Diagnosis utama: sinusitis akut. Karsinoma endoserviks. Histerektomi dilakukan.');
 assert.ok(out.checks.every(c=>c.status==='evidence_present'));assert.equal(out.clinical_review_required,true);assert.ok(out.warnings.some(w=>w.message.includes('Rule MB1')));
@@ -22,3 +22,4 @@ out=audit({diagnoses:[{role:'DU',code:'Z51.1'}],procedures:[]},'Pasien rawat jal
 const prompt=ctx.buildPrompt('Contoh rawat jalan kemoterapi oral dan sakit kepala','');
 assert.ok(prompt.includes('MB5'));assert.ok(prompt.includes('first_alternative_code'));assert.ok(prompt.includes('documentation_quote'));assert.ok(prompt.includes('RAWAT JALAN saja'));
 console.log('PASS: MB1–MB5 evidence checks, both MB5 branches, multiple DU, fabricated quotes, setting/route boundaries and sourced prompt');
+
