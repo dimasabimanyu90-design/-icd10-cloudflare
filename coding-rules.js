@@ -455,6 +455,26 @@ function auditClinicalCoding(parsed, clinicalText) {
     const quote = String(diagnosis.documentation_quote || '');
     const supportedQuote = quote && normalize(input).includes(normalize(quote));
     const issues = [];
+    const unspecifiedOrganism = /(?:tidak ada|tanpa) (?:kuman|organisme) spesifik|(?:kuman|organisme)(?: penyebab)? (?:belum|tidak) (?:diketahui|teridentifikasi)|organism (?:unknown|unspecified)/i.test(input);
+    const unsupportedPattern = diagnosis.code === 'J18.0'
+      ? !/bronchopneumonia|bronkopneumonia|bronchial pneumonia/i.test(quote)
+      : diagnosis.code === 'J18.1' && !/\b(?:lobar|lobaris)\b/i.test(quote);
+    if (supportedQuote && unsupportedPattern && unspecifiedOrganism && /pneumonia/i.test(quote) &&
+        !/aspiras|aspirat|bakter|bacter|viral|virus|influenza|hipost|hypost|pneumococc|streptococc|staphylococc|klebsiella|haemophilus|mycoplasma/i.test(quote)) {
+      const originalCode = diagnosis.code;
+      diagnosis.code = 'J18.9';
+      diagnosis.description = 'Pneumonia, unspecified';
+      diagnosis.description_id = 'Pneumonia, tidak spesifik';
+      diagnosis.lead_term = 'Pneumonia';
+      diagnosis.lead_term_path = null;
+      diagnosis.volume1_notes = [];
+      diagnosis.confidence = Math.min(Number(diagnosis.confidence) || 70, 70);
+      diagnosis.reasoning = 'Organisme belum diketahui dan dokumentasi hanya menyatakan lokasi pneumonia; pola bronchopneumonia/lobar belum ditegaskan. J18.9 merupakan usulan sementara, perlu klarifikasi dokter.';
+      diagnosis.coding_adjustment = {original_code: originalCode, proposed_code: 'J18.9',
+        rule: 'pneumonia_location_without_documented_pattern', status: 'provisional_requires_clarification'};
+      warnings.push({type:'WARNING',message:`Usulan ${originalCode} dikoreksi sementara menjadi J18.9: lokasi lobus bukan bukti pola broncho/lobar; klarifikasi diagnosis dokter tetap diperlukan.`});
+      if (diagnosis.role === 'DU') parsed.du_reasoning = 'Pneumonia diusulkan sebagai DU berdasarkan diagnosis dokter dan alasan perawatan dalam teks. Organisme belum diketahui; pola pneumonia perlu klarifikasi. Penempatan DM sebagai DS tetap perlu bukti pengaruhnya terhadap perawatan.';
+    }
     if (!supportedQuote) issues.push('Kutipan diagnosis belum terbukti di input.');
     if (diagnosis.code === 'J18.0' && (!supportedQuote || !/\b(?:broncho(?:pneumonia)?|bronko(?:pneumonia)?|bronchial pneumonia)\b/i.test(quote)))
       issues.push('J18.0 memerlukan diagnosis bronchopneumonia/bronkopneumonia; lokasi lobus atau infiltrat saja tidak cukup.');

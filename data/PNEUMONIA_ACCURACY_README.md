@@ -11,3 +11,5 @@ Index lead-root matching cannot prove essential dash modifiers. Such branches no
 GDS/HbA1c values alone do not prove procedure 90.59. A documented chest radiograph can support a radiology procedure; confirm the exact ICD-9-CM code against its tabular description. Tabular existence is labeled as code existence rather than clinical approval.
 
 Tests: node tests/pneumonia-accuracy.test.cjs plus the shared module, ICS, index cross-reference, integration and WHO adapter suites.
+
+A subsequent live regression showed the model still proposes J18.1 for location-only wording despite the prompt. A bounded provisional normalization now changes J18.0/J18.1 to J18.9 only when the source quote is present, it states pneumonia without the proposed broncho/lobar pattern, the input explicitly states an unknown/unspecified organism, and the quote does not state an etiological/aspiration/hypostatic form. The original code is retained in coding_adjustment, confidence is capped at 70, and clarification is warned. This is not a final clinical assignment. The normalized diagnosis is then checked against D1 and WHO, rather than reusing references from the old code.
