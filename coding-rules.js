@@ -498,6 +498,27 @@ function auditClinicalCoding(parsed, clinicalText) {
     const quote = String(diagnosis.documentation_quote || '');
     const supportedQuote = quote && normalize(input).includes(normalize(quote));
     const issues = [];
+    const morphologyRules = {
+      'S72.30': /\b(?:simple|sederhana)\b/i,
+      'S72.31': /\bbutterfly\b/i,
+      'S72.32': /\b(?:comminuted|kominutif|kominuta)\b/i,
+      'S72.37': /\b(?:bifocal|bifokal|segmental|multiple|multipel)\b/i
+    };
+    if (supportedQuote && morphologyRules[diagnosis.code] && /femur/i.test(quote) && /shaft|diafis|batang|1\s*\/\s*3 tengah/i.test(quote) &&
+        !morphologyRules[diagnosis.code].test(quote)) {
+      const originalCode = diagnosis.code;
+      diagnosis.code = 'S72.3';
+      diagnosis.description = 'Fracture of shaft of femur';
+      diagnosis.description_id = 'Fraktur shaft femur';
+      diagnosis.lead_term = 'Fracture';
+      diagnosis.lead_term_path = null;
+      diagnosis.volume1_notes = [];
+      diagnosis.coding_adjustment = {original_code:originalCode, proposed_code:'S72.3',
+        rule:'unsupported_femoral_shaft_morphology', status:'provisional_requires_clarification'};
+      diagnosis.reasoning = 'Fraktur shaft femur terdokumentasi; pola morfologi subkode IM sebelumnya tidak terbukti. Gunakan usulan kategori dasar dan klarifikasi pola bila diperlukan.';
+      diagnosis.confidence = Math.min(Number(diagnosis.confidence) || 70, 70);
+      warnings.push({type:'WARNING',message:`Subkode ${originalCode} tidak didukung pola fraktur dalam kutipan; dikembalikan sementara ke S72.3. Status tertutup tidak membuktikan pola simple/butterfly/comminuted/segmental.`});
+    }
     const unspecifiedOrganism = /(?:tidak ada|tanpa) (?:kuman|organisme) spesifik|(?:kuman|organisme)(?: penyebab)? (?:belum|tidak) (?:diketahui|teridentifikasi)|(?:tidak|belum) (?:menyebut(?:kan)?|mencantumkan|mengidentifikasi|menentukan) (?:kuman|organisme|patogen)(?: spesifik)?|organism (?:unknown|unspecified)/i.test(normalize(input));
     const unsupportedPattern = diagnosis.code === 'J18.0'
       ? !/bronchopneumonia|bronkopneumonia|bronchial pneumonia/i.test(quote)

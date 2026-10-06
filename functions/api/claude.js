@@ -369,8 +369,8 @@ export async function onRequestPost(context) {
       let enrichedText = text;
       try {
         const parsed = JSON.parse(text);
-        const fractureNotes = applyFractureDefaults(parsed, clinicalText);
         const clinicalWarnings = auditClinicalCoding(parsed, clinicalText);
+        const fractureNotes = applyFractureDefaults(parsed, clinicalText);
         const diagnosisIM = await attachIMReferences(parsed.diagnoses, context.env.ICD10_IM_DB, 'icd10_im_entries', 'ICD10');
         parsed.diagnoses = diagnosisIM.items;
         for (const diagnosis of parsed.diagnoses) {
