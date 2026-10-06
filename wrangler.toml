@@ -10,3 +10,8 @@ database_id = "276b126c-00cf-4b6d-8a9a-0ddde27650be"
 binding = "ICD10_IM_DB"
 database_name = "icd10-im-db"
 database_id = "eb0ffaff-3414-4cd3-8e3d-abaae211ff8e"
+
+[[d1_databases]]
+binding = "ICD9_IM_DB"
+database_name = "icd9-im-db"
+database_id = "faad1234-19fc-4614-afca-dd485a837c5d"
