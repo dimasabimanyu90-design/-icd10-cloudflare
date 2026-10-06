@@ -13,3 +13,7 @@ GDS/HbA1c values alone do not prove procedure 90.59. A documented chest radiogra
 Tests: node tests/pneumonia-accuracy.test.cjs plus the shared module, ICS, index cross-reference, integration and WHO adapter suites.
 
 A subsequent live regression showed the model still proposes J18.1 for location-only wording despite the prompt. A bounded provisional normalization now changes J18.0/J18.1 to J18.9 only when the source quote is present, it states pneumonia without the proposed broncho/lobar pattern, the input explicitly states an unknown/unspecified organism, and the quote does not state an etiological/aspiration/hypostatic form. The original code is retained in coding_adjustment, confidence is capped at 70, and clarification is warned. This is not a final clinical assignment. The normalized diagnosis is then checked against D1 and WHO, rather than reusing references from the old code.
+
+## Built-in example regression
+
+The actual Pneumonia iDRG button says "Dokter TIDAK menyebut kuman spesifik", unlike the paraphrased case used in the first live test. That wording did not match the normalization condition. The regression suite now reads example 7 directly from index.html and tests negated mentions (tidak menyebut/menyebutkan/mencantumkan/mengidentifikasi/menentukan), Unicode dash normalization, explicit lobar/broncho preservation, and a positive mention that must not trigger the unknown-organism correction. The original test was observed failing before this change.
