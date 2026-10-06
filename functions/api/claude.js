@@ -284,8 +284,12 @@ External cause: V01-V99=transport | W=falls | X=environmental | X60-X84=self-har
 S codes: wajib lokasi anatomi + open/closed. Multiple trauma → kode tiap injury terpisah.
 Epilepsi + cedera saat serangan → cedera=DU, epilepsi=DS + kode eksternal (ICS).`;
 
-const PROMPT_JSON = `Return ONLY valid JSON:
-{"summary","du_reasoning","validations":[{"type","message"}],"diagnoses":[{"role","code","dagger_asterisk","description","description_id","category","confidence","lead_term","lead_term_path","volume1_notes":[{"type","text"}],"paired_with","reasoning"}],"procedures":[{"code","description","description_id","category","confidence","lead_term_path","volume1_notes","reasoning"}]}`;
+const PROMPT_JSON = `
+REFERENSI INDEKS: ikuti see (wajib), see also (bila informasi terkait belum tercakup), dan see condition (cari nama kondisi yang terdokumentasi).
+Jangan mengarang rujukan atau menandai jalur terverifikasi. condition_term hanya diisi dengan nama kondisi yang ada dalam teks klinis.
+Untuk kondisi multi-modifier, setiap modifier harus diperiksa di indeks dan kode akhir di tabular. Sistem akan memberi tanda unverified bila sumber tidak membuktikan jalur.
+Return ONLY valid JSON:
+{"summary","du_reasoning","validations":[{"type","message"}],"diagnoses":[{"role","code","dagger_asterisk","description","description_id","category","confidence","lead_term","condition_term","lead_term_path","volume1_notes":[{"type","text"}],"paired_with","reasoning"}],"procedures":[{"code","description","description_id","category","confidence","lead_term_path","volume1_notes","reasoning"}]}`;
 
 // ── DETECT CASE TYPE & BUILD PROMPT ──
 function buildPrompt(clinicalText, langInstruction) {
@@ -394,237 +398,143 @@ function extractLeadTerm(diagnosis) {
   const path = diagnosis?.lead_term_path;
   if (Array.isArray(path)) {
     const first = path.find(line => String(line).trim() && !String(line).trim().startsWith('-'));
-    if (first) return String(first).trim().replace(/^CODE\\s+/i, '');
+    if (first) return String(first).trim().replace(/^CODE\s+/i, '');
   }
 
   if (typeof path === 'string') {
-    const first = path.split(/\\r?\\n/).find(line => line.trim() && !line.trim().startsWith('-'));
-    if (first) return first.trim().replace(/^CODE\\s+/i, '');
+    const first = path.split(/\r?\n/).find(line => line.trim() && !line.trim().startsWith('-'));
+    if (first) return first.trim().replace(/^CODE\s+/i, '');
   }
 
   return String(diagnosis?.description || '').trim();
 }
 
 function normalizeIndexLabel(value) {
-  return String(value || '').replace(/<[^>]*>/g, '').replace(/\\s+/g, ' ').trim();
+  return String(value || '').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
 }
 
-function buildWHOIndexPath(indexResult, diagnosis) {
-  if (!indexResult || !Array.isArray(indexResult.results)) return null;
-
-  const code = String(diagnosis?.code || '').trim().toUpperCase();
-  const match = indexResult.results.find(item => String(item?.code || '').trim().toUpperCase() === code);
+function parseIndexReference(value) {
+  const text = normalizeIndexLabel(value);
+  const match = text.match(/\bsee\s+(also\s+)?(.+)$/i);
   if (!match) return null;
+  const target = match[2].replace(/[)\].]+$/, '').trim();
+  const condition = /^(?:the\s+)?condition\b/i.test(target);
+  return { type: condition ? 'see_condition' : match[1] ? 'see_also' : 'see', target, source_text: text };
+}
 
-  const aiLeadTerm = extractLeadTerm(diagnosis);
-  const terms = [...new Set((match.index_terms || []).map(normalizeIndexLabel).filter(Boolean))];
+function formatIndexTrace(result) {
+  const escape = value => String(value || '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+  const steps = (result.cross_reference_trace || []).map(step => step.directive
+    ? `${step.from} → ${step.directive.replace(/_/g, ' ')} → ${step.target || '?'}`
+    : `${step.term} → ${step.code}`);
+  return steps.length ? ' Langkah sumber: ' + escape(steps.join('; ')) + '.' : '';
+}
 
-  const normalizedAI = normalizeIndexLabel(aiLeadTerm).toLowerCase();
-  const matchedWHOIndexTerm = terms.find(term => {
-    const normalized = term.toLowerCase();
-    return normalized === normalizedAI ||
-      normalized.includes(normalizedAI) ||
-      normalizedAI.includes(normalized);
-  });
-  const matchedTerm = matchedWHOIndexTerm || terms[0] || aiLeadTerm;
+function indexTermMatches(source, requested) {
+  const key = value => normalizeIndexLabel(value).toLowerCase().replace(/[‐‑‒–—]/g, '-').replace(/[^a-z0-9]+/g, ' ').trim();
+  const text = normalizeIndexLabel(source).split(/\bsee\b/i)[0].replace(/[-,(\s]+$/, '');
+  const root = text.split(/\s+-{1,3}\s+/)[0];
+  return Boolean(key(requested)) && (key(text) === key(requested) || key(root) === key(requested));
+}
 
-  // Volume 3 hierarchy harus memakai struktur IndexTerm WHO bila tersedia.
-  // WHO IndexTerm dapat membawa separator " - ", " -- ", " --- " yang
-  // merepresentasikan level modifier pada Alphabetical Index.
-  // lead_term_path AI hanya dipakai sebagai fallback jika WHO tidak
-  // mengembalikan hierarchy terstruktur.
-  let leadTerm = aiLeadTerm || matchedTerm;
-  let modifiers = [];
-
-  const whoHierarchy = Array.isArray(match.index_hierarchy)
-    ? match.index_hierarchy
-    : [];
-
-  if (whoHierarchy.length > 0) {
-    const normalizedHierarchy = whoHierarchy
-      .map(item => ({
-        level: Number(item?.level || 0),
-        text: normalizeIndexLabel(item?.text || '')
-      }))
-      .filter(item => item.text);
-
-    const root = normalizedHierarchy.find(item => item.level === 0);
-    if (root) {
-      leadTerm = root.text;
-      modifiers = normalizedHierarchy
-        .filter(item => item.level > 0)
-        .map(item => ({ level: item.level, text: item.text }));
-    }
+function buildWHOIndexPath(indexResult, diagnosis, term = extractLeadTerm(diagnosis)) {
+  const code = String(diagnosis?.code || '').trim().toUpperCase();
+  const candidates = Array.isArray(indexResult?.results) ? indexResult.results : [];
+  const match = candidates.find(item => String(item.code || '').toUpperCase() === code &&
+    (item.index_terms || []).some(label => indexTermMatches(label, term) && !parseIndexReference(label)));
+  if (!match) return null;
+  const sourceTerm = match.index_terms.find(label => indexTermMatches(label, term) && !parseIndexReference(label));
+  // Only source text supplies the hierarchy; AI modifiers are never certified.
+  const parts = normalizeIndexLabel(sourceTerm).split(/\s+(-{1,3})\s+/);
+  const modifiers = [], levels = [];
+  for (let i = 1; i < parts.length; i += 2) {
+    if (parts[i + 1]) { modifiers.push(parts[i + 1].trim()); levels.push(parts[i].length); }
   }
-
-  if (modifiers.length === 0) {
-    // Fallback utama: WHO IndexTerm sendiri dapat berisi hierarchy cetak
-    // seperti "Diabetes mellitus - type 2 -- with ...". Jangan biarkan
-    // seluruh string tersebut menjadi satu lead term.
-    const whoTermHierarchy = String(matchedTerm || '').trim()
-      .split(/\s+(-{1,3})\s+/)
-      .map(part => part.trim())
-      .filter(Boolean);
-
-    if (whoTermHierarchy.length > 1) {
-      leadTerm = whoTermHierarchy[0];
-      modifiers = [];
-      for (let i = 1; i < whoTermHierarchy.length; i += 2) {
-        const separator = whoTermHierarchy[i];
-        const text = whoTermHierarchy[i + 1];
-        if (text) modifiers.push({
-          level: String(separator || '-').length,
-          text
-        });
-      }
-    }
-  }
-
-  if (modifiers.length === 0) {
-    const aiPath = String(diagnosis?.lead_term_path || '').trim();
-    const hierarchyLines = aiPath
-      ? aiPath.split(/\\r?\\n/).map(line => line.trimEnd()).filter(Boolean)
-      : [];
-
-    const parsedHierarchy = hierarchyLines.map(line => {
-      const lineMatch = line.match(/^(\\s*)(-+)?\\s*(.*)$/);
-      return {
-        level: (lineMatch?.[2] || '').length,
-        text: normalizeIndexLabel(lineMatch?.[3] || line)
-      };
-    }).filter(item => item.text);
-
-    const aiRoot = parsedHierarchy.find(item => item.level === 0);
-    if (aiRoot) leadTerm = aiRoot.text;
-    modifiers = parsedHierarchy
-      .filter(item => item.level > 0)
-      .map(item => ({ level: item.level, text: item.text }));
-
-    const codeLine = parsedHierarchy.find(item =>
-      item.text.toUpperCase().startsWith(code + ' ')
-    );
-    if (codeLine && modifiers.length > 0) {
-      const target = modifiers[modifiers.length - 1];
-      const remainder = codeLine.text.slice(code.length).trim();
-      target.text = remainder
-        ? target.text + ' ' + code + ' ' + remainder
-        : target.text + ' ' + code;
-    }
-  }
-
-  const modifierTexts = modifiers.map(item => item.text);
-
-  const title = String(match.title || diagnosis?.who_official_title || diagnosis?.description || '').trim();
-
   return {
-    status: 'verified',
-    source: 'WHO',
-    version: 'ICD-10 2010',
-    code,
-    lead_term: leadTerm || null,
-    index_terms: terms,
-    index_path: {
-      lead_term: leadTerm || null,
-      modifiers: modifierTexts,
-      modifier_levels: modifiers.map(item => item.level),
-      code,
-      title
-    },
-    tabular_path: Array.isArray(match.tabular_path) ? match.tabular_path : [],
-    tabular_path_display: Array.isArray(match.path_display) ? match.path_display : [],
-    note: 'WHO API menyediakan indexTerm Volume 3 dan parent hierarchy Volume 1. API tidak menyediakan level indentasi cetak Volume 3, sehingga level modifier tidak dibuat-buat.'
+    status: 'verified', source: 'WHO_INDEX', version: 'ICD-10 2010', code,
+    lead_term: parts[0], index_terms: [normalizeIndexLabel(sourceTerm)],
+    index_path: { lead_term: parts[0], modifiers, modifier_levels: levels, code, title: match.title || diagnosis.who_official_title || '' },
+    tabular_path: match.tabular_path || [], tabular_path_display: match.path_display || [],
+    note: 'Istilah dan jalur berasal dari WHO Index; kesesuaian klinis seluruh modifier tetap perlu ditinjau.'
   };
 }
 
-async function validateDiagnosesWithWHOIndex(diagnoses, request) {
-  if (!Array.isArray(diagnoses) || diagnoses.length === 0) {
-    return { validations: [], checked: 0, unverified: 0 };
-  }
-
-  const validations = [];
-  let unverified = 0;
-
-  for (const diagnosis of diagnoses) {
-    const code = String(diagnosis?.code || '').trim().toUpperCase();
-    if (!code || diagnosis.im_reference?.local_extension) continue;
-
-    const term = extractLeadTerm(diagnosis);
-    if (!term || term.length < 2) {
-      const result = {
-        code,
-        status: 'unverified',
-        source: 'WHO_INDEX',
-        version: 'ICD-10 2010',
-        reason: 'Lead term Volume 3 tidak tersedia untuk pencarian WHO Index.'
-      };
-      unverified++;
-      validations.push(result);
-      diagnosis.who_index = result;
+async function resolveWHOIndexReferences(diagnosis, request, lookup) {
+  const code = String(diagnosis.code || '').trim().toUpperCase();
+  const initial = extractLeadTerm(diagnosis);
+  const trace = [];
+  const visited = new Set();
+  let term = initial;
+  const pending = [];
+  const fail = reason => ({ code, status: 'unverified', source: 'WHO_INDEX', lead_term: initial,
+    reason, cross_reference_trace: trace, cross_reference_status: 'unverified' });
+  // Includes all branches: max four source queries per diagnosis, not per branch.
+  for (let step = 0; step < 4; step++) {
+    const key = normalizeIndexLabel(term).toLowerCase();
+    if (!key || key.length < 2) return fail('Istilah tujuan rujukan tidak tersedia.');
+    if (visited.has(key)) return fail('Rujukan indeks berulang atau membentuk siklus.');
+    visited.add(key);
+    const data = await lookup(term, code, request);
+    if (!data || data.valid !== true) return fail('Sumber WHO Index tidak tersedia untuk membuktikan rujukan.');
+    const terms = (data.results || []).flatMap(item => (item.index_terms || []).map(text => ({ text, code: item.code })))
+      .filter(item => indexTermMatches(item.text, term));
+    if (!terms.length) return fail('Kode ditemukan tetapi istilah pencarian tidak terbukti pada WHO Index.');
+    const references = terms.map(item => parseIndexReference(item.text)).filter(Boolean);
+    const unique = [...new Map(references.map(ref => [ref.type + ':' + ref.target, ref])).values()];
+    if (unique.length) {
+      // Mixed direct entries and referrals cannot safely be selected from just a lead term.
+      if (terms.some(item => !parseIndexReference(item.text))) return fail('Istilah memiliki beberapa jalur; perlu pemilihan modifier dan rujukan secara manual.');
+      const targets = unique.map(ref => {
+        const target = ref.type === 'see_condition' ? String(diagnosis.condition_term || '').trim() : ref.target;
+        trace.push({ from: term, directive: ref.type, target: target || null, source: 'WHO_INDEX', source_text: ref.source_text });
+        return target;
+      });
+      if (targets.some(target => !target)) return fail('See condition memerlukan nama kondisi yang terdokumentasi; AI tidak boleh menebak tujuan.');
+      pending.unshift(...targets.slice(1));
+      term = targets[0];
       continue;
     }
-
-    try {
-      const url = new URL('/api/who-index', request.url);
-      url.searchParams.set('term', term);
-      url.searchParams.set('code', code);
-      url.searchParams.set('limit', '12');
-
-      const response = await fetch(url.toString(), {
-        method: 'GET',
-        headers: { Accept: 'application/json' }
-      });
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok || data.valid !== true) {
-        const result = {
-          code,
-          status: 'unverified',
-          source: 'WHO_INDEX',
-          version: 'ICD-10 2010',
-          reason: data.error || data.detail || `WHO Index HTTP ${response.status}`
-        };
-        unverified++;
-        validations.push(result);
-        diagnosis.who_index = result;
-        continue;
-      }
-
-      const result = buildWHOIndexPath(data, diagnosis);
-      if (!result) {
-        const fallback = {
-          code,
-          status: 'unverified',
-          source: 'WHO_INDEX',
-          version: 'ICD-10 2010',
-          lead_term: term,
-          reason: 'WHO Index tidak mengembalikan kandidat dengan kode yang sama dengan kode AI.',
-          candidates: Array.isArray(data.results)
-            ? data.results.slice(0, 5).map(item => ({ code: item.code, title: item.title, index_terms: item.index_terms }))
-            : []
-        };
-        unverified++;
-        validations.push(fallback);
-        diagnosis.who_index = fallback;
-        continue;
-      }
-
-      validations.push(result);
-      diagnosis.who_index = result;
-      diagnosis.who_index_path = result.path;
-    } catch (error) {
-      const result = {
-        code,
-        status: 'unverified',
-        source: 'WHO_INDEX',
-        version: 'ICD-10 2010',
-        reason: error instanceof Error ? error.message : String(error)
-      };
-      unverified++;
-      validations.push(result);
-      diagnosis.who_index = result;
-    }
+    const resolved = buildWHOIndexPath(data, diagnosis, term);
+    if (!resolved) return fail('Tujuan indeks tidak mengarah ke kode hasil coding.');
+    trace.push({ term, code, source: 'WHO_INDEX', source_text: resolved.index_terms[0], status: 'code_match' });
+    if (pending.length) { term = pending.shift(); continue; }
+    // AI-proposed directives must be evidenced by the source, not accepted as facts.
+    const aiPath = Array.isArray(diagnosis.lead_term_path) ? diagnosis.lead_term_path.join('\n') : String(diagnosis.lead_term_path || '');
+    if (/\bsee\b/i.test(aiPath) && !trace.some(item => item.directive)) return fail('Rujukan yang ditulis AI tidak ditemukan pada sumber indeks.');
+    if (diagnosis.who_validation?.valid !== true) return fail('Jalur indeks cocok, tetapi konfirmasi tabular belum berhasil.');
+    return { ...resolved, cross_reference_trace: trace,
+      cross_reference_status: trace.some(item => item.directive) ? 'resolved' : 'not_observed',
+      cross_reference_coverage: 'returned_source_terms_only' };
   }
+  return fail('Batas penelusuran rujukan tercapai; tinjau indeks secara manual.');
+}
 
+async function validateDiagnosesWithWHOIndex(diagnoses, request) {
+  const validations = [];
+  let unverified = 0;
+  const cache = new Map();
+  async function lookup(term, code) {
+    const key = term.toLowerCase() + ':' + code;
+    if (!cache.has(key)) cache.set(key, (async () => {
+      const url = new URL('/api/who-index', request.url);
+      url.searchParams.set('term', term); url.searchParams.set('code', code); url.searchParams.set('limit', '12');
+      const response = await fetch(url.toString(), { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(10000) });
+      return response.ok ? response.json() : null;
+    })());
+    return cache.get(key);
+  }
+  for (const diagnosis of (Array.isArray(diagnoses) ? diagnoses : [])) {
+    let result;
+    if (diagnosis.im_reference?.local_extension) {
+      result = { code: diagnosis.code, status: 'unverified', source: 'LOCAL_IM', cross_reference_status: 'unverified', reason: 'Referensi IM draft belum menyediakan jalur rujukan indeks terverifikasi.' };
+    } else {
+      try { result = await resolveWHOIndexReferences(diagnosis, request, lookup); }
+      catch { result = { code: diagnosis.code, status: 'unverified', source: 'WHO_INDEX', cross_reference_status: 'unverified', reason: 'Penelusuran rujukan tidak tersedia atau timeout.' }; }
+    }
+    if (result.status !== 'verified') unverified++;
+    validations.push(result); diagnosis.who_index = result;
+    diagnosis.index_cross_reference = { status: result.cross_reference_status, trace: result.cross_reference_trace || [], coverage: result.cross_reference_coverage || 'unverified' };
+  }
   return { validations, checked: validations.length, unverified };
 }
 
@@ -926,6 +836,10 @@ export async function onRequestPost(context) {
         const parsed = JSON.parse(text);
         const diagnosisIM = await attachIMReferences(parsed.diagnoses, context.env.ICD10_IM_DB, 'icd10_im_entries', 'ICD10');
         parsed.diagnoses = diagnosisIM.items;
+        for (const diagnosis of parsed.diagnoses) {
+          const condition = String(diagnosis.condition_term || '').trim();
+          if (!condition || !clinicalText.toLowerCase().includes(condition.toLowerCase())) diagnosis.condition_term = null;
+        }
         const procedureIM = await attachIMReferences(parsed.procedures, context.env.ICD9_IM_DB, 'icd9_im_entries', 'ICD9');
         parsed.procedures = procedureIM.items;
 
@@ -971,17 +885,18 @@ export async function onRequestPost(context) {
           if (result.status === 'verified') {
             parsed.validations.push({
               type: 'WHO_INDEX_VALID',
-              message: `WHO Vol. 3 Index cocok untuk <strong>${result.code}</strong> melalui lead term "${result.lead_term || '-'}".`
+              message: `WHO Vol. 3 Index cocok untuk <strong>${result.code}</strong> melalui lead term "${result.lead_term || '-'}". Rujukan: ${result.cross_reference_status === 'resolved' ? 'tujuan yang tersedia telah ditelusuri' : 'tidak tampak pada istilah sumber yang dikembalikan'}.${formatIndexTrace(result)}`
             });
           } else {
             parsed.validations.push({
               type: 'WHO_INDEX_UNVERIFIED',
-              message: `WHO Vol. 3 Index untuk <strong>${result.code}</strong> belum terverifikasi. ${result.reason || 'Verifikasi manual diperlukan.'}`
+              message: `WHO Vol. 3 Index untuk <strong>${result.code}</strong> belum terverifikasi. ${result.reason || 'Verifikasi manual diperlukan.'}${formatIndexTrace(result)}`
             });
           }
         }
 
         parsed.validation_layers = {
+          index_cross_references: { status: whoIndexResult.unverified ? 'unverified' : whoIndexResult.checked ? 'source_checked' : 'not_applicable', checked: whoIndexResult.checked, unverified: whoIndexResult.unverified, coverage: 'returned_source_terms_only' },
           icd10_im: { status: diagnosisIM.status, matched: diagnosisIM.matched, coding_validity: 'not_assessed' },
           icd9_im: { status: procedureIM.status, matched: procedureIM.matched, coding_validity: 'not_assessed' },
           who_icd10_2010: {
@@ -1010,6 +925,9 @@ export async function onRequestPost(context) {
         }
 
         if (parsed.procedures && parsed.procedures.length > 0) {
+          for (const item of parsed.procedures) item.index_cross_reference = { status: 'unverified', trace: [], reason: 'Lookup ICD-9 dan referensi IM belum menyediakan rujukan indeks terverifikasi.' };
+          parsed.validation_layers.icd9_index_cross_references = { status: 'unverified', checked: parsed.procedures.length };
+          parsed.validations.push({ type: 'WARNING', message: 'Jalur see/see also/see condition untuk prosedur ICD-9 belum terverifikasi; periksa indeks dan tabular secara manual.' });
           const db = context.env.ICD9_DB || null;
           parsed.procedures = await enrichWithD1(parsed.procedures, db);
 
@@ -1051,4 +969,5 @@ export async function onRequestOptions() {
     headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Allow-Methods": "POST, OPTIONS" }
   });
 }
+
 
