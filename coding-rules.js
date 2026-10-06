@@ -267,7 +267,10 @@ I63 wajib digit. Fraktur: wajib lokasi+open/closed.`;
 const PROMPT_TRAUMA = `
 ## TRAUMA
 External cause: V01-V99=transport | W=falls | X=environmental | X60-X84=self-harm
-S codes: wajib lokasi anatomi + open/closed. Multiple trauma → kode tiap injury terpisah.
+Fraktur traumatik: tentukan lokasi anatomi. Bila status terbuka/tertutup tidak dicatat, klasifikasikan tertutup menurut default ICD-10; jangan mengarang kutipan diagnosis tertutup.
+Bila fraktur terbuka/compound fracture dicatat, pertahankan terbuka. ORIF/open reduction adalah tindakan, bukan bukti fraktur terbuka.
+Default ini tidak menetapkan pola simple/comminuted, laterality, atau fraktur patologis. Jangan otomatis menambah digit 0/1: periksa tabular dan kode IM karena S72.30 berarti simple fracture (IM).
+Multiple trauma → kode tiap injury terpisah.
 Epilepsi + cedera saat serangan → cedera=DU, epilepsi=DS + kode eksternal (ICS).`;
 
 const PROMPT_ICS_SOURCE_OVERLAY = `
@@ -446,6 +449,46 @@ async function resolveWHOIndexReferences(diagnosis, request, lookup) {
 
 
 // ── STRUCTURE AND ICS DOCUMENTATION CHECKS ──
+// Closed is a classification default, not a fabricated clinical statement.
+function applyFractureDefaults(parsed, clinicalText) {
+  const normalize = value => String(value || '').normalize('NFKC').toLowerCase()
+    .replace(/[‐‑‒–—−]/g, '-').replace(/\s+/g, ' ').trim();
+  const input = String(clinicalText || '');
+  const clauses = input.split(/[;\n.!?]+|,\s*(?=(?:fraktur|fracture|open fracture|closed fracture))/i);
+  const warnings = [];
+  for (const diagnosis of parsed.diagnoses || []) {
+    if (!/^(?:S(?:02|12|22|32|42|52|62|72|82|92)|T(?:02|08|10|12))(?:\.|$)|^T14\.2/.test(String(diagnosis.code || ''))) continue;
+    const quote = String(diagnosis.documentation_quote || '').trim();
+    const needle = normalize(quote).replace(/[.!?]+$/, '');
+    const matching = clauses.filter(clause => needle && normalize(clause).includes(needle));
+    if (!needle || !normalize(input).includes(normalize(quote)) || !/fraktur|fracture|patah tulang/i.test(quote) || !matching.length) {
+      diagnosis.fracture_status = {classification:'unverified', basis:'insufficient_documentation', clinical_confirmation:false};
+      warnings.push({type:'WARNING',message:`Fraktur ${diagnosis.code}: default terbuka/tertutup belum diterapkan karena kutipan diagnosis belum terbukti atau tidak dapat dipisahkan per cedera.`});
+      continue;
+    }
+    const evidence = matching.map(clause => normalize(clause)
+      .replace(/(?:open reduction|reduksi terbuka|orif)[\s\S]*$/, '')
+      .replace(/(?:tidak|belum) (?:disebutkan|dinyatakan|dicatat)[\s\S]*$/, '')
+      .replace(/tidak terbuka/g, 'tertutup')
+      .replace(/\b(?:luka terbuka|open wound)\b/g, 'associated wound')).join('; ');
+    const open = /\b(?:open|compound) fracture\b|(?:fraktur|fracture|patah tulang)[^;]{0,100}\b(?:terbuka|open|compound)\b/.test(evidence);
+    const closed = /\bclosed fracture\b|(?:fraktur|fracture|patah tulang)[^;]{0,100}\b(?:tertutup|closed)\b/.test(evidence);
+    if (open && closed) {
+      diagnosis.fracture_status = {classification:'unverified',basis:'conflicting_documentation',clinical_confirmation:false};
+      warnings.push({type:'WARNING',message:`Fraktur ${diagnosis.code}: dokumentasi terbuka dan tertutup bertentangan; klarifikasi diperlukan.`});
+      continue;
+    }
+    const classification = open ? 'open' : 'closed';
+    diagnosis.fracture_status = {classification, basis:open || closed ? 'documented' : 'icd10_default',
+      clinical_confirmation:Boolean(open || closed), source:'ICD-10 fracture category note', code_unchanged:true};
+    const message = open || closed
+      ? `Fraktur ${diagnosis.code}: status ${open ? 'terbuka' : 'tertutup'} sesuai dokumentasi pada cedera tersebut.`
+      : `Fraktur ${diagnosis.code}: status terbuka/tertutup tidak disebutkan; diklasifikasikan tertutup menurut default ICD-10 untuk coding, bukan konfirmasi klinis. Kode IM/pola fraktur tidak diubah otomatis.`;
+    warnings.push({type:'INFO',message});
+  }
+  return warnings;
+}
+
 // Targeted contradiction checks; this is not a complete clinical coding engine.
 function auditClinicalCoding(parsed, clinicalText) {
   const input = String(clinicalText || '');
@@ -781,4 +824,4 @@ function isIMCode(item) {
   return Boolean(ref && (ref.local_extension || (ref.entries || []).some(entry => /\(IM\)/i.test(entry.title_extracted || ''))));
 }
 
-export { auditClinicalCoding, buildPrompt, extractLeadTerm, normalizeIndexLabel, parseIndexReference, formatIndexTrace, indexTermMatches, buildWHOIndexPath, resolveWHOIndexReferences, referenceWarnings, validateCodingStructure, ICS_REFERENCE_PROFILE, auditICSContext, validateProcedures, validateDiagnosisCode, validateDiagnoses, isIMCode };
+export { applyFractureDefaults, auditClinicalCoding, buildPrompt, extractLeadTerm, normalizeIndexLabel, parseIndexReference, formatIndexTrace, indexTermMatches, buildWHOIndexPath, resolveWHOIndexReferences, referenceWarnings, validateCodingStructure, ICS_REFERENCE_PROFILE, auditICSContext, validateProcedures, validateDiagnosisCode, validateDiagnoses, isIMCode };

@@ -1,4 +1,4 @@
-import { auditClinicalCoding, buildPrompt, extractLeadTerm, normalizeIndexLabel, parseIndexReference, formatIndexTrace, indexTermMatches, buildWHOIndexPath, resolveWHOIndexReferences, referenceWarnings, validateCodingStructure, ICS_REFERENCE_PROFILE, auditICSContext } from "../../coding-rules.js";
+import { applyFractureDefaults, auditClinicalCoding, buildPrompt, extractLeadTerm, normalizeIndexLabel, parseIndexReference, formatIndexTrace, indexTermMatches, buildWHOIndexPath, resolveWHOIndexReferences, referenceWarnings, validateCodingStructure, ICS_REFERENCE_PROFILE, auditICSContext } from "../../coding-rules.js";
 
 // HTTP/model and database adapters. Coding policy is in coding-rules.js.
 function extractWHOOfficialTitle(entity) {
@@ -369,6 +369,7 @@ export async function onRequestPost(context) {
       let enrichedText = text;
       try {
         const parsed = JSON.parse(text);
+        const fractureNotes = applyFractureDefaults(parsed, clinicalText);
         const clinicalWarnings = auditClinicalCoding(parsed, clinicalText);
         const diagnosisIM = await attachIMReferences(parsed.diagnoses, context.env.ICD10_IM_DB, 'icd10_im_entries', 'ICD10');
         parsed.diagnoses = diagnosisIM.items;
@@ -392,7 +393,7 @@ export async function onRequestPost(context) {
         );
 
         if (!Array.isArray(parsed.validations)) parsed.validations = [];
-        parsed.validations.push(...clinicalWarnings);
+        parsed.validations.push(...fractureNotes, ...clinicalWarnings);
         const icsAudit = auditICSContext(parsed, clinicalText);
         parsed.ics_policy = { ...icsAudit, warnings: undefined };
         parsed.validations.push({ type: 'INFO', message: 'Referensi aturan: ICS DRAFT V1 Juli2025 dan pedoman iDRG April2025; perlu tinjauan koder.' }, ...icsAudit.warnings);
@@ -484,7 +485,7 @@ export async function onRequestPost(context) {
             }));
           if (notFoundWarnings.length > 0) {
             if (!Array.isArray(parsed.validations)) parsed.validations = [];
-        parsed.validations.push(...clinicalWarnings);
+        parsed.validations.push(...fractureNotes, ...clinicalWarnings);
             parsed.validations.push(...notFoundWarnings);
           }
           if (parsed.procedures.some(p => p._d1_unavailable)) parsed.validations.push({ type: 'WARNING', message: 'Lookup ICD-9-CM dasar tidak tersedia; verifikasi manual.' });
