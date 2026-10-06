@@ -1,0 +1,23 @@
+{
+  "profile": "uploaded-ics-draft-v1-20250725",
+  "status": "draft_reference",
+  "sources": [
+    {
+      "file": "ICS Version 1_25072025.pdf",
+      "sha256": "5135d7f882d3b756522f5d52a7167de1ff918bda72bd81e91102ea0e51619139"
+    },
+    {
+      "file": "20250414-pedoman-koding-idrg_compress.pdf",
+      "sha256": "c0540dedbcf483b9f5393bda0e0912fff7e19eee74bbba0cd2d9cbe2bace577a"
+    }
+  ],
+  "coverage": [
+    "ICS 2.1.1 diagnosis utama",
+    "ICS 2.2.1\u20132.2.5 MB1\u2013MB5",
+    "ICS 2.2.6.1 gejala",
+    "ICS 2.3.1 see/omit/code also",
+    "April2025 slide8 documentation",
+    "April2025 slides46\u201347 outpatient chemotherapy/radiotherapy"
+  ],
+  "clinical_validation": "not_assessed"
+}
