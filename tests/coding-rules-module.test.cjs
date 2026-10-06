@@ -22,3 +22,13 @@ const root=path.resolve(__dirname,'..');
  assert.ok(!prompt.includes('90.59 jika lab numerik'));assert.ok(!prompt.includes('Primary PCI → WAJIB:'));
  console.log('PASS: native ES-module import, shared browser/server policy, source-backed badges, no clinical approval from cache, corrected legacy shortcuts');
 })().catch(e=>{console.error(e);process.exitCode=1});
+
+(async () => {
+  const source = require('node:fs').readFileSync(require('node:path').join(__dirname, '../coding-rules.js'), 'utf8');
+  const rules = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
+  require('node:assert/strict').equal(rules.indexTermMatches('Pneumonia (acute) (double) (septic) - atypical NEC', 'Pneumonia'), true);
+  require('node:assert/strict').equal(rules.indexTermMatches('Pneumonia (acute) - atypical NEC', 'Pneumonia bacterial'), false);
+  require('node:assert/strict').equal(rules.buildWHOIndexPath({results:[{code:'J18.9', index_terms:['Pneumonia (acute) (double)'], title:'Pneumonia, unspecified'}]}, {code:'J18.9',lead_term:'Pneumonia'}).status, 'verified');
+  require('node:assert/strict').equal(rules.buildWHOIndexPath({results:[{code:'J18.9', index_terms:['Pneumonia (acute)']}]}, {code:'J15.9',lead_term:'Pneumonia'}), null);
+  console.log('PASS: WHO parenthesized nonessential qualifiers and wrong-code rejection');
+})();

@@ -362,7 +362,10 @@ function indexTermMatches(source, requested) {
   const key = value => normalizeIndexLabel(value).toLowerCase().replace(/[‐‑‒–—]/g, '-').replace(/[^a-z0-9]+/g, ' ').trim();
   const text = normalizeIndexLabel(source).split(/\bsee\b/i)[0].replace(/[-,(\s]+$/, '');
   const root = text.split(/\s+-{1,3}\s+/)[0];
-  return Boolean(key(requested)) && (key(text) === key(requested) || key(root) === key(requested));
+  // Parenthesized WHO index qualifiers are nonessential modifiers.
+  // Remove them only from the source root, never from essential dash branches.
+  const bareRoot = root.replace(/\([^()]*\)/g, ' ').replace(/\s+/g, ' ').trim();
+  return Boolean(key(requested)) && (key(text) === key(requested) || key(root) === key(requested) || key(bareRoot) === key(requested));
 }
 
 function buildWHOIndexPath(indexResult, diagnosis, term = extractLeadTerm(diagnosis)) {
