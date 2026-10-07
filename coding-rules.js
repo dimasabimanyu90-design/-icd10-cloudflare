@@ -510,6 +510,25 @@ function auditMaternalTTTS(parsed, input) {
     ttts.coding_adjustment={original_code:original,proposed_code:'O43.0',rule:'documented_maternal_ttts',status:'provisional_requires_review'};
     warnings.push({type:'WARNING',code:'O43.0',message:original+' dikoreksi ke kandidat maternal O43.0 untuk TTTS yang tertulis; urutan DU/DS tetap perlu ditinjau.'});
   }
+  // Printed WHO index: preterm caesarean NEC -> O60.1; .3 requires
+  // documented absence of spontaneous labour/induction, not route alone.
+  const deliveredPreterm=/partus prematur|preterm (?:delivery|birth)|persalinan prematur/i.test(quote) && /\bSC\b|caesarean|cesarean|sectio/i.test(quote);
+  const withoutSpontaneous=clauses.some(x=>/tanpa (?:onset )?(?:persalinan|kontraksi|inpartu|labor)|without spontaneous labo[u]?r|non[- ]spontaneous labo[u]?r|belum inpartu|tidak inpartu|pre[- ]?labo[u]?r|induksi persalinan|induction of labo[u]?r/i.test(x) && !/riwayat|history|rencana|planned|dibatalkan|cancelled/i.test(x));
+  if(deliveredPreterm && !withoutSpontaneous) for(const d of diagnoses) {
+    if(d.code!=='O60.3' || documentationIssue(d.documentation_quote,input)) continue;
+    d.code='O60.1';d.description='Preterm spontaneous labour with preterm delivery';d.description_id=null;d.lead_term='Delivery';
+    d.coding_adjustment={original_code:'O60.3',proposed_code:'O60.1',rule:'documented_preterm_caesarean_nec_index',status:'provisional_requires_clarification'};
+    d.reasoning='Persalinan preterm dengan SC tercatat tanpa rincian onset; O60.1 adalah rujukan preterm caesarean NEC, bukan bukti onset spontan. Klarifikasi onset dan DU.';
+    warnings.push({type:'WARNING',code:'O60.1',message:'O60.3 tidak didukung rincian tanpa persalinan spontan/induksi. Kandidat O60.1 mengikuti indeks preterm SC NEC; klarifikasi onset tetap diperlukan.'});
+  }
+  const specificTechnique=clauses.some(x=>/klasik|classical|korporal|corporal|low cervical|segmen bawah|lower segment|extraperitoneal|ekstraperitoneal/i.test(x) && /SC|caesarean|cesarean|sectio/i.test(x) && !/riwayat|history|bekas|previous|rencana|planned/i.test(x));
+  if(deliveredPreterm && !specificTechnique) for(const procedure of parsed.procedures || []) {
+    if(!['74.0','74.1','74.2','74.4'].includes(procedure.code) || documentationIssue(procedure.documentation_quote,input,true)) continue;
+    const original=procedure.code;
+    procedure.code='74.99';procedure.description='Other caesarean section of unspecified type';procedure.description_id=null;procedure.code_system='ICD9_CM';procedure.lead_term='Caesarean section';
+    procedure.coding_adjustment={original_code:original,proposed_code:'74.99',rule:'documented_caesarean_without_technique',status:'provisional_requires_review'};
+    warnings.push({type:'WARNING',code:'74.99',message:original+' memerlukan rincian teknik SC yang belum tertulis. Usulan 74.99 digunakan untuk jenis SC tidak spesifik; tinjau laporan operasi.'});
+  }
   const complex=/\bIUFD\b|intrauterine (?:fetal )?(?:death|demise)/i.test(quote) && /gemelli|kembar|twin/i.test(quote) && /\bSC\b|caesarean|cesarean|sectio/i.test(quote);
   if(complex) {
     const explicit=clauses.filter(x=>/^diagnos(?:is|a)\s+utama\s*:/i.test(x) && !/[+]|\b(?:dan|serta|and|atau|or)\b/i.test(x));
