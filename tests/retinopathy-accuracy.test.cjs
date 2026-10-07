@@ -10,7 +10,12 @@ for(const text of [clinical.replaceAll('tipe 2','tipe 1'),clinical.replaceAll('r
 }
 for(const text of [clinical.replace('Tindakan: Laser','Rencana: Laser'),clinical.replace('Tindakan: Laser','Tindakan dibatalkan: Laser'),clinical+' Robekan retina.']){p=run(text);assert.equal(p.procedures[0].code,'67.01',text);}
 p=ctx.normalizeModelResult({diagnoses:[{role:' secondary ',code:'H36.0'},{role:'unknown',code:'E11.3'}]});assert.equal(p.diagnoses[0].role,'DS');assert.equal(p.diagnoses[1].role,'unknown');
-p=ctx.normalizeModelResult(model());p.diagnoses[0].role='DS';ctx.auditClinicalCoding(p,clinical);assert.ok(p.diagnoses.every(x=>x.role==='DS'),'do not promote DS to DU');
+p=ctx.normalizeModelResult(model());p.diagnoses[0].role='DS';ctx.auditClinicalCoding(p,clinical);assert.equal(p.diagnoses[0].role,'DU','focused documented treatment recovers missing DU');assert.equal(p.diagnoses[1].role,'DS');
+for(const roles of [['DS','DS'],['unknown','unknown'],['DU','DU']]) {
+ p=ctx.normalizeModelResult({diagnoses:[{role:roles[0],code:'E11.3'},{role:roles[1],code:'H36.0'}],procedures:[]});ctx.auditClinicalCoding(p,clinical);assert.equal(p.diagnoses[0].role,'DU');assert.equal(p.diagnoses[1].role,'DS');ctx.auditClinicalCoding(p,clinical);assert.equal(p.diagnoses.filter(d=>d.role==='DU').length,1);
+}
+p=ctx.normalizeModelResult({diagnoses:[{role:'DS',code:'E11.3'},{role:'DS',code:'H36.0'},{role:'DU',code:'J18.9'}]});ctx.auditClinicalCoding(p,clinical+' Diagnosis: Pneumonia.');assert.equal(p.diagnoses[0].role,'DS');assert.equal(p.diagnoses[2].role,'DU');
+p=ctx.normalizeModelResult(model());p.diagnoses[0].role='DS';ctx.auditClinicalCoding(p,clinical.replace('Tindakan: Laser','Rencana: Laser'));assert.ok(p.diagnoses.every(d=>d.role==='DS'),'no treatment evidence means no automatic promotion');
 p=ctx.normalizeModelResult(model());p.diagnoses[0].documentation_quote='fabricated';ctx.auditClinicalCoding(p,clinical);assert.equal(p.diagnoses[0].code,'E11.32');
 p=ctx.normalizeModelResult({diagnoses:[{role:'DU',code:'H36.0'},{role:'DS',code:'E11'}],procedures:[]});ctx.auditClinicalCoding(p,clinical);assert.equal(p.diagnoses.find(d=>d.code==='E11.3').role,'DU');assert.equal(p.diagnoses.find(d=>d.code==='H36.0').role,'DS');
 console.log('PASS: reported retinopathy case, role aliases, WHO pair, retinal laser, repeat safety, no inferred diabetes/retinopathy, canceled/planned procedures, type conflict and invalid quotes');
