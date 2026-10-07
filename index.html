@@ -891,11 +891,25 @@ function renderWHOIndexPath(index) {
   }
 
   if (index.status !== 'verified') {
+    const escape = value => String(value || '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    const ip = index.index_path;
+    const known = window.KNOWN_PATHS?.[index.code];
+    let reference = '';
+    // Only an actual returned path or a saved reference may be displayed.
+    // A search lead term alone is not an index path and must not be synthesized.
+    if (ip?.lead_term && ip.code && String(ip.code) === String(index.code)) {
+      const lines = [ip.lead_term, ...(Array.isArray(ip.modifiers) ? ip.modifiers : []), ip.code];
+      reference = '<div class="lead-term-box"><div class="lead-label">Jalur sumber yang dikembalikan — belum terverifikasi</div><div class="lead-path">' +
+        lines.map(line => '<div class="lp-line">' + escape(line) + '</div>').join('') + '</div></div>';
+    } else if (known?.path) {
+      reference = '<div class="lead-term-box"><div class="lead-label">Jalur referensi tersimpan — belum diverifikasi WHO</div><div class="lead-path">' +
+        renderLeadPath(known.path,index.code,'') + '</div></div>';
+    }
     return '<div class="vol1-box" style="margin-top:8px;border-left:3px solid #f59e0b">' +
       '<div class="vol1-label">WHO Vol. 3 Alphabetical Index</div>' +
       '<div class="vol1-notes"><div class="vol1-note"><span>🟡 Belum terverifikasi: ' +
-      (index.reason || 'WHO Index belum menemukan kecocokan kode.') +
-      '</span></div></div></div>';
+      escape(index.reason || 'WHO Index belum menemukan kecocokan kode.') +
+      '</span></div><div class="vol1-note">Jalur referensi tidak mengesahkan kecocokan diagnosis atau kode.</div></div></div>' + reference;
   }
 
   const ip = index.index_path || {};
