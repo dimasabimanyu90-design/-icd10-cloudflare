@@ -1,7 +1,7 @@
 const fs = require('node:fs');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
-const source = fs.readFileSync(require('node:path').join(__dirname, '../functions/api/who-index.js'), 'utf8').replace('export async function', 'async function');
+const source = fs.readFileSync(require('node:path').join(__dirname, '../functions/api/who-index.js'), 'utf8').replace(/^import [^;]+;\n/gm,'').replace('export async function', 'async function');
 const context = {AbortSignal, URL, URLSearchParams, Response, Map, btoa, fetch: async (url) => {
   if (String(url).includes('connect/token')) return Response.json({access_token:'test'});
   if (String(url).endsWith('/search?q=Headache&useFlexisearch=true&flatResults=true')) return new Response('not found',{status:404});
@@ -20,3 +20,4 @@ assert.equal(result.results[0].index_source,'WHO_ICD10_BROWSER');
 assert.equal(context.extractBrowserIndexResults('<div class="oneentity" data-stemid="http://id.who.int/icd/release/10/2010/R51"><span class="titlelabel">Headache</span></div>').length,0);
 console.log('WHO adapter tests passed');
 })();
+

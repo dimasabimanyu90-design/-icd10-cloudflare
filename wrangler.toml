@@ -15,3 +15,9 @@ database_id = "eb0ffaff-3414-4cd3-8e3d-abaae211ff8e"
 binding = "ICD9_IM_DB"
 database_name = "icd9-im-db"
 database_id = "faad1234-19fc-4614-afca-dd485a837c5d"
+
+
+[[d1_databases]]
+binding = "ICD10_WHO_DB"
+database_name = "icd10-who2010-reference-db"
+database_id = "bc979608-eccf-454c-9887-8f3bcebeb19a"

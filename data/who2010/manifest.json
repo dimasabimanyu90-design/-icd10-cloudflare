@@ -1,0 +1,18 @@
+{
+  "source_id": "b257f86029092bd6c53624a4",
+  "file_name": "ICD10_2010.pdf",
+  "sha256": "b257f86029092bd6c53624a4374149ac200612b06dbc76504bfa903829ef3c47",
+  "pages": 1999,
+  "declared_version": "2010",
+  "notes": "User-uploaded compilation. Drugs/chemicals section contains 2007 running headers and is quarantined.",
+  "tabular_records": 11200,
+  "tabular_distinct_codes": 11099,
+  "index_records": 67434,
+  "diagnosis_index_records": 64319,
+  "external_cause_records": 3115,
+  "index_context_issues": 13827,
+  "quarantined_pages": 141,
+  "shared_subdivisions": 10,
+  "certified_records": 0,
+  "index_emitted_records": 69725
+}

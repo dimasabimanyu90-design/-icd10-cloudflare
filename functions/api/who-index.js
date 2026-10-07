@@ -1,3 +1,4 @@
+import { lookupPDFReference } from '../lib/who2010-pdf.js';
 /**
  * WHO ICD-10 2010 Vol. 3 / Alphabetical Index search
  *
@@ -231,6 +232,18 @@ export async function onRequestGet(context) {
     const requestedLimit = Number(url.searchParams.get("limit") || 10);
     const limit = Number.isFinite(requestedLimit) ? Math.min(Math.max(Math.trunc(requestedLimit),1),20) : 10;
     if (term.length > 200 || (requestedCode && !/^[A-Z]\d{2}(?:\.\d{1,3})?$/.test(requestedCode))) return json({valid:false,error:"Invalid search parameters"},400);
+    if (context.env.ICD10_WHO_DB && requestedCode && term.length >= 2) {
+      try {
+        const local=await lookupPDFReference(context.env.ICD10_WHO_DB,requestedCode,term,limit);
+        if (local && (local.index_candidates.length || local.reference_steps.length)) {
+          const paths=local.index_candidates.map(row=>({code:row.code,lead_term:row.lead_term,modifiers:JSON.parse(row.modifiers_json),modifier_levels:JSON.parse(row.modifiers_json).map((_,i)=>i+1),pdf_page:row.pdf_page,source_file:local.file_name}));
+          return json({valid:true,source:local.source,version:'2010',review_required:true,
+            pdf_index_paths:paths,reference_steps:local.reference_steps.map(row=>({...row,source_file:local.file_name})),
+            results:[{code:requestedCode,index_terms:local.index_candidates.map(row=>row.path_text.replace(/\n/g,' ')),source:local.source}],
+            reason:'Jalur/rujukan PDF tersedia; hasil ekstraksi belum disahkan sebagai verifikasi indeks atau kecocokan klinis.'});
+        }
+      } catch { /* Fall back to WHO network adapter when local lookup fails. */ }
+    }
     let calls = 0; const deadline = Date.now() + 18000; const cache = new Map();
     const fetchReference = async (url, options = {}) => {
       const key = String(url) + String(options.body || "");

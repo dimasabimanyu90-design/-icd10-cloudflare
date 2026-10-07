@@ -891,13 +891,16 @@ function renderWHOIndexPath(index) {
     if (paths.length) {
       reference = paths.map((ip, n) => {
         const modifiers = Array.isArray(ip.modifiers) ? ip.modifiers : [];
-        const lines = [ip.lead_term, ...modifiers.map((text,i) => '-'.repeat(Math.min(3, Math.max(1, Number(ip.modifier_levels?.[i]) || 1))) + ' ' + text), ip.code];
+        const lines = [ip.lead_term, ...modifiers.map((text,i) => '-'.repeat(Math.min(8, Math.max(1, Number(ip.modifier_levels?.[i]) || 1))) + ' ' + text), ip.code];
         return '<div class="lead-term-box"><div class="lead-label">' + (paths.length > 1 ? 'Kandidat jalur ' + (n+1) : 'Jalur sumber') + ' — belum terverifikasi</div><div class="lead-path">' +
-          lines.map(line => '<div class="lp-line">' + escape(line) + '</div>').join('') + '</div></div>';
+          lines.map(line => '<div class="lp-line">' + escape(line) + '</div>').join('') + (ip.pdf_page ? '<small>' + escape(ip.source_file) + ' · PDF ' + escape(ip.pdf_page) + '</small>' : '') + '</div></div>';
       }).join('');
     } else if (known?.path) {
       reference = '<div class="lead-term-box"><div class="lead-label">Jalur referensi tersimpan — belum diverifikasi WHO</div><div class="lead-path">' +
         renderLeadPath(known.path,index.code,'') + '</div></div>';
+    }
+    if (Array.isArray(index.reference_steps) && index.reference_steps.length) {
+      reference += '<div class="lead-term-box"><div class="lead-label">Langkah rujukan sumber — bukan satu jalur indeks terverifikasi</div>' + index.reference_steps.map(step=>'<div class="lead-path">' + String(step.path_text || '').split('\n').map(line=>'<div class="lp-line">' + escape(line) + '</div>').join('') + '<small>' + escape(step.source_file) + ' · PDF ' + escape(step.pdf_page) + '</small></div>').join('') + '</div>';
     }
     return '<div class="vol1-box" style="margin-top:8px;border-left:3px solid #f59e0b">' +
       '<div class="vol1-label">WHO Vol. 3 Alphabetical Index</div>' +

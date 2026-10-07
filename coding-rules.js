@@ -274,7 +274,7 @@ async function resolveWHOIndexReferences(diagnosis, request, lookup) {
   let term = initial;
   const pending = [];
   let sourcePath = null;
-  const fail = reason => ({ ...(sourcePath || {}), code, status: 'unverified', source: 'WHO_INDEX', lead_term: initial,
+  const fail = reason => ({ ...(sourcePath || {}), code, status: 'unverified', source: sourcePath?.source || 'WHO_INDEX', lead_term: initial,
     reason, cross_reference_trace: trace, cross_reference_status: 'unverified' });
   const clinicalConflict = diagnosis.clinical_validation?.status === 'review_required';
   // Includes all branches: max four source queries per diagnosis, not per branch.
@@ -297,6 +297,12 @@ async function resolveWHOIndexReferences(diagnosis, request, lookup) {
         return {lead_term:parts[0],modifiers:parts.filter((_,i)=>i>0 && i%2===0),modifier_levels:parts.filter((_,i)=>i%2===1).map(x=>x.length),code};
       });
       sourcePath = {index_paths:paths, ...(paths.length === 1 ? {index_path:paths[0]} : {}), reference_scope:'source_candidate_only'};
+    }
+    if (data.review_required === true) {
+      const paths=(data.pdf_index_paths || []).filter(path=>path.code===code && path.lead_term);
+      sourcePath={...(sourcePath || {}),...(paths.length ? {index_paths:paths,...(paths.length===1 ? {index_path:paths[0]} : {})} : {}),
+        source:data.source || 'UPLOADED_WHO2010_PDF',reference_steps:Array.isArray(data.reference_steps) ? data.reference_steps : [],reference_scope:'pdf_source_candidate_only'};
+      return fail(data.reason || 'Referensi PDF tersedia; hasil ekstraksi indeks masih perlu ditinjau.');
     }
     if (clinicalConflict) return fail('Dokumentasi atau konvensi coding masih perlu ditinjau; jalur sumber hanya referensi, bukan validasi klinis.');
     if (!terms.length) return fail('Kode ditemukan tetapi istilah pencarian tidak terbukti pada WHO Index.');
