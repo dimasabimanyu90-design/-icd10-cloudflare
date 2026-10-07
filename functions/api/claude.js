@@ -356,7 +356,7 @@ async function attachDiagnosisIMOptions(items, db) {
       ).bind(anchor,anchor.includes('.') ? anchor+'%' : anchor+'.%').all());
       const rows=cache.get(anchor).results || [];
       item.im_options_status=rows.length > 40 ? 'truncated_requires_review' : 'available';
-      item.im_options=rows.slice(0,40).filter(row=>row.title_extracted).map(row=>({
+      item.im_options=rows.slice(0,40).filter(row=>row.title_extracted && (row.code !== anchor || /\(IM\)/i.test(row.title_extracted))).map(row=>({
         code:row.code,description:row.title_extracted,source_file:row.source_file,pdf_page:row.pdf_page,
         review_status:row.review_status,entry_id:row.entry_id,who_anchor_code:anchor,
         relationship:'code_family_candidate_only',clinical_match:'requires_review',selected:false,
