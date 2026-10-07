@@ -331,6 +331,10 @@ function normalizeModelResult(value) {
       const out = {};
       for (const key of fields) out[key] = typeof item[key] === 'string' ? item[key].slice(0,4000) : null;
       out.code = String(out.code || '').trim().toUpperCase();
+      if (group === 'diagnoses') {
+        const role = String(out.role || '').trim().toLowerCase();
+        out.role = ({du:'DU',primary:'DU',principal:'DU','diagnosis utama':'DU',ds:'DS',secondary:'DS','diagnosis sekunder':'DS'})[role] || out.role;
+      }
       out.confidence = null;
       out.lead_term_path = null; out.volume1_notes = [];
       return out;
