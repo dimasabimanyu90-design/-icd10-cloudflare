@@ -282,12 +282,18 @@ async function resolveWHOIndexReferences(diagnosis, request, lookup) {
     visited.add(key);
     const data = await lookup(term, code, request);
     if (!data || data.valid !== true) return fail('Sumber WHO Index tidak tersedia untuk membuktikan rujukan.');
-    const terms = (data.results || []).flatMap(item => (item.index_terms || []).map(text => ({ text, code: item.code })))
-      .filter(item => indexTermMatches(item.text, term));
-    const candidate = terms.find(item => String(item.code).toUpperCase() === code && !parseIndexReference(item.text));
-    if (candidate) {
-      const parts = normalizeIndexLabel(candidate.text).split(/\s+(-{1,3})\s+/);
-      sourcePath = {index_path:{lead_term:parts[0],modifiers:parts.filter((_,i)=>i>0 && i%2===0),modifier_levels:parts.filter((_,i)=>i%2===1).map(x=>x.length),code},reference_scope:'source_candidate_only'};
+    const sourceTerms = (data.results || []).flatMap(item => (item.index_terms || []).map(text => ({ text, code: item.code })));
+    const terms = sourceTerms.filter(item => indexTermMatches(item.text, term));
+    // Preserve actual source paths for this exact code independently of lead-term
+    // matching. These are candidates, never evidence that this diagnosis is verified.
+    const candidates = [...new Set(sourceTerms.filter(item => String(item.code).toUpperCase() === code && !parseIndexReference(item.text))
+      .map(item => normalizeIndexLabel(item.text)).filter(Boolean))];
+    if (candidates.length) {
+      const paths = candidates.map(text => {
+        const parts = text.split(/\s+(-{1,3})\s+/);
+        return {lead_term:parts[0],modifiers:parts.filter((_,i)=>i>0 && i%2===0),modifier_levels:parts.filter((_,i)=>i%2===1).map(x=>x.length),code};
+      });
+      sourcePath = {index_paths:paths, ...(paths.length === 1 ? {index_path:paths[0]} : {}), reference_scope:'source_candidate_only'};
     }
     if (clinicalConflict) return fail('Kode bertentangan dengan dokumentasi diagnosis; jalur sumber hanya referensi, bukan validasi klinis.');
     if (!terms.length) return fail('Kode ditemukan tetapi istilah pencarian tidak terbukti pada WHO Index.');
