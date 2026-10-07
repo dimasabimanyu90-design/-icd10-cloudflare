@@ -458,6 +458,17 @@ function repairDocumentedRetinopathy(parsed, input) {
   const laser = clauses.filter(x=>/laser/i.test(x) && /fotokoagulasi|photocoagulation/i.test(x) && /retina/i.test(x) && !/\b(?:rencana|planned|planning|batal|dibatalkan|cancelled|canceled|ditunda|deferred|riwayat|history|tidak|belum|tanpa|not)\b/i.test(x) && !documentationIssue(x,input,true));
   if (laser.length === 1 && !/retinal (?:tear|detachment)|robekan retina|ablasio|ablasi retina/i.test(input)) {
     manifestation.secondary_relevance_quote = laser[0];
+    // Recover a focused episode; a dagger comorbidity must not override another DU.
+    const focusedPair = parsed.diagnoses.every(d=>d===etiology || d===manifestation);
+    const diagnosisStatements = clauses.filter(x=>/^(?:diagnosis|diagnosa)\s*:/i.test(x));
+    if (primary.length === 0 && focusedPair && diagnosisStatements.length === 1 &&
+        !/\b(?:dan|and|serta)\b|[,+]/i.test(quote)) {
+      etiology.role='DU'; manifestation.role='DS';
+      etiology.role_adjustment={rule:'documented_retinopathy_focused_treatment_episode',status:'provisional_requires_review',documentation_quote:quote,treatment_quote:laser[0]};
+      warnings.push({type:'WARNING',message:'Pasangan diabetes–retinopati merupakan satu-satunya diagnosis yang dikodekan dan mendapat tindakan retina pada episode ini: E11.3 dagger diusulkan sebagai DU, H36.0 asterisk sebagai DS. Tinjau alasan utama episode pelayanan.'});
+    } else if (etiology.role === 'DU' && focusedPair) {
+      manifestation.role='DS';
+    }
     for (const procedure of parsed.procedures || []) {
       if (procedure.code !== '67.01' || (procedure.documentation_quote && documentationIssue(procedure.documentation_quote,input,true))) continue;
       procedure.code='14.24'; procedure.code_system='ICD9_CM';
