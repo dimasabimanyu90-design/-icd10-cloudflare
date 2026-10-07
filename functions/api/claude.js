@@ -1,4 +1,4 @@
-import { applyFractureDefaults, auditClinicalCoding, buildPrompt, extractLeadTerm, normalizeIndexLabel, parseIndexReference, formatIndexTrace, indexTermMatches, buildWHOIndexPath, resolveWHOIndexReferences, referenceWarnings, validateCodingStructure, ICS_REFERENCE_PROFILE, auditICSContext } from "../../coding-rules.js";
+import { getIMParentCodes, applyFractureDefaults, auditClinicalCoding, buildPrompt, extractLeadTerm, normalizeIndexLabel, parseIndexReference, formatIndexTrace, indexTermMatches, buildWHOIndexPath, resolveWHOIndexReferences, referenceWarnings, validateCodingStructure, ICS_REFERENCE_PROFILE, auditICSContext } from "../../coding-rules.js";
 
 // HTTP/model and database adapters. Coding policy is in coding-rules.js.
 function extractWHOOfficialTitle(entity) {
@@ -82,7 +82,20 @@ async function validateDiagnosesWithWHOIndex(diagnoses, request) {
   }
   for (const diagnosis of (Array.isArray(diagnoses) ? diagnoses : [])) {
     let result;
-    if (diagnosis.im_reference?.local_extension) {
+    if (diagnosis.index_parent_reference && (diagnosis.im_reference?.local_extension || !diagnosis.index_parent_reference.child_in_database)) {
+      const ref = diagnosis.index_parent_reference;
+      let parentIndex = null;
+      if (ref.who_anchor_code) {
+        const parent = {...diagnosis,code:ref.who_anchor_code, im_reference:null, description_source:null};
+        await validateDiagnosesWithWHO([parent],request);
+        try { parentIndex = await resolveWHOIndexReferences(parent,request,lookup); }
+        catch { parentIndex = {code:parent.code,status:'unverified',reason:'Referensi indeks parent belum tersedia.'}; }
+      }
+      result = {code:diagnosis.code,status:'parent_reference',source:'LOCAL_IM',
+        scope:'parent_reference_only',parent_code:ref.parent_code,who_anchor_code:ref.who_anchor_code,
+        parent_index:parentIndex, parent_entries:ref.parents, child_in_database:ref.child_in_database,
+        cross_reference_status:'unverified',reason:'Jalur parent ditampilkan sebagai referensi; kode IM anak dan kecocokan klinis tidak disahkan oleh jalur tersebut.'};
+    } else if (diagnosis.im_reference?.local_extension) {
       result = { code: diagnosis.code, status: 'unverified', source: 'LOCAL_IM', cross_reference_status: 'unverified', reason: 'Referensi IM draft belum menyediakan jalur rujukan indeks terverifikasi.' };
     } else {
       try { result = await resolveWHOIndexReferences(diagnosis, request, lookup); }
@@ -149,7 +162,7 @@ async function validateDiagnosesWithWHO(diagnoses, request) {
         // AI tetap boleh memberi description_id/penjelasan Indonesia,
         // tetapi description tidak boleh mengarang judul ICD-10.
         if (whoTitle) {
-          diagnosis.description = whoTitle;
+          if (!diagnosis.description_source) diagnosis.description = whoTitle;
           diagnosis.who_official_title = whoTitle;
         }
 
@@ -247,7 +260,8 @@ async function attachIMReferences(items, db, table, system) {
   if (!list.length) return { items: list, status: 'not_applicable', matched: 0 };
   if (!db) return { items: list, status: 'unavailable', matched: 0 };
   try {
-    const codes = [...new Set(list.map(x => String(x.code || '').trim().toUpperCase()).filter(Boolean))];
+    const exactCodes = list.map(x => String(x.code || '').trim().toUpperCase()).filter(Boolean);
+    const codes = [...new Set(exactCodes.flatMap(code => system === 'ICD10' ? [code, ...getIMParentCodes(code)] : [code]))];
     const rows = [];
     for (let offset = 0; offset < codes.length; offset += 50) {
       const batch = codes.slice(offset, offset + 50);
@@ -258,13 +272,29 @@ async function attachIMReferences(items, db, table, system) {
     const enriched = list.map(item => {
       const code = String(item.code || '').trim().toUpperCase();
       const matches = rows.filter(row => row.code === code);
-      if (!matches.length) return { ...item, code };
+      const parentCodes = system === 'ICD10' ? getIMParentCodes(code) : [];
+      const parents = parentCodes.map(parentCode => {
+        const entries = rows.filter(row => row.code === parentCode);
+        return entries.length ? {code:parentCode, entries,
+          description:[...new Set(entries.map(e => e.title_extracted).filter(Boolean))].join(' / ')} : null;
+      }).filter(Boolean);
+      const indexParent = parents.length ? {scope:'parent_reference_only', child_code:code,
+        child_in_database:Boolean(matches.length), parent_code:parents[0].code,
+        who_anchor_code:parents.find(p => /^[A-Z]\d{2}\.\d$/.test(p.code))?.code || null,
+        parents, clinical_validity:'not_assessed'} : null;
+      if (!matches.length) return { ...item, code, ...(indexParent ? {index_parent_reference:indexParent} : {}) };
       matched++;
-      return { ...item, code, im_reference: {
+      const titles = [...new Set(matches.map(entry => String(entry.title_extracted || '').trim()).filter(Boolean))];
+      return { ...item, code,
+        ...(titles.length ? {description:titles.join(' / '), description_id:null,
+          description_source:{source:system + '_IM_DB',code,ambiguous:titles.length > 1}} : {}),
+        ...(indexParent ? {index_parent_reference:indexParent} : {}),
+        im_reference: {
         system, status: 'reference_found', coding_validity: 'not_assessed',
         local_extension: system === 'ICD9' ? /^\d{2}\.\d{3}$/.test(code) : /^[A-Z]\d{2}\.\d{2,3}$/.test(code),
         ambiguous: matches.length > 1, entries: matches
       } };
+
     });
     return { items: enriched, status: 'available', matched };
   } catch {

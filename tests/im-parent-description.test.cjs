@@ -1,0 +1,54 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
+const path=require('node:path');
+const root=path.resolve(__dirname,'..');
+let model,rows;
+const requests=[];
+const context=vm.createContext({Request,Response,URL,AbortSignal,console,setTimeout,fetch:async(url,options={})=>{
+ requests.push({url:String(url),body:options.body});
+ if(String(url).includes('groq.com'))return Response.json({choices:[{message:{content:JSON.stringify(model)}}]});
+ if(String(url).includes('who-index'))return Response.json({valid:true,results:[{code:'S72.3',title:'WHO parent title',index_terms:['Fracture']}]});
+ return Response.json({valid:true,entity:{title:'WHO parent title'}});
+}});
+require('./load-coding.cjs')(context,root);
+const db={prepare:()=>({bind:()=>({all:async()=>({results:rows})})})};
+const input='Fraktur shaft femur simple tertutup.';
+async function run(code,entries){
+ rows=entries;requests.length=0;
+ model={diagnoses:[{role:'DU',code,description:'AI invented title',description_id:'AI translation',lead_term:'Fracture',documentation_quote:input}],procedures:[]};
+ const r=await context.onRequestPost({request:new Request('https://test/api/claude',{method:'POST',body:JSON.stringify({clinicalText:input})}),env:{GROQ_API_KEY:'test',ICD10_IM_DB:db}});
+ return JSON.parse((await r.json()).text);
+}
+(async()=>{
+ const base={code:'S72.3',title_extracted:'Fracture of shaft of femur',pdf_page:83};
+ const parent={code:'S72.30',title_extracted:'Fracture of shaft of femur, simple fracture (IM)',pdf_page:83};
+ const child={code:'S72.301',title_extracted:'Fixture child title (IM)',pdf_page:83};
+ let result=await run(child.code,[base,parent,child]);let d=result.diagnoses[0];
+ assert.equal(d.code,'S72.301');assert.equal(d.description,child.title_extracted);assert.equal(d.description_id,null);
+ assert.equal(d.description_source.source,'ICD10_IM_DB');
+ assert.equal(d.index_parent_reference.parent_code,'S72.30');assert.equal(d.index_parent_reference.who_anchor_code,'S72.3');
+ assert.equal(d.who_index.scope,'parent_reference_only');assert.equal(d.who_index.code,'S72.301');
+ assert.equal(d.who_index.parent_index.code,'S72.3');assert.equal(d.who_index.parent_index.status,'verified');
+ assert.equal(d.who_validation.valid,false);assert.equal(result.reference_checks_passed,false);assert.equal(result.finalized,false);
+ result=await run('S72.301',[base,parent]);d=result.diagnoses[0];
+ assert.equal(d.index_parent_reference.child_in_database,false);assert.equal(d.im_reference,undefined);assert.equal(d.who_index.scope,'parent_reference_only');
+ result=await run('S72.30',[base,parent]);d=result.diagnoses[0];
+ assert.equal(d.description,parent.title_extracted);assert.equal(d.index_parent_reference.parent_code,'S72.3');
+ result=await run('S72.3',[base]);assert.equal(result.diagnoses[0].description,base.title_extracted,'WHO enrichment must not overwrite DB description');
+ result=await run('S72.301',[base,parent,child,{...child,title_extracted:'Second fixture title (IM)'}]);
+ assert.equal(result.diagnoses[0].description_source.ambiguous,true);assert.ok(result.diagnoses[0].description.includes('Second fixture title'));
+ assert.deepEqual(Array.from(context.getIMParentCodes('S72.301')),['S72.30','S72.3']);
+ assert.deepEqual(Array.from(context.getIMParentCodes('S72.3')),[]);
+ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+ const renderSource=html.slice(html.indexOf('function renderWHOIndexPath('),html.indexOf('function renderWHOGuidance('));
+ const ui=vm.createContext({window:{KNOWN_PATHS:{'S72.3':{path:'Fracture\n- femur\n-- shaft S72.3'}}},renderLeadPath:(p,c)=>p+' [reference '+c+']',highlightCodes:s=>s});
+ vm.runInContext(renderSource,ui);
+ const markup=ui.renderWHOIndexPath({code:'S72.301',scope:'parent_reference_only',parent_code:'S72.30',who_anchor_code:'S72.3',parent_entries:[{code:'S72.30',description:'DB <title>'}],child_in_database:false});
+ assert.ok(markup.includes('Kode DU/DS tetap S72.301'));
+ assert.ok(markup.includes('S72.30 — DB &lt;title&gt;'));
+ assert.ok(markup.includes('shaft S72.3'));
+ assert.ok(markup.includes('Kode anak belum ditemukan'));
+ assert.ok(!markup.includes('code match verified'));
+ console.log('PASS: canonical DB titles, parent-only path scope, missing child, ambiguity, parent lookup without child approval');
+})().catch(e=>{console.error(e);process.exitCode=1});
