@@ -104,6 +104,7 @@ Status abortus lengkap/tidak lengkap bukan ditentukan semata-mata sebelum/sesuda
 Riwayat SC tidak otomatis membuktikan perawatan untuk bekas luka uterus pada episode ini.
 Persalinan preterm tidak otomatis dibuktikan dari usia kehamilan; periksa onset, waktu persalinan, dan rincian diagnosis. Urgensi SC bukan satu-satunya alasan penentuan DU.
 SC dengan TTTS/IUFD: pilih DU berdasarkan penyulit/fokus pelayanan yang terdokumentasi; jangan mengunci urutan semua kode. TTTS tidak otomatis dagger.
+74.3 adalah removal of extratubal ectopic pregnancy, bukan SC gemelli.
 Pada rekam ibu, TTTS (twin-to-twin transfusion syndrome) → kandidat O43.0, bukan O73.2 atau kode bayi P50.3. IUFD → tinjau O36.4; O31.2 membutuhkan continuing pregnancy setelah kematian salah satu janin, bukan sekadar gemelli + IUFD.
 Daftar gemelli + TTTS + IUFD + bekas SC adalah kondisi bersamaan, bukan diagnosis alternatif MB5. Urutan pertama dalam daftar bukan bukti DU. Label "Diagnosis utama dan riwayat" yang mencampur G/P/A dan riwayat bukan penetapan DU spesifik.
 Jika indikasi dominan SC/masuk belum jelas, nyatakan DU sebagai usulan dan jelaskan pilihan yang perlu diklarifikasi. Jangan mengarang hubungan TTTS menyebabkan IUFD atau hasil bayi lain hidup.
@@ -523,11 +524,12 @@ function auditMaternalTTTS(parsed, input) {
   }
   const specificTechnique=clauses.some(x=>/klasik|classical|korporal|corporal|low cervical|segmen bawah|lower segment|extraperitoneal|ekstraperitoneal/i.test(x) && /SC|caesarean|cesarean|sectio/i.test(x) && !/riwayat|history|bekas|previous|rencana|planned/i.test(x));
   if(deliveredPreterm && !specificTechnique) for(const procedure of parsed.procedures || []) {
-    if(!['74.0','74.1','74.2','74.4'].includes(procedure.code) || documentationIssue(procedure.documentation_quote,input,true)) continue;
+    const wrongEctopic=procedure.code==='74.3' && !/ektopik|ectopic/i.test(input);
+    if((!['74.0','74.1','74.2','74.4'].includes(procedure.code) && !wrongEctopic) || documentationIssue(procedure.documentation_quote,input,true)) continue;
     const original=procedure.code;
     procedure.code='74.99';procedure.description='Other caesarean section of unspecified type';procedure.description_id=null;procedure.code_system='ICD9_CM';procedure.lead_term='Caesarean section';
     procedure.coding_adjustment={original_code:original,proposed_code:'74.99',rule:'documented_caesarean_without_technique',status:'provisional_requires_review'};
-    warnings.push({type:'WARNING',code:'74.99',message:original+' memerlukan rincian teknik SC yang belum tertulis. Usulan 74.99 digunakan untuk jenis SC tidak spesifik; tinjau laporan operasi.'});
+    warnings.push({type:'WARNING',code:'74.99',message:original+(wrongEctopic?' memerlukan pengangkatan kehamilan ektopik ekstratubal yang tidak tertulis.':' memerlukan rincian teknik SC yang belum tertulis.')+' Usulan 74.99 digunakan untuk jenis SC tidak spesifik; tinjau laporan operasi.'});
   }
   const complex=/\bIUFD\b|intrauterine (?:fetal )?(?:death|demise)/i.test(quote) && /gemelli|kembar|twin/i.test(quote) && /\bSC\b|caesarean|cesarean|sectio/i.test(quote);
   if(complex) {
