@@ -43,5 +43,18 @@ export async function retrievePDFContext(db, clinicalText) {
     const result=await db.prepare('SELECT group_start,group_end,suffix,title,pdf_page FROM shared_subdivisions ORDER BY suffix').all();
     for(const row of result.results || []) records.push({...row,review_status:'extracted_requires_review'});
   }
-  return records.slice(0,30);
+  // Maternal obstetric candidates: literal source excerpts, never an ordering rule.
+  const codes=new Set();
+  if (/\bttts\b|twin.to.twin transfusion/.test(text)) codes.add('O43.0');
+  if (/\biufd\b|intrauterine (?:fetal )?(?:death|demise)/.test(text)) {codes.add('O36.4');if(/gemelli|kembar|twin/.test(text))codes.add('O31.2');}
+  if (/gemelli|kembar|twin pregnancy/.test(text)) codes.add('O30.0');
+  if (/partus prematur|preterm|persalinan prematur/.test(text)) {codes.add('O60.1');codes.add('O60.3');}
+  if (/bekas sc|previous caesarean|previous cesarean/.test(text)) codes.add('O34.2');
+  for(const code of [...codes].slice(0,7)) {
+    const tabular=await db.prepare('SELECT code,title,raw_text,pdf_page FROM tabular_entries WHERE code = ? ORDER BY pdf_page LIMIT 1').bind(code).all();
+    for(const row of tabular.results||[]) records.push({...row,raw_text:String(row.raw_text).slice(0,1200),reference_type:'tabular_candidate',review_status:'extracted_requires_review'});
+    const index=await db.prepare("SELECT code,path_text,raw_text,pdf_page FROM index_entries WHERE code = ? AND section = 'diagnosis' AND version = '2010' AND context_issue = '' ORDER BY pdf_page LIMIT 1").bind(code).all();
+    for(const row of index.results||[]) records.push({...row,raw_text:String(row.raw_text).slice(0,800),reference_type:'index_candidate',review_status:'extracted_requires_review'});
+  }
+  return records.slice(0,40);
 }

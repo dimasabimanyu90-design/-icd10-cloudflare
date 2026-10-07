@@ -1127,7 +1127,9 @@ function renderResults(result) {
   const secondary = diagnoses.filter(d=>d.role==='DS');
   const other = diagnoses.filter(d=>!['DU','DS'].includes(d.role));
   const group = (title,items,isPrimary) => items.length ? '<h3 class="result-group-title">' + title + '</h3>' + items.map(item=>renderResultCard(item,{procedure:false,primary:isPrimary,warnings:forItem(item),duReason:result.du_reasoning})).join('') : '';
-  document.getElementById('diagList').innerHTML =
+  const decision=result.primary_decision;
+  const decisionBox=decision?.status==='clarification_required' ? '<div class="item-alert">⚠ <strong>' + (en ? 'Primary diagnosis is provisional' : 'DU masih usulan') + '</strong><p>' + escapeHTML(decision.clarification || decision.reason) + '</p></div>' : '';
+  document.getElementById('diagList').innerHTML = decisionBox +
     (primary.length ? group(en ? 'Primary diagnosis' : 'Diagnosis utama',primary,true) : '<div class="empty-result">' + (en ? 'Primary diagnosis has not been established.' : 'Diagnosis utama belum ditetapkan.') + '</div>') +
     group(en ? 'Secondary diagnoses' : 'Diagnosis sekunder',secondary,false) +
     group(en ? 'Role needs review' : 'Peran diagnosis perlu ditinjau',other,false) +
@@ -1138,7 +1140,7 @@ function renderResults(result) {
   document.getElementById('labelDiagTable').textContent = en ? 'Diagnoses — WHO ICD-10 2010' : 'Diagnosis — WHO ICD-10 2010';
   document.getElementById('labelProcTable').textContent = en ? 'Procedures' : 'Prosedur';
   document.getElementById('resultStatus').innerHTML = '<a href="#codingDetails">' + (en ? 'Review notes & references' : 'Lihat catatan & referensi') + (actionable.length ? ' · ' + actionable.length : '') + '</a>' +
-    (primary.length !== 1 && diagnoses.length ? ' · ⚠ ' + (en ? 'Check the primary diagnosis selection' : 'Periksa pemilihan satu DU') : '') +
+    (decision?.status==='clarification_required' ? ' · ⚠ ' + (en ? 'Clarify primary diagnosis' : 'DU perlu klarifikasi') : primary.length !== 1 && diagnoses.length ? ' · ⚠ ' + (en ? 'Check the primary diagnosis selection' : 'Periksa pemilihan satu DU') : '') +
     (unique.some(v=>v.type==='ERROR') ? ' · ⚠ ' + (en ? 'Analysis could not be completed' : 'Analisis belum berhasil') : '');
   document.getElementById('summaryBox').innerHTML = '<details class="overall-details" id="codingDetails"><summary>' + (en ? 'Clinical summary, notes & references' : 'Ringkasan klinis, catatan & referensi') + '</summary><div class="details-body">' +
     (result.summary ? '<p>' + escapeHTML(result.summary) + '</p>' : '') + renderValidations(unique) +

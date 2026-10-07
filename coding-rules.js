@@ -104,6 +104,12 @@ Status abortus lengkap/tidak lengkap bukan ditentukan semata-mata sebelum/sesuda
 Riwayat SC tidak otomatis membuktikan perawatan untuk bekas luka uterus pada episode ini.
 Persalinan preterm tidak otomatis dibuktikan dari usia kehamilan; periksa onset, waktu persalinan, dan rincian diagnosis. Urgensi SC bukan satu-satunya alasan penentuan DU.
 SC dengan TTTS/IUFD: pilih DU berdasarkan penyulit/fokus pelayanan yang terdokumentasi; jangan mengunci urutan semua kode. TTTS tidak otomatis dagger.
+Pada rekam ibu, TTTS (twin-to-twin transfusion syndrome) → kandidat O43.0, bukan O73.2 atau kode bayi P50.3. IUFD → tinjau O36.4; O31.2 membutuhkan continuing pregnancy setelah kematian salah satu janin, bukan sekadar gemelli + IUFD.
+Daftar gemelli + TTTS + IUFD + bekas SC adalah kondisi bersamaan, bukan diagnosis alternatif MB5. Urutan pertama dalam daftar bukan bukti DU. Label "Diagnosis utama dan riwayat" yang mencampur G/P/A dan riwayat bukan penetapan DU spesifik.
+Jika indikasi dominan SC/masuk belum jelas, nyatakan DU sebagai usulan dan jelaskan pilihan yang perlu diklarifikasi. Jangan mengarang hubungan TTTS menyebabkan IUFD atau hasil bayi lain hidup.
+Partus prematurus dengan SC yang tertulis sebagai diagnosis episode menunjukkan persalinan dilakukan; tampilkan prosedur SC sesuai rincian. Bila jenis SC tidak tersedia, kandidat 74.99 dari referensi ICD-9-CM; jangan mengarang low cervical 74.1. Bekas SC saja bukan tindakan sekarang.
+O60.1 memiliki inclusion preterm labour with delivery NOS; O60.3 memerlukan tanpa persalinan spontan/induksi yang terdokumentasi. Jangan memilih O60.3 hanya karena SC. Usia 32–33 minggu saja tidak membuktikan persalinan.
+Hb 9,1 saja bukan diagnosis anemia. Kista ovarium ibu tidak membuktikan kelainan janin; jangan menyamakan "kista rahim" dengan ovarium atau janin tanpa klarifikasi.
 `;
 
 const PROMPT_PROSEDUR = `
@@ -382,7 +388,7 @@ function applyFractureDefaults(parsed, clinicalText) {
     .replace(/[‐‑‒–—−]/g, '-').replace(/\s+/g, ' ').trim();
   const input = String(clinicalText || '');
   const clauses = input.split(/[;\n.!?]+|,\s*(?=(?:fraktur|fracture|open fracture|closed fracture))/i);
-  const warnings = repairDocumentedRetinopathy(parsed, input);
+  const warnings = [...repairDocumentedRetinopathy(parsed, input),...auditMaternalTTTS(parsed,input)];
   for (const diagnosis of parsed.diagnoses || []) {
     if (!/^(?:S(?:02|12|22|32|42|52|62|72|82|92)|T(?:02|08|10|12))(?:\.|$)|^T14\.2/.test(String(diagnosis.code || ''))) continue;
     const quote = String(diagnosis.documentation_quote || '').trim();
@@ -481,11 +487,62 @@ function repairDocumentedRetinopathy(parsed, input) {
   return warnings;
 }
 
+// Source-bound maternal TTTS repair and sequencing review; never select DU by list order.
+function auditMaternalTTTS(parsed, input) {
+  const warnings=[];
+  if (!/hamil|partus|persalinan|pregnan/i.test(input) || /(?:rekam|pasien)\s+(?:bayi|neonatus)|newborn record/i.test(input)) return warnings;
+  const clauses=String(input).split(/[\n;.!?]+/).map(x=>x.trim()).filter(Boolean);
+  const active=clauses.filter(x=>/^diagnos(?:is|a)(?:\s+utama)?\s*:/i.test(x) && /\bTTTS\b|twin[- ]to[- ]twin transfusion/i.test(x) && !/\b(?:suspek|suspected|possible|rule out|tanpa|tidak|no|not|riwayat|history)\b/i.test(x) && !documentationIssue(x,input));
+  if (!active.length || active.length>2) return warnings;
+  const quote=active.find(x=>/gemelli|kembar|twin/i.test(x) && /IUFD|intrauterine/i.test(x)) || active[0];
+  const diagnoses=parsed.diagnoses || [];
+  const existing=diagnoses.filter(d=>d.code==='O43.0' || ((/^(?:TTTS|twin[- ]to[- ]twin transfusion syndrome)$/i.test(String(d.documentation_quote||'').trim()) || /TTTS|twin[- ]to[- ]twin transfusion/i.test(d.description||'')) && !documentationIssue(d.documentation_quote,input)));
+  if (existing.length>1) {warnings.push({type:'WARNING',message:'Beberapa usulan TTTS ditemukan; tinjau duplikasi sebelum menentukan DU.'});return warnings;}
+  let ttts=existing[0];
+  if (!ttts) {
+    ttts={code:'O43.0',role:'DS',code_system:'WHO_ICD10_2010',documentation_quote:quote,reasoning:'TTTS tertulis pada diagnosis maternal; relevansi dan urutan perlu ditinjau.'};
+    diagnoses.push(ttts);parsed.diagnoses=diagnoses;
+  } else if (ttts.documentation_quote && documentationIssue(ttts.documentation_quote,input)) return warnings;
+  const original=ttts.code;
+  ttts.code='O43.0';ttts.code_system='WHO_ICD10_2010';ttts.description='Placental transfusion syndromes';ttts.description_id=null;ttts.lead_term='Transfusion';ttts.documentation_quote=quote;
+  ttts.dagger_asterisk=null;ttts.paired_with=null;
+  if(original!=='O43.0') {
+    ttts.coding_adjustment={original_code:original,proposed_code:'O43.0',rule:'documented_maternal_ttts',status:'provisional_requires_review'};
+    warnings.push({type:'WARNING',code:'O43.0',message:original+' dikoreksi ke kandidat maternal O43.0 untuk TTTS yang tertulis; urutan DU/DS tetap perlu ditinjau.'});
+  }
+  const complex=/\bIUFD\b|intrauterine (?:fetal )?(?:death|demise)/i.test(quote) && /gemelli|kembar|twin/i.test(quote) && /\bSC\b|caesarean|cesarean|sectio/i.test(quote);
+  if(complex) {
+    const explicit=clauses.filter(x=>/^diagnos(?:is|a)\s+utama\s*:/i.test(x) && !/[+]|\b(?:dan|serta|and|atau|or)\b/i.test(x));
+    let primary=diagnoses.filter(d=>d.role==='DU');
+    const directTTTS=explicit.length===1 && /TTTS|twin[- ]to[- ]twin transfusion/i.test(explicit[0]);
+    if(directTTTS && primary.length<=1 && (primary.length===0 || primary[0]===ttts || /^(?:O60\.[0-3]|O30\.0|O36\.4)$/.test(primary[0].code))) {
+      if(primary[0] && primary[0]!==ttts) primary[0].role='DS';
+      ttts.role='DU';
+      ttts.role_adjustment={rule:'explicit_documented_maternal_ttts_primary',status:'provisional_requires_review',documentation_quote:explicit[0]};
+      primary=diagnoses.filter(d=>d.role==='DU');
+    }
+    const supported=directTTTS && primary.length===1 && primary[0]===ttts;
+    parsed.primary_decision={status:supported?'documented_requires_review':'clarification_required',source:'maternal_ttts_episode_audit',candidate_codes:diagnoses.filter(d=>/^(?:O43\.0|O36\.4|O31\.2|O30\.0|O60\.[0-3])$/.test(d.code)).map(d=>d.code),documentation_quote:quote,
+      reason:supported?'TTTS disebut eksplisit sebagai diagnosis utama; tetap tinjau aturan dan episode.':'Gemelli, TTTS, IUFD dan persalinan preterm tercatat bersama; urutan daftar belum membuktikan penyulit utama episode.',
+      clarification:supported?null:'Apa indikasi utama rawat inap/SC menurut DPJP, dan apakah persalinan spontan sudah dimulai?'};
+    if(!supported) {
+      parsed.du_reasoning=parsed.primary_decision.reason+' DU yang tampil masih usulan; klarifikasi indikasi utama rawat inap/SC.';
+      warnings.push({type:'WARNING',message:'DU obstetri perlu klarifikasi: '+parsed.primary_decision.reason});
+    }
+    if(parsed.ics_context?.mb_rule==='MB5' && parsed.ics_context.mb5_mode==='alternative_diagnoses' && !/\b(?:atau|or|versus)\b/i.test(parsed.ics_context.mb_trigger_quote||'')) {
+      parsed.ics_context.mb_rule=null;parsed.ics_context.mb5_mode=null;parsed.ics_context.first_alternative_code=null;
+      warnings.push({type:'WARNING',message:'MB5 alternatif tidak diterapkan: tanda + menyatakan kondisi bersamaan, bukan alternatif; jangan menetapkan DU dari urutan pertama.'});
+    }
+    if(/diagnosis utama dan riwayat/i.test(input) && !directTTTS) parsed.ics_context={...parsed.ics_context,documented_du_quote:null};
+  }
+  return warnings;
+}
+
 // Targeted contradiction checks; this is not a complete clinical coding engine.
 function auditClinicalCoding(parsed, clinicalText) {
   const input = String(clinicalText || '');
   const normalize = value => String(value || '').normalize('NFKC').toLowerCase().replace(/[‐‑‒–—−]/g, '-').replace(/\s+/g, ' ').trim();
-  const warnings = repairDocumentedRetinopathy(parsed, input);
+  const warnings = [...repairDocumentedRetinopathy(parsed, input),...auditMaternalTTTS(parsed,input)];
   for (const diagnosis of parsed.diagnoses || []) {
     const quote = String(diagnosis.documentation_quote || '');
     const evidenceIssue = documentationIssue(quote,input);
