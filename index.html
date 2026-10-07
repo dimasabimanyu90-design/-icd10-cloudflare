@@ -871,7 +871,7 @@ function renderWHOIndexPath(index) {
     const parentLabel = nearest ? escape(nearest.code + ' — ' + nearest.description) : escape(index.parent_code);
     const known = window.KNOWN_PATHS?.[index.who_anchor_code];
     const parentVerified = index.parent_index?.status === 'verified';
-    const referencePath = (parentVerified || index.parent_index?.index_path?.lead_term) ? renderWHOIndexPath(index.parent_index)
+    const referencePath = (parentVerified || index.parent_index?.index_path?.lead_term || index.parent_index?.index_paths?.length) ? renderWHOIndexPath(index.parent_index)
       : known?.path ? '<div class="lead-term-box"><div class="lead-label">Jalur parent tersimpan — belum diverifikasi WHO</div><div class="lead-path">' + renderLeadPath(known.path,index.who_anchor_code,'') + '</div></div>'
       : index.parent_index ? renderWHOIndexPath(index.parent_index) : '';
     return '<div class="vol1-box" style="margin-top:8px"><div class="vol1-label">Volume 3 — referensi parent untuk ' + escape(index.code) + '</div>' +
@@ -883,15 +883,18 @@ function renderWHOIndexPath(index) {
 
   if (index.status !== 'verified') {
     const escape = value => String(value || '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-    const ip = index.index_path;
+    const paths = (Array.isArray(index.index_paths) ? index.index_paths : [index.index_path])
+      .filter(ip => ip?.lead_term && ip.code && String(ip.code) === String(index.code));
     const known = window.KNOWN_PATHS?.[index.code];
     let reference = '';
-    // Only an actual returned path or a saved reference may be displayed.
-    // A search lead term alone is not an index path and must not be synthesized.
-    if (ip?.lead_term && ip.code && String(ip.code) === String(index.code)) {
-      const lines = [ip.lead_term, ...(Array.isArray(ip.modifiers) ? ip.modifiers : []), ip.code];
-      reference = '<div class="lead-term-box"><div class="lead-label">Jalur sumber yang dikembalikan — belum terverifikasi</div><div class="lead-path">' +
-        lines.map(line => '<div class="lp-line">' + escape(line) + '</div>').join('') + '</div></div>';
+    // Display source candidates without selecting or certifying a clinical branch.
+    if (paths.length) {
+      reference = paths.map((ip, n) => {
+        const modifiers = Array.isArray(ip.modifiers) ? ip.modifiers : [];
+        const lines = [ip.lead_term, ...modifiers.map((text,i) => '-'.repeat(Math.min(3, Math.max(1, Number(ip.modifier_levels?.[i]) || 1))) + ' ' + text), ip.code];
+        return '<div class="lead-term-box"><div class="lead-label">' + (paths.length > 1 ? 'Kandidat jalur ' + (n+1) : 'Jalur sumber') + ' — belum terverifikasi</div><div class="lead-path">' +
+          lines.map(line => '<div class="lp-line">' + escape(line) + '</div>').join('') + '</div></div>';
+      }).join('');
     } else if (known?.path) {
       reference = '<div class="lead-term-box"><div class="lead-label">Jalur referensi tersimpan — belum diverifikasi WHO</div><div class="lead-path">' +
         renderLeadPath(known.path,index.code,'') + '</div></div>';
@@ -1082,12 +1085,13 @@ function renderResultCard(item, options) {
     '<div class="diag-desc">' + escapeHTML(item.description || (en ? 'Description unavailable' : 'Deskripsi belum tersedia')) + '</div>' +
     (primary && duReason ? '<p class="primary-reason">' + escapeHTML(conciseResultText(duReason)) + '</p>' : '') + '</div></div>' +
     (notice ? '<div class="item-alert">⚠ ' + escapeHTML(notice) + '</div>' : '') +
-    '<details class="result-details"><summary>' + (en ? 'Index & coding evidence' : 'Indeks & dasar coding') + (warnings.length ? ' · ' + warnings.length + (en ? ' notes' : ' catatan') : '') + '</summary><div class="details-body">' +
+    (path ? '<details class="result-details index-reference" open><summary>' + (en ? 'Index path & status' : 'Jalur indeks & status') + '</summary><div class="details-body">' + path + '</div></details>' : '') +
+    '<details class="result-details"><summary>' + (en ? 'Coding evidence' : 'Dasar coding') + (warnings.length ? ' · ' + warnings.length + (en ? ' notes' : ' catatan') : '') + '</summary><div class="details-body">' +
     evidence + (item.description_id && !en ? '<p>' + escapeHTML(item.description_id) + '</p>' : '') +
     (item.paired_with ? '<p>' + (en ? 'Proposed pair: ' : 'Usulan pasangan: ') + escapeHTML(item.paired_with) + '</p>' : '') +
     (item.reasoning ? '<p>' + escapeHTML(item.reasoning) + '</p>' : '') +
     (primary && duReason ? '<p><strong>' + (en ? 'Primary diagnosis rationale' : 'Alasan pemilihan DU') + '</strong><br>' + escapeHTML(duReason) + '</p>' : '') +
-    path + renderVol1Notes(item.volume1_notes) + renderWHOGuidance(item.who_guidance) +
+    renderVol1Notes(item.volume1_notes) + renderWHOGuidance(item.who_guidance) +
     renderValidations(warnings) + '</div></details></article>';
 }
 function renderResults(result) {
