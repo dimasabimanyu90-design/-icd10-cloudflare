@@ -23,8 +23,8 @@ async function run(result,env={}) {
  let out=await run({diagnoses:[{code:'A15.0',lead_term_path:''}],procedures:[]});
  assert.ok(out.validation_layers); assert.equal(out.finalized,false); assert.equal(out.diagnoses[0].description,'Official title');
  const entries=[{code:'I49.00',title_extracted:'IM reference',review_status:'draft',pdf_page:2}];
- out=await run({diagnoses:[{code:'I49.00'}],procedures:[]},{ICD10_IM_DB:db(entries)});
- assert.equal(out.diagnoses[0].im_reference.coding_validity,'not_assessed'); assert.equal(out.diagnoses[0].who_validation.valid,false); assert.equal(out.finalized,false);
+ out=await run({diagnoses:[{code:'I49.00',code_system:'ICD10_IM'}],procedures:[]},{ICD10_IM_DB:db(entries)});
+ assert.equal(out.diagnoses.length,0); assert.equal(out.blocked_diagnoses[0].code,'I49.00'); assert.equal(out.finalized,false);
  calls.length=0;
  await run({diagnoses:[{code:'I49.00'}],procedures:[]});
  assert.ok(calls.some(x=>x.includes('/api/who-icd10')),'missing IM binding must not bypass WHO');
@@ -44,4 +44,5 @@ async function run(result,env={}) {
  assert.equal((await endpoint.onRequestGet({request:new Request('https://example.test/api/icd9-im?code=BAD'),env:{ICD9_IM_DB:db([])}})).status,400);
  console.log('PASS: diagnosis-only persistence, IM draft handling, missing bindings, duplicate IM codes, mapping corrections, ICD9 endpoint');
 })().catch(e=>{console.error(e);process.exitCode=1});
+
 

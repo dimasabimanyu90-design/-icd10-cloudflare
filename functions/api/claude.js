@@ -319,6 +319,56 @@ async function attachIMReferences(items, db, table, system) {
 }
 
 // Model output is untrusted: only proposal fields can enter the validation pipeline.
+// WHO is the base diagnosis system. Missing/invalid evidence is quarantined,
+// never repaired by truncating digits or substituting an IM database title.
+function selectWHOBaseDiagnoses(diagnoses) {
+  const accepted = [], blocked = [];
+  for (const item of diagnoses || []) {
+    if (/^[A-Z]\d{2}(?:\.\d{1,2})?$/.test(item.code) && item.code_system !== 'ICD10_IM' && item.who_validation?.source === 'WHO' &&
+        item.who_validation?.valid === true && item.who_validation?.title) {
+      accepted.push({...item,code_system:'WHO_ICD10_2010',description:item.who_validation.title,
+        description_id:null,description_source:{source:'WHO_ICD10_2010',code:item.code}});
+    } else {
+      blocked.push({...item,coding_status:'held',hold_reason:item.code_system === 'ICD10_IM'
+        ? 'Usulan IM tidak dipakai sebagai DU/DS WHO; pilih kode dasar WHO yang didukung dokumentasi.'
+        : item.who_validation?.status === 'invalid' ? 'Kode tidak ditemukan pada WHO ICD-10 2010.'
+        : 'Keberadaan kode dan judul WHO belum terverifikasi; usulan ditahan.'});
+    }
+  }
+  return {accepted,blocked};
+}
+
+// Prefix matching retrieves related references only. It never certifies that an
+// IM child fits the documented diagnosis, and never changes the base WHO code.
+async function attachDiagnosisIMOptions(items, db) {
+  if (!items.length) return {status:'not_applicable',matched:0};
+  if (!db) {for(const item of items) item.im_options_status='unavailable';return {status:'unavailable',matched:0};}
+  let matched=0;
+  const cache=new Map();
+  try {
+    for (const item of items) {
+      // Optional WHO fifth characters (closed/open) can collide with IM morphology.
+      const anchor = /^[A-Z]\d{2}\.\d{2}$/.test(item.code) ? item.code.slice(0,5) : item.code;
+      if (!cache.has(anchor)) cache.set(anchor,await db.prepare(
+        "SELECT code,kind,title_extracted,source_file,pdf_page,review_status,entry_id FROM icd10_im_entries WHERE code = ? OR code LIKE ? ORDER BY code,pdf_page,entry_id LIMIT 41"
+      ).bind(anchor,anchor.includes('.') ? anchor+'%' : anchor+'.%').all());
+      const rows=cache.get(anchor).results || [];
+      item.im_options_status=rows.length > 40 ? 'truncated_requires_review' : 'available';
+      item.im_options=rows.slice(0,40).filter(row=>row.title_extracted).map(row=>({
+        code:row.code,description:row.title_extracted,source_file:row.source_file,pdf_page:row.pdf_page,
+        review_status:row.review_status,entry_id:row.entry_id,who_anchor_code:anchor,
+        relationship:'code_family_candidate_only',clinical_match:'requires_review',selected:false,
+        index_scope:'who_parent_reference_only'
+      }));
+      if(item.im_options.length) matched++;
+    }
+    return {status:'available',matched};
+  } catch {
+    for(const item of items) {item.im_options=[];item.im_options_status='unavailable';}
+    return {status:'unavailable',matched:0};
+  }
+}
+
 function normalizeModelResult(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid model object');
   const result = {};
@@ -470,8 +520,7 @@ export async function onRequestPost(context) {
         const fetchReference = createValidationFetch();
         const clinicalWarnings = auditClinicalCoding(parsed, clinicalText);
         const fractureNotes = applyFractureDefaults(parsed, clinicalText);
-        const diagnosisIM = await attachIMReferences(parsed.diagnoses, context.env.ICD10_IM_DB, 'icd10_im_entries', 'ICD10');
-        parsed.diagnoses = diagnosisIM.items;
+        // Diagnosis IM lookup follows WHO validation and is advisory only.
         for (const diagnosis of parsed.diagnoses) {
           const condition = String(diagnosis.condition_term || '').trim();
           if (!condition || !clinicalText.toLowerCase().includes(condition.toLowerCase())) diagnosis.condition_term = null;
@@ -484,6 +533,12 @@ export async function onRequestPost(context) {
           Array.isArray(parsed.diagnoses) ? parsed.diagnoses : [],
           context.request, fetchReference
         );
+
+        const base = selectWHOBaseDiagnoses(parsed.diagnoses);
+        parsed.diagnoses = base.accepted;
+        parsed.blocked_diagnoses = base.blocked;
+        const diagnosisIM = await attachDiagnosisIMOptions(parsed.diagnoses,context.env.ICD10_IM_DB);
+        parsed.diagnosis_policy = {base_system:'WHO_ICD10_2010',im_mode:'separate_reference_options',blocked:base.blocked.length};
 
         // Layer 1B: WHO Volume 3 Index lookup + code match.
         const whoIndexResult = await validateDiagnosesWithWHOIndex(
@@ -500,7 +555,9 @@ export async function onRequestPost(context) {
         const procedureWarnings = validateProcedures(parsed.procedures, clinicalText).map(w => ({type:'WARNING',message:w.message}));
         for (const d of parsed.diagnoses) if (d.code_system_ambiguity) parsed.validations.push({type:'WARNING',message:`${d.code}: digit WHO mengacu pada ${d.code_system_ambiguity.who_supplementary_status}; referensi IM memuat ${d.code_system_ambiguity.im_entries.map(e=>e.title_extracted || '').join(' / ')}. Skema harus dipastikan; kedua arti tidak boleh disamakan.`});
         parsed.validations.push(...procedureWarnings);
-        parsed.validations.push(...referenceWarnings(diagnosisIM, 'ICD-10 IM'), ...referenceWarnings(procedureIM, 'ICD-9-CM IM'), ...structureWarnings);
+        if(base.blocked.length) parsed.validations.push({type:'WARNING',message:base.blocked.length + ' usulan diagnosis ditahan dari DU/DS karena belum cocok dengan kode WHO yang terverifikasi.'});
+        if(diagnosisIM.status === 'unavailable') parsed.validations.push({type:'WARNING',message:'Opsi ICD-10 IM tidak tersedia; kode dasar WHO tetap dipakai.'});
+        parsed.validations.push(...referenceWarnings(procedureIM, 'ICD-9-CM IM'), ...structureWarnings);
 
         for (const result of whoResult.validations) {
           if (result.status === 'valid') {
@@ -541,7 +598,7 @@ export async function onRequestPost(context) {
 
         parsed.validation_layers = {
           index_cross_references: { status: whoIndexResult.unverified ? 'unverified' : whoIndexResult.checked ? 'source_checked' : 'not_applicable', checked: whoIndexResult.checked, unverified: whoIndexResult.unverified, coverage: 'returned_source_terms_only' },
-          icd10_im: { status: diagnosisIM.status, matched: diagnosisIM.matched, coding_validity: 'not_assessed' },
+          icd10_im: { status: diagnosisIM.status, matched: diagnosisIM.matched, mode:'separate_reference_options', coding_validity: 'not_assessed' },
           icd9_im: { status: procedureIM.status, matched: procedureIM.matched, coding_validity: 'not_assessed' },
           who_icd10_2010: {
             status: !whoResult.checked ? 'not_applicable' : whoResult.allValid ? 'passed' : 'review_required',

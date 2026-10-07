@@ -9,7 +9,7 @@
 
 const PROMPT_BASE = `
 ## EXTRACTION DAN BUKTI
-Usulkan coding ICD-10 WHO 2010/Indonesian Modification dan ICD-9-CM berdasarkan dokumentasi episode ini.
+Usulkan DU/DS hanya dengan kode ICD-10 WHO 2010 dan prosedur ICD-9-CM berdasarkan dokumentasi episode ini. Opsi Indonesian Modification diambil server dari database terpisah, jangan mengganti kode WHO dengan IM.
 Diagnosis final DPJP menjadi dasar. Diagnosis sekunder harus relevan pada episode dan memenuhi kriteria ICS; riwayat saja tidak otomatis menjadi penyakit aktif/DS.
 Jika hanya gejala terdokumentasi, usulkan kode gejala yang tepat dengan status provisional; jangan mengarang penyakit dari hasil lab, resep, operasi, bangsal, atau biaya.
 Tidak nafsu makan bukan otomatis feeding difficulties. Diabetes tanpa tipe tidak otomatis tipe 2; insulin tidak membuktikan tipe 1.
@@ -20,8 +20,8 @@ Jangan menggeneralisasi PCR/kultur/serologi/PA ke satu kode: periksa spesimen, m
 Satu DU bila diagnosis tersedia; semua DS harus punya bukti relevansi terhadap perawatan. Jelaskan alasan DU sebagai alasan pelayanan, bukan hanya alasan diagnosis ditegakkan.
 Untuk setiap DS isi secondary_relevance_quote: kutipan dampak pada risiko/pemeriksaan/tatalaksana episode ini sesuai ICS §2.1.2 (PDF29–31); kosongkan bila belum tersedia.
 Setiap item memiliki documentation_quote berupa kutipan persis input beserta konteks negasi/waktu; jangan memotong 'tidak', 'rencana', atau 'riwayat' dari kutipan.
-Jangan meminjam kode ICD-10-CM Amerika atau menambahkan digit laterality buatan ke kode WHO 2010. Jika subkode IM belum diketahui, usulkan kode dasar yang didukung dokumentasi dan nyatakan kebutuhan lookup.
-code_system: WHO_ICD10_2010 atau ICD10_IM untuk diagnosis; ICD9_CM atau ICD9_IM untuk tindakan. Skema ini usulan AI, bukan bukti validitas.
+Jangan meminjam kode ICD-10-CM Amerika atau menambahkan digit laterality buatan ke kode WHO 2010. Gunakan kode WHO dasar yang didukung dokumentasi. Jangan mengusulkan digit IM; server menampilkan opsi IM terpisah jika referensi tersedia.
+code_system: hanya WHO_ICD10_2010 untuk diagnosis; ICD9_CM atau ICD9_IM untuk tindakan. Skema ini usulan AI, bukan bukti validitas.
 description: kandidat nama kode; server mengambil nama referensi yang sesuai skema bila tersedia. description_id: terjemahan usulan, bukan nama resmi.
 lead_term: kata utama indeks, bukan judul tabular lengkap. lead_term_path: null jika sumber indeks tidak tersedia; jangan mengarang hierarki atau rujukan.
 confidence: null; probabilitas akurasi tidak dikalibrasi.
