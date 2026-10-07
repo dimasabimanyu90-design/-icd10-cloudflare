@@ -297,7 +297,7 @@ async function resolveWHOIndexReferences(diagnosis, request, lookup) {
       });
       sourcePath = {index_paths:paths, ...(paths.length === 1 ? {index_path:paths[0]} : {}), reference_scope:'source_candidate_only'};
     }
-    if (clinicalConflict) return fail('Kode bertentangan dengan dokumentasi diagnosis; jalur sumber hanya referensi, bukan validasi klinis.');
+    if (clinicalConflict) return fail('Dokumentasi atau konvensi coding masih perlu ditinjau; jalur sumber hanya referensi, bukan validasi klinis.');
     if (!terms.length) return fail('Kode ditemukan tetapi istilah pencarian tidak terbukti pada WHO Index.');
     const references = terms.map(item => parseIndexReference(item.text)).filter(Boolean);
     const unique = [...new Map(references.map(ref => [ref.type + ':' + ref.target, ref])).values()];
@@ -527,7 +527,7 @@ function auditClinicalCoding(parsed, clinicalText) {
     if (diagnosis.dagger_asterisk && diagnosis.dagger_asterisk !== 'none') issues.push('Usulan dagger/asterisk dan pasangan belum diverifikasi terhadap konvensi tabular.');
     diagnosis.clinical_validation = {status: issues.length ? 'review_required' : 'no_targeted_contradiction',
       clinical_validity: 'not_certified', issues};
-    for (const issue of issues) warnings.push({type:'WARNING',message: `Ketidaksesuaian dokumentasi ${diagnosis.code}: ${issue}`});
+    for (const issue of issues) warnings.push({type:'WARNING',message: `Tinjauan dokumentasi dan kaidah ${diagnosis.code}: ${issue}`});
   }
   for (const procedure of parsed.procedures || []) {
     const quote = String(procedure.documentation_quote || '');

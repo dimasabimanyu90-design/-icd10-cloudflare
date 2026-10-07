@@ -12,7 +12,7 @@ const fs = require('node:fs');
  assert.equal(rules.buildWHOIndexPath(index,{code:'J18.0',lead_term:'Bronchopneumonia'}).status,'verified');
  const blocked = await rules.resolveWHOIndexReferences(wrong.diagnoses[0],{},async()=>index);
  assert.equal(blocked.status,'unverified');
- assert.match(blocked.reason,/bertentangan/);
+ assert.match(blocked.reason,/perlu ditinjau/);
  for(const [code,quote] of [['J18.0','bronkopneumonia'],['J18.1','pneumonia lobaris'],['J18.9','pneumonia lobus kanan atas']]) {
   const parsed={diagnoses:[{code,documentation_quote:quote}],procedures:[]};
   assert.equal(rules.auditClinicalCoding(parsed,quote).length,0);
@@ -51,3 +51,4 @@ const fs = require('node:fs');
  assert.equal(knownCause.diagnoses[0].clinical_validation.status,'review_required');
  console.log('PASS: pneumonia documentation, essential source branches, wrong-code block, laboratory evidence');
 })();
+
