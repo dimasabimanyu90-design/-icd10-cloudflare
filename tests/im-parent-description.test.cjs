@@ -16,7 +16,7 @@ const db={prepare:()=>({bind:()=>({all:async()=>({results:rows})})})};
 const input='Fraktur shaft femur simple tertutup.';
 async function run(code,entries){
  rows=entries;requests.length=0;
- model={diagnoses:[{role:'DU',code,description:'AI invented title',description_id:'AI translation',lead_term:'Fracture',documentation_quote:input}],procedures:[]};
+ model={diagnoses:[{role:'DU',code,code_system:'ICD10_IM',description:'AI invented title',description_id:'AI translation',lead_term:'Fracture',documentation_quote:input}],procedures:[]};
  const r=await context.onRequestPost({request:new Request('https://test/api/claude',{method:'POST',body:JSON.stringify({clinicalText:input})}),env:{GROQ_API_KEY:'test',ICD10_IM_DB:db}});
  return JSON.parse((await r.json()).text);
 }
@@ -70,3 +70,4 @@ async function run(code,entries){
  assert.ok(verified.includes('code match verified'));
  console.log('PASS: canonical DB titles, parent-only path scope, missing child, ambiguity, parent lookup without child approval');
 })().catch(e=>{console.error(e);process.exitCode=1});
+
