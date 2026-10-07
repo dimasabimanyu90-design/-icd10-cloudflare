@@ -159,6 +159,41 @@ textarea::placeholder { color: #b8b0a6; font-style: italic; }
   .quota-strip{padding:6px 12px; gap:10px;} .quota-model-wrap{display:none;} .quota-reset{display:none;}
   .ics-banner{padding:6px 12px; gap:8px;} .ics-source{display:none;}
 }
+
+/* Results: diagnoses first, evidence progressively disclosed. */
+#resultStatus { margin:0 0 14px; font-size:12px; color:var(--muted); }
+#resultStatus a { color:var(--blue); text-underline-offset:3px; }
+.result-group-title { padding:18px 22px 8px; margin:0; font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); }
+.result-card { margin:8px 16px 16px; border:1px solid var(--rule); border-radius:9px; background:#fff; overflow:hidden; }
+.result-card.primary { border-color:#b9c9dc; border-left:4px solid #234e70; background:#f8fbff; }
+.result-card .diag-main { grid-template-columns:auto minmax(0,1fr); padding:18px; gap:12px; }
+.result-card.primary .diag-code { font-size:27px; letter-spacing:.2px; color:#163b59; }
+.result-card .diag-code { font-size:19px; letter-spacing:0; }
+.result-card .diag-code-row { flex-wrap:wrap; gap:8px; margin-bottom:7px; }
+.result-card .diag-desc { font-size:15px; line-height:1.5; overflow-wrap:anywhere; }
+.result-card.primary .diag-desc { font-size:18px; font-weight:600; }
+.result-card .du-badge.du { background:#234e70; }
+.source-chip { font-size:10px; font-weight:500; background:#eef2f6; color:#536273; padding:3px 7px; border-radius:4px; }
+.review-chip { display:inline-flex; align-items:center; font-size:10px; padding:3px 7px; background:#fff3d6; color:#805400; border-radius:4px; }
+.primary-reason { font-size:12px; color:#536273; line-height:1.6; margin:9px 0 0; }
+.item-alert { margin:0 18px 12px; padding:9px 11px; border-radius:5px; border:1px solid #f1d69e; background:#fff8e8; color:#805400; font-size:12px; line-height:1.5; overflow-wrap:anywhere; }
+.result-details { border-top:1px solid var(--rule); }
+.result-details > summary, .overall-details > summary { padding:12px 18px; cursor:pointer; font-size:12px; font-weight:500; color:#44566a; }
+.result-details > summary:focus-visible, .overall-details > summary:focus-visible { outline:2px solid #2563eb; outline-offset:-3px; }
+.result-details[open] > summary { background:var(--cream); }
+.details-body { padding:0 18px 16px; font-size:12px; line-height:1.7; overflow-wrap:anywhere; }
+.details-body .lead-term-box,.details-body .vol1-box,.details-body .reasoning-box { padding:12px; margin:8px 0 0; border-radius:5px; }
+.details-body .lp-line { white-space:normal; overflow-wrap:anywhere; }
+.details-body blockquote { margin:6px 0 12px; border-left:2px solid #b9c9dc; padding-left:12px; color:var(--muted); }
+.overall-details { margin:8px 0 24px; background:#fff; border:1px solid var(--rule); border-radius:8px; }
+.overall-details .summary-strip { margin-bottom:12px; }
+.empty-result { padding:18px 22px; color:var(--muted); font-size:13px; }
+.coding-table-header,.proc-header { background:#fff; color:var(--ink); border-bottom:1px solid var(--rule); padding:15px 20px; }
+.coding-count,#procCount { color:var(--muted) !important; }
+.coding-table-wrap,.proc-table-wrap { border-radius:10px; }
+.coding-table-wrap > .legend { display:none; }
+@media(max-width:600px) { .result-card { margin:8px 10px 12px; } .result-card .diag-main { padding:14px 12px; gap:9px; } .item-alert { margin:0 12px 10px; } .result-card.primary .diag-code { font-size:24px; } .result-card.primary .diag-desc { font-size:16px; } .details-body { padding:0 12px 12px; } }
+
 </style>
 <script src="known-paths.js"></script>
 <script type="module">
@@ -275,7 +310,7 @@ window.isIMCode = isIMCode;
       <div class="section-rule-label" id="labelHasil">Hasil Coding</div>
       <div class="section-rule-line"></div>
     </div>
-    <div id="summaryBox"></div>
+    <div id="resultStatus" aria-live="polite"></div>
     <div class="coding-table-wrap">
       <div class="coding-table-header">
         <div class="coding-table-title" id="labelDiagTable">Diagnosis — ICD-10 2010 with Indonesian Modification</div>
@@ -297,6 +332,7 @@ window.isIMCode = isIMCode;
       </div>
       <div id="procList"></div>
     </div>
+    <div id="summaryBox"></div>
   </div>
 </main>
 
@@ -1013,119 +1049,89 @@ function renderValidations(validations) {
   return html;
 }
 
+// Presentation only: preserve every proposed code, warning and source detail.
+function conciseResultText(value, limit = 180) {
+  const text = String(value || '').replace(/<[^>]*>/g,'').replace(/\s+/g,' ').trim();
+  return text.length > limit ? text.slice(0,limit-1).trimEnd() + '…' : text;
+}
+function resultItemNotice(item, warnings, procedure) {
+  const en = currentLang !== 'id';
+  if (item.code_system_ambiguity) return en ? 'WHO and IM meanings differ. Confirm the code system.' : 'Arti kode WHO dan IM berbeda. Pastikan skemanya.';
+  if (item.who_validation?.status === 'invalid') return en ? 'Code not found in WHO 2010. Review this proposal.' : 'Kode tidak ditemukan di WHO 2010. Tinjau usulan ini.';
+  if (item.coding_adjustment) return en ? 'Code adjusted from ' + item.coding_adjustment.original_code + '. Review the evidence.' : 'Kode dikoreksi dari ' + item.coding_adjustment.original_code + '. Tinjau buktinya.';
+  if (item.clinical_validation?.status === 'review_required') return en ? 'Documentation needs review before using this code.' : 'Bukti dokumentasi perlu ditinjau sebelum kode digunakan.';
+  if (warnings.length) return en ? 'A coding note needs review. Open the details.' : 'Ada catatan coding yang perlu ditinjau. Buka detailnya.';
+  if (item.description_source?.source === 'AI_PROPOSAL_UNVERIFIED') return en ? 'AI-proposed description; source match unavailable.' : 'Deskripsi usulan AI; belum cocok dengan sumber.';
+  return '';
+}
+function renderResultCard(item, options) {
+  const {procedure, primary, warnings, duReason} = options;
+  const en = currentLang !== 'id';
+  const label = procedure ? 'PROC' : item.role || '?';
+  const badge = procedure ? 'proc' : primary ? 'du' : 'ds';
+  const notice = resultItemNotice(item,warnings,procedure);
+  const symbol = item.dagger_asterisk === 'dagger' ? '†' : item.dagger_asterisk === 'asterisk' ? '*' : '';
+  const source = isIMCode(item) ? 'IM' : item.who_validation?.valid === true ? 'WHO 2010' : procedure && item.description_source?.source === 'ICD9_DB' ? 'ICD-9-CM' : en ? 'Proposal' : 'Usulan';
+  const indexUnverified = procedure ? item.index_cross_reference?.status !== 'resolved' : item.who_index?.status !== 'verified';
+  const indexNote = en ? 'Index needs review' : 'Indeks belum terverifikasi';
+  const evidence = item.documentation_quote ? '<p><strong>' + (en ? 'Documentation' : 'Bukti dokumentasi') + '</strong></p><blockquote>' + escapeHTML(item.documentation_quote) + '</blockquote>' : '';
+  const path = procedure ? (item.lead_term_path ? '<div class="lead-term-box"><div class="lead-label">ICD-9-CM — ' + (en ? 'reference, unverified' : 'referensi, belum terverifikasi') + '</div><div class="lead-path">' + renderLeadPath(item.lead_term_path,item.code,item.description) + '</div></div>' : '') : renderWHOIndexPath(item.who_index || {code:item.code,status:'unverified',reason:en ? 'Index unavailable.' : 'Jalur indeks belum tersedia.'});
+  return '<article class="result-card' + (primary ? ' primary' : '') + '"><div class="diag-main"><div><span class="du-badge ' + badge + '">' + escapeHTML(label) + '</span></div><div>' +
+    '<div class="diag-code-row"><span class="diag-code">' + escapeHTML(item.code) + escapeHTML(symbol) + '</span><span class="source-chip">' + source + '</span>' +
+    (indexUnverified ? '<span class="review-chip">' + indexNote + '</span>' : '') + '</div>' +
+    '<div class="diag-desc">' + escapeHTML(item.description || (en ? 'Description unavailable' : 'Deskripsi belum tersedia')) + '</div>' +
+    (primary && duReason ? '<p class="primary-reason">' + escapeHTML(conciseResultText(duReason)) + '</p>' : '') + '</div></div>' +
+    (notice ? '<div class="item-alert">⚠ ' + escapeHTML(notice) + '</div>' : '') +
+    '<details class="result-details"><summary>' + (en ? 'Index & coding evidence' : 'Indeks & dasar coding') + (warnings.length ? ' · ' + warnings.length + (en ? ' notes' : ' catatan') : '') + '</summary><div class="details-body">' +
+    evidence + (item.description_id && !en ? '<p>' + escapeHTML(item.description_id) + '</p>' : '') +
+    (item.paired_with ? '<p>' + (en ? 'Proposed pair: ' : 'Usulan pasangan: ') + escapeHTML(item.paired_with) + '</p>' : '') +
+    (item.reasoning ? '<p>' + escapeHTML(item.reasoning) + '</p>' : '') +
+    (primary && duReason ? '<p><strong>' + (en ? 'Primary diagnosis rationale' : 'Alasan pemilihan DU') + '</strong><br>' + escapeHTML(duReason) + '</p>' : '') +
+    path + renderVol1Notes(item.volume1_notes) + renderWHOGuidance(item.who_guidance) +
+    renderValidations(warnings) + '</div></details></article>';
+}
 function renderResults(result) {
-  const t = T[currentLang];
+  const en = currentLang !== 'id';
   document.getElementById('emptyState').style.display = 'none';
   document.getElementById('resultsSection').style.display = 'block';
-
-  // ── HALLUCINATION VALIDATOR ──
-  const _inputText = document.getElementById('clinicalInput').value;
-  const _procWarnings = (typeof validateProcedures === 'function')
-    ? validateProcedures(result.procedures, _inputText) : [];
-  const _diagWarnings = (typeof validateDiagnoses === 'function')
-    ? validateDiagnoses(result.diagnoses) : [];
-
-  document.getElementById('summaryBox').innerHTML = `
-    <div class="summary-strip"><strong>${t.labelSummary}</strong>${escapeHTML(result.summary || '')}</div>
-    ${result.du_reasoning ? `<div class="summary-strip" style="background:#eff6ff;border-color:#bfdbfe;border-left-color:#2563eb;color:#1e3a5f;margin-top:8px">
-      <strong style="color:#1d4ed8">${t.labelDUReason}</strong>${escapeHTML(result.du_reasoning)}</div>` : ''}
-    ${renderValidations(result.validations)}`;
-
-  const diagnoses = result.diagnoses;
-  document.getElementById('diagCount').textContent = `${diagnoses.length} ${currentLang === 'id' ? 'kode' : 'codes'}`;
-
-  // ── Render diagnosis hallucination/unverified warnings ──
-  const _oldDiagBanner = document.querySelector('.diag-validator-banner');
-  if (_oldDiagBanner) _oldDiagBanner.remove();
-  if (_diagWarnings && _diagWarnings.length > 0) {
-    const _diagWarnHTML = `<div class="validation-banner diag-validator-banner" style="border-radius:0;border-left-width:4px;border-left-color:#f59e0b;background:#fffbeb;border-color:#fde68a;color:#92400e;margin-bottom:0">
-      <strong>⚠ KODE DIAGNOSIS PERLU VERIFIKASI</strong>
-      ${_diagWarnings.map(w => `<div class="val-item"><span>🟡</span><span>${safeMessage(w.message)}</span></div>`).join('')}
-      <div style="font-size:10px;margin-top:6px;opacity:0.65;font-style:italic">Format tidak valid = kemungkinan halusinasi AI. Referensi belum terverifikasi = tinjau sumber dan dokumentasi.</div>
-    </div>`;
-    document.querySelector('.coding-table-header').insertAdjacentHTML('afterend', _diagWarnHTML);
-  }
-  document.getElementById('diagList').innerHTML = diagnoses.map((d, i) => {
-    const isDagger   = d.dagger_asterisk === 'dagger';
-    const isAsterisk = d.dagger_asterisk === 'asterisk';
-    const isIM       = isIMCode(d);
-    const badgeClass = d.role === 'DU' ? 'du' : 'ds';
-    const dagMark    = isDagger   ? `<span class="dagger-mark" title="Usulan etiologi — pasangan belum terverifikasi">†</span>` : '';
-    const astMark    = isAsterisk ? `<span class="asterisk-mark" title="Usulan manifestasi — pasangan belum terverifikasi">*</span>` : '';
-    const imBadge    = isIM       ? `<span class="im-badge" title="Indonesian Modification">IM</span>` : '';
-    const pairNote   = d.paired_with ? `<span style="font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;"> → ${t.labelPasangan}: ${escapeHTML(d.paired_with)}</span>` : '';
-    const descAlt    = currentLang === 'id' && d.description_id ? `<div class="diag-desc-alt">🇮🇩 ${escapeHTML(d.description_id)}</div>` : '';
-    return `<div class="diag-item" style="animation-delay:${i*0.06}s">
-      <div class="diag-main">
-        <div><span class="du-badge ${badgeClass}">${escapeHTML(d.role)}</span></div>
-        <div>
-          <div class="diag-code-row"><span class="diag-code">${escapeHTML(d.code)}</span>${dagMark}${astMark}${imBadge}${pairNote}</div>
-          <div class="diag-desc">${escapeHTML(d.description)}</div>
-          ${d.description_source?.source === 'AI_PROPOSAL_UNVERIFIED' ? '<div class="diag-category">⚠ Deskripsi usulan AI — belum dicocokkan dengan sumber</div>' : ''}
-          ${descAlt}
-          <div class="diag-category">${escapeHTML(d.category)}</div>
-        </div>
-        <div class="conf-wrap">
-          <div class="conf-val">—</div>
-          <div class="conf-bar"><div class="conf-fill" style="width:0%"></div></div>
-        </div>
-      </div>
-      ${renderWHOIndexPath(d.who_index || {code:d.code,status:'unverified',reason:'Jalur indeks belum tersedia.'})}
-      ${renderVol1Notes(d.volume1_notes)}
-      ${renderWHOGuidance(d.who_guidance)}
-      ${d.reasoning ? `<div class="reasoning-box">${t.labelReasoning}${escapeHTML(d.reasoning)}</div>` : ''}
-    </div>`;
-  }).join('');
-
-  const procedures = result.procedures;
-  document.getElementById('procCount').textContent = `${procedures.length} ${currentLang === 'id' ? 'kode' : 'codes'}`;
-
-  // Clear previous results even when the new analysis has no warnings.
-  document.querySelector('.proc-validator-banner')?.remove();
-  if (_procWarnings && _procWarnings.length > 0) {
-    const _warnHTML = `<div class="validation-banner proc-validator-banner" style="border-radius:0;border-left-width:4px;border-left-color:#f59e0b;background:#fffbeb;border-color:#fde68a;color:#92400e;margin-bottom:0">
-      <strong>⚠ PROSEDUR TIDAK TERVERIFIKASI DI TEKS INPUT</strong>
-      ${_procWarnings.map(w => `<div class="val-item"><span>🟡</span><span>${safeMessage(w.message)}</span></div>`).join('')}
-      <div style="font-size:10px;margin-top:6px;opacity:0.65;font-style:italic">Verifikasi manual — kemungkinan halusinasi AI karena kata kunci tidak ditemukan di teks</div>
-    </div>`;
-    const _oldBanner = document.querySelector('.proc-validator-banner');
-    if (_oldBanner) _oldBanner.remove();
-    document.querySelector('.proc-header').insertAdjacentHTML('afterend', _warnHTML);
-  }
-
-  const _filteredProcs = procedures;
-
-  document.getElementById('procList').innerHTML = _filteredProcs.map((p, i) => {
-    const isIM    = isIMCode(p);
-    const imBadge = isIM ? `<span class="im-badge" title="Indonesian Modification">IM</span>` : '';
-    const descAlt = currentLang === 'id' && p.description_id ? `<div class="diag-desc-alt">🇮🇩 ${escapeHTML(p.description_id)}</div>` : '';
-    return `<div class="diag-item" style="animation-delay:${(diagnoses.length+i)*0.06}s">
-      <div class="diag-main">
-        <div><span class="du-badge proc">PROC</span></div>
-        <div>
-          <div class="diag-code-row"><span class="diag-code">${escapeHTML(p.code)}</span>${imBadge}</div>
-          <div class="diag-desc">${escapeHTML(p.description)}</div>
-          ${p.description_source?.source === 'AI_PROPOSAL_UNVERIFIED' ? '<div class="diag-category">⚠ Deskripsi usulan AI — belum dicocokkan dengan sumber</div>' : ''}
-          ${descAlt}
-          <div class="diag-category">${escapeHTML(p.category)}</div>
-        </div>
-        <div class="conf-wrap">
-          <div class="conf-val">—</div>
-          <div class="conf-bar"><div class="conf-fill" style="width:0%"></div></div>
-        </div>
-      </div>
-      ${p.lead_term_path ? `<div class="lead-term-box">
-        <div class="lead-label"><span>${t.labelVol3proc} — referensi tersimpan, belum terverifikasi</span>
-</div>
-        <div class="lead-path">${renderLeadPath(p.lead_term_path, p.code, p.description)}</div>
-      </div>` : ''}
-      ${renderVol1Notes(p.volume1_notes)}
-      ${p.reasoning ? `<div class="reasoning-box">${t.labelReasoning}${escapeHTML(p.reasoning)}</div>` : ''}
-    </div>`;
-  }).join('');
+  const diagnoses = Array.isArray(result.diagnoses) ? result.diagnoses : [];
+  const procedures = Array.isArray(result.procedures) ? result.procedures : [];
+  const input = document.getElementById('clinicalInput').value;
+  const extra = [
+    ...(typeof validateProcedures === 'function' ? validateProcedures(procedures,input) : []),
+    ...(typeof validateDiagnoses === 'function' ? validateDiagnoses(diagnoses) : [])
+  ].map(w => ({...w,type:'WARNING'}));
+  const validations = [...(result.validations || []),...extra].filter(v=>v && typeof v.message === 'string');
+  const unique = [...new Map(validations.map(v=>[v.type + ':' + v.message,v])).values()];
+  const actionable = unique.filter(v=>!['INFO','WHO_VALID','WHO_INDEX_VALID','WHO_INDEX_UNVERIFIED','WHO_UNVERIFIED','IM_VALID'].includes(v.type));
+  const forItem = item => actionable.filter(v => v.code === item.code ||
+    (v.message.match(/\b[A-Z]\d{2}(?:\.\d+)?\b|\b\d{2}\.\d+\b/g) || []).includes(item.code) ||
+    (item.role === 'DU' && /\bDU\b|\bMB[1-5]\b|reseleksi/i.test(v.message)));
+  const primary = diagnoses.filter(d=>d.role==='DU');
+  const secondary = diagnoses.filter(d=>d.role==='DS');
+  const other = diagnoses.filter(d=>!['DU','DS'].includes(d.role));
+  const group = (title,items,isPrimary) => items.length ? '<h3 class="result-group-title">' + title + '</h3>' + items.map(item=>renderResultCard(item,{procedure:false,primary:isPrimary,warnings:forItem(item),duReason:result.du_reasoning})).join('') : '';
+  document.getElementById('diagList').innerHTML =
+    (primary.length ? group(en ? 'Primary diagnosis' : 'Diagnosis utama',primary,true) : '<div class="empty-result">' + (en ? 'Primary diagnosis has not been established.' : 'Diagnosis utama belum ditetapkan.') + '</div>') +
+    group(en ? 'Secondary diagnoses' : 'Diagnosis sekunder',secondary,false) +
+    group(en ? 'Role needs review' : 'Peran diagnosis perlu ditinjau',other,false);
+  document.getElementById('procList').innerHTML = procedures.length ? procedures.map(item=>renderResultCard(item,{procedure:true,primary:false,warnings:forItem(item)})).join('') : '<div class="empty-result">' + (en ? 'No procedures proposed.' : 'Tidak ada prosedur yang diusulkan.') + '</div>';
+  document.getElementById('diagCount').textContent = primary.length + ' DU · ' + secondary.length + ' DS' + (other.length ? ' · ' + other.length + ' ?' : '');
+  document.getElementById('procCount').textContent = procedures.length + (en ? ' codes' : ' kode');
+  document.getElementById('labelDiagTable').textContent = en ? 'Diagnoses' : 'Diagnosis';
+  document.getElementById('labelProcTable').textContent = en ? 'Procedures' : 'Prosedur';
+  document.getElementById('resultStatus').innerHTML = '<a href="#codingDetails">' + (en ? 'Review notes & references' : 'Lihat catatan & referensi') + (actionable.length ? ' · ' + actionable.length : '') + '</a>' +
+    (primary.length !== 1 && diagnoses.length ? ' · ⚠ ' + (en ? 'Check the primary diagnosis selection' : 'Periksa pemilihan satu DU') : '') +
+    (unique.some(v=>v.type==='ERROR') ? ' · ⚠ ' + (en ? 'Analysis could not be completed' : 'Analisis belum berhasil') : '');
+  document.getElementById('summaryBox').innerHTML = '<details class="overall-details" id="codingDetails"><summary>' + (en ? 'Clinical summary, notes & references' : 'Ringkasan klinis, catatan & referensi') + '</summary><div class="details-body">' +
+    (result.summary ? '<p>' + escapeHTML(result.summary) + '</p>' : '') + renderValidations(unique) +
+    '<p>† / *: ' + (en ? 'Proposed etiology / manifestation pair; verify the conventions.' : 'Usulan pasangan etiologi / manifestasi; perlu verifikasi konvensi.') + '</p></div></details>';
+  document.querySelector('#resultStatus a').addEventListener('click',()=>{document.getElementById('codingDetails').open=true;});
 }
+
 </script>
 </body>
 </html>
+
 
 
