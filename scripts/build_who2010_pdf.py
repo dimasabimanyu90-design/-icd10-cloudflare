@@ -105,6 +105,7 @@ def main():
  ap=argparse.ArgumentParser();ap.add_argument('pdf');ap.add_argument('--out',required=True);a=ap.parse_args();out=Path(a.out);out.mkdir(parents=True,exist_ok=True)
  source,tab,index,quarantine,shared=extract(a.pdf)
  db=sqlite3.connect(out/'who2010.sqlite');db.executescript(SCHEMA)
+ for table in ['reference_sources','tabular_entries','index_entries','quarantined_pages','shared_subdivisions']:db.execute('DELETE FROM '+table)
  for table,records in [('reference_sources',[source]),('tabular_entries',tab),('index_entries',index),('quarantined_pages',quarantine),('shared_subdivisions',shared)]:
   for r in records:
    keys=list(r);db.execute(f"INSERT OR REPLACE INTO {table} ({','.join(keys)}) VALUES ({','.join('?' for _ in keys)})",list(r.values()))
