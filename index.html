@@ -874,6 +874,21 @@ function renderVol1Notes(notes) {
 
 function renderWHOIndexPath(index) {
   if (!index) return '';
+  if (index.scope === 'parent_reference_only') {
+    const escape = value => String(value || '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    const nearest = (index.parent_entries || [])[0];
+    const parentLabel = nearest ? escape(nearest.code + ' — ' + nearest.description) : escape(index.parent_code);
+    const known = window.KNOWN_PATHS?.[index.who_anchor_code];
+    const parentVerified = index.parent_index?.status === 'verified';
+    const referencePath = parentVerified ? renderWHOIndexPath(index.parent_index)
+      : known?.path ? '<div class="lead-term-box"><div class="lead-label">Jalur parent tersimpan — belum diverifikasi WHO</div><div class="lead-path">' + renderLeadPath(known.path,index.who_anchor_code,'') + '</div></div>'
+      : index.parent_index ? renderWHOIndexPath(index.parent_index) : '';
+    return '<div class="vol1-box" style="margin-top:8px"><div class="vol1-label">Volume 3 — referensi parent untuk ' + escape(index.code) + '</div>' +
+      '<div class="vol1-notes">Parent database: ' + parentLabel +
+      '<br>Kode DU/DS tetap ' + escape(index.code) + '. Jalur parent tidak memvalidasi kode anak.' +
+      (index.child_in_database === false ? '<br>⚠ Kode anak belum ditemukan di database IM.' : '') +
+      '</div></div>' + referencePath;
+  }
 
   if (index.status !== 'verified') {
     return '<div class="vol1-box" style="margin-top:8px;border-left:3px solid #f59e0b">' +

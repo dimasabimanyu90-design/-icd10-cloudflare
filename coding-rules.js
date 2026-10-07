@@ -449,6 +449,15 @@ async function resolveWHOIndexReferences(diagnosis, request, lookup) {
 
 
 // ── STRUCTURE AND ICS DOCUMENTATION CHECKS ──
+// Candidate prefixes are resolved against the database; truncation alone is not proof.
+function getIMParentCodes(code) {
+  const value = String(code || '').trim().toUpperCase();
+  if (!/^[A-Z]\d{2}\.\d{2,3}$/.test(value)) return [];
+  const result = [];
+  for (let length = value.length - 1; length >= 5; length--) result.push(value.slice(0,length));
+  return result;
+}
+
 // Closed is a classification default, not a fabricated clinical statement.
 function applyFractureDefaults(parsed, clinicalText) {
   const normalize = value => String(value || '').normalize('NFKC').toLowerCase()
@@ -845,4 +854,4 @@ function isIMCode(item) {
   return Boolean(ref && (ref.local_extension || (ref.entries || []).some(entry => /\(IM\)/i.test(entry.title_extracted || ''))));
 }
 
-export { applyFractureDefaults, auditClinicalCoding, buildPrompt, extractLeadTerm, normalizeIndexLabel, parseIndexReference, formatIndexTrace, indexTermMatches, buildWHOIndexPath, resolveWHOIndexReferences, referenceWarnings, validateCodingStructure, ICS_REFERENCE_PROFILE, auditICSContext, validateProcedures, validateDiagnosisCode, validateDiagnoses, isIMCode };
+export { getIMParentCodes, applyFractureDefaults, auditClinicalCoding, buildPrompt, extractLeadTerm, normalizeIndexLabel, parseIndexReference, formatIndexTrace, indexTermMatches, buildWHOIndexPath, resolveWHOIndexReferences, referenceWarnings, validateCodingStructure, ICS_REFERENCE_PROFILE, auditICSContext, validateProcedures, validateDiagnosisCode, validateDiagnoses, isIMCode };
