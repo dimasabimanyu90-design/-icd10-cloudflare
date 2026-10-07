@@ -503,7 +503,10 @@ function auditMaternalTTTS(parsed, input) {
   if (!ttts) {
     ttts={code:'O43.0',role:'DS',code_system:'WHO_ICD10_2010',documentation_quote:quote,reasoning:'TTTS tertulis pada diagnosis maternal; relevansi dan urutan perlu ditinjau.'};
     diagnoses.push(ttts);parsed.diagnoses=diagnoses;
-  } else if (ttts.documentation_quote && documentationIssue(ttts.documentation_quote,input)) return warnings;
+  } else if (ttts.documentation_quote && documentationIssue(ttts.documentation_quote,input)) {
+    ttts.documentation_adjustment={original_quote:ttts.documentation_quote,source_quote:quote,rule:'independently_documented_maternal_ttts',status:'provisional_requires_review'};
+    warnings.push({type:'WARNING',code:'O43.0',message:'Kutipan AI untuk TTTS tidak cocok dengan input; gunakan diagnosis maternal asli yang tertulis, bukan kutipan elipsis buatan AI.'});
+  }
   const original=ttts.code;
   ttts.code='O43.0';ttts.code_system='WHO_ICD10_2010';ttts.description='Placental transfusion syndromes';ttts.description_id=null;ttts.lead_term='Transfusion';ttts.documentation_quote=quote;
   ttts.dagger_asterisk=null;ttts.paired_with=null;
@@ -513,10 +516,11 @@ function auditMaternalTTTS(parsed, input) {
   }
   // Printed WHO index: preterm caesarean NEC -> O60.1; .3 requires
   // documented absence of spontaneous labour/induction, not route alone.
-  const deliveredPreterm=/partus prematur|preterm (?:delivery|birth)|persalinan prematur/i.test(quote) && /\bSC\b|caesarean|cesarean|sectio/i.test(quote);
+  const deliveredPreterm=/partus prematur|preterm (?:delivery|birth)|persalinan prematur/i.test(quote) && /(?:dengan|by|via|melalui)\s+(?:operasi\s+)?(?:SC|caesarean|cesarean|sectio)\b/i.test(quote) && !/rencana|planned|batal|cancelled/i.test(quote);
   const withoutSpontaneous=clauses.some(x=>/tanpa (?:onset )?(?:persalinan|kontraksi|inpartu|labor)|without spontaneous labo[u]?r|non[- ]spontaneous labo[u]?r|belum inpartu|tidak inpartu|pre[- ]?labo[u]?r|induksi persalinan|induction of labo[u]?r/i.test(x) && !/riwayat|history|rencana|planned|dibatalkan|cancelled/i.test(x));
   if(deliveredPreterm && !withoutSpontaneous) for(const d of diagnoses) {
-    if(d.code!=='O60.3' || documentationIssue(d.documentation_quote,input)) continue;
+    if(d.code!=='O60.3') continue;
+    if(documentationIssue(d.documentation_quote,input)) {d.documentation_adjustment={original_quote:d.documentation_quote,source_quote:quote,status:'provisional_requires_review'};d.documentation_quote=quote;}
     d.code='O60.1';d.description='Preterm spontaneous labour with preterm delivery';d.description_id=null;d.lead_term='Delivery';
     d.coding_adjustment={original_code:'O60.3',proposed_code:'O60.1',rule:'documented_preterm_caesarean_nec_index',status:'provisional_requires_clarification'};
     d.reasoning='Persalinan preterm dengan SC tercatat tanpa rincian onset; O60.1 adalah rujukan preterm caesarean NEC, bukan bukti onset spontan. Klarifikasi onset dan DU.';
@@ -525,7 +529,12 @@ function auditMaternalTTTS(parsed, input) {
   const specificTechnique=clauses.some(x=>/klasik|classical|korporal|corporal|low cervical|segmen bawah|lower segment|extraperitoneal|ekstraperitoneal/i.test(x) && /SC|caesarean|cesarean|sectio/i.test(x) && !/riwayat|history|bekas|previous|rencana|planned/i.test(x));
   if(deliveredPreterm && !specificTechnique) for(const procedure of parsed.procedures || []) {
     const wrongEctopic=procedure.code==='74.3' && !/ektopik|ectopic/i.test(input);
-    if((!['74.0','74.1','74.2','74.4'].includes(procedure.code) && !wrongEctopic) || documentationIssue(procedure.documentation_quote,input,true)) continue;
+    if(!['74.0','74.1','74.2','74.4'].includes(procedure.code) && !wrongEctopic) continue;
+    if(documentationIssue(procedure.documentation_quote,input,true)) {
+      procedure.documentation_adjustment={original_quote:procedure.documentation_quote,source_quote:quote,rule:'independently_documented_preterm_caesarean',status:'provisional_requires_review'};
+      procedure.documentation_quote=quote;
+      warnings.push({type:'WARNING',message:'Kutipan AI untuk SC tidak cocok dengan input; kandidat didasarkan pada diagnosis partus dengan SC yang benar-benar tertulis. Tinjau laporan operasi.'});
+    }
     const original=procedure.code;
     procedure.code='74.99';procedure.description='Other caesarean section of unspecified type';procedure.description_id=null;procedure.code_system='ICD9_CM';procedure.lead_term='Caesarean section';
     procedure.coding_adjustment={original_code:original,proposed_code:'74.99',rule:'documented_caesarean_without_technique',status:'provisional_requires_review'};
