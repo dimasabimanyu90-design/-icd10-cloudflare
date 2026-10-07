@@ -139,6 +139,7 @@ External cause: V01-V99=transport | W=falls | X=environmental | X60-X84=self-har
 Fraktur traumatik: tentukan lokasi anatomi. Bila status terbuka/tertutup tidak dicatat, klasifikasikan tertutup menurut default ICD-10; jangan mengarang kutipan diagnosis tertutup.
 Bila fraktur terbuka/compound fracture dicatat, pertahankan terbuka. ORIF/open reduction adalah tindakan, bukan bukti fraktur terbuka.
 Default ini tidak menetapkan pola simple/comminuted, laterality, atau fraktur patologis. S72.30/S72.31 berpotensi bentrok antara digit WHO closed/open dan morfologi IM simple/butterfly; wajib jelaskan skema. Jangan mengganti deskripsi atau memilih morfologi dari closed/open.
+DU/DS fraktur memakai kategori WHO empat karakter, misalnya S72.3 untuk shaft femur. Simpan status closed/open sebagai metadata; digit tambahan/morfologi IM hanya opsi terpisah.
 Multiple trauma → kode tiap injury terpisah.
 DU pada cedera/epilepsi mengikuti fokus pelayanan dan CORE, bukan urutan otomatis.`;
 
@@ -475,6 +476,12 @@ function auditClinicalCoding(parsed, clinicalText) {
     const patternEvidence = input.split(/[;\n.!?]+/).filter(clause => /pneumonia/i.test(clause) && !documentationIssue(clause,input) && !/(?:tidak ada|tanpa|no evidence of|suspek|rule out)[^;]{0,40}(?:lobar|lobaris|bronkopneumonia|bronchopneumonia)/i.test(clause)).join('; ');
     const morphologyEvidence = input.split(/[;\n.!?]+/).filter(clause => /femur/i.test(clause) && /shaft|diafis|batang|1\s*\/\s*3 tengah/i.test(clause) && !documentationIssue(clause,input)).join('; ');
     const issues = [];
+    if (diagnosis.code_system === 'WHO_ICD10_2010' && ['S72.30','S72.31'].includes(diagnosis.code) && supportedQuote && /femur/i.test(quote) && /shaft|diafis|batang|1\s*\/\s*3 tengah/i.test(quote)) {
+      const originalCode=diagnosis.code;
+      diagnosis.code='S72.3';diagnosis.description='Fracture of shaft of femur';diagnosis.description_id=null;diagnosis.lead_term='Fracture';
+      diagnosis.coding_adjustment={original_code:originalCode,proposed_code:'S72.3',rule:'documented_who_four_character_shaft_fracture_base',status:'provisional_requires_review'};
+      issues.push('Kategori dasar S72.3 digunakan untuk shaft femur yang tertulis; closed/open diperiksa terpisah sebagai metadata, bukan morfologi IM.');
+    }
     if (diagnosis.code_system === 'WHO_ICD10_2010' && !/^[A-Z]\d{2}(?:\.\d{1,2})?$/.test(String(diagnosis.code || ''))) issues.push('Format kode tidak cocok dengan skema WHO ICD-10 2010 yang didukung; jangan mengarang digit IM/laterality atau mengambil ICD-10-CM.');
     if (diagnosis.code === 'H25.0' && supportedQuote && /katarak|cataract/i.test(quote) && /senilis|senile/i.test(quote) && /nuklear|nuclear/i.test(quote)) {
       diagnosis.code = 'H25.1'; diagnosis.description = 'Senile nuclear cataract'; diagnosis.description_id = null;
