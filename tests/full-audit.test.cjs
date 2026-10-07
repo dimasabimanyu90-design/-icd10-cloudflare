@@ -25,6 +25,22 @@ async function run(text,value,env={}) {
  assert.equal(ctx.validateProcedures([{code:'36.07'}],'pemasangan stent koroner').length,1,'unspecified stent does not prove DES');
  assert.equal(ctx.validateProcedures([{code:'87.03'}],'CT abdomen dilakukan').length,1,'generic CT cannot prove CT head');
  assert.equal(ctx.validateProcedures([{code:'45.23'}],'Rencana kolonoskopi').length,1);
+ const xray={diagnoses:[],procedures:[{code:'87.41',documentation_quote:'Foto thorax: infiltrat lobus kanan atas.'}]};
+ ctx.auditClinicalCoding(xray,'Foto thorax: infiltrat lobus kanan atas.');
+ assert.equal(xray.procedures[0].code,'87.44');
+ const both={diagnoses:[],procedures:[{code:'87.41',documentation_quote:'CT thorax dilakukan'}]};
+ ctx.auditClinicalCoding(both,'Foto thorax dan CT thorax dilakukan.');
+ assert.equal(both.procedures[0].code,'87.41');
+ const planned={diagnoses:[],procedures:[{code:'87.41',documentation_quote:'foto thorax'}]};
+ ctx.auditClinicalCoding(planned,'Rencana foto thorax besok.');
+ assert.equal(planned.procedures[0].code,'87.41');
+ assert.equal(planned.procedures[0].clinical_validation.status,'review_required');
+ const nuclear={diagnoses:[{code:'H25.0',documentation_quote:'katarak senilis nuklear mata kanan'}],procedures:[]};
+ ctx.auditClinicalCoding(nuclear,'Diagnosis katarak senilis nuklear mata kanan.');
+ assert.equal(nuclear.diagnoses[0].code,'H25.1');
+ const unspecified={diagnoses:[{code:'H25.0',documentation_quote:'katarak senilis'}],procedures:[]};
+ ctx.auditClinicalCoding(unspecified,'Diagnosis katarak senilis.');
+ assert.equal(unspecified.diagnoses[0].code,'H25.0');
  // Radiologist-supported lobar pattern must survive a short DPJP quotation.
  const radio={diagnoses:[{code:'J18.1',documentation_quote:'Diagnosis pneumonia'}],procedures:[]};
  ctx.auditClinicalCoding(radio,'Diagnosis pneumonia. Laporan radiolog: lobar pneumonia. Kuman tidak diketahui.');

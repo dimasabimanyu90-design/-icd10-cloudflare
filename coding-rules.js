@@ -109,6 +109,7 @@ SC dengan TTTS/IUFD: pilih DU berdasarkan penyulit/fokus pelayanan yang terdokum
 const PROMPT_PROSEDUR = `
 ## ICD-9-CM
 Gunakan indeks prosedur lalu tabular, dengan lokasi, metode, pendekatan, alat, durasi dan waktu yang terdokumentasi.
+Foto thorax/routine chest X-ray→87.44; CT thorax→87.41. Jangan menyamakan kedua modalitas.
 Pemetaan berikut hanya kandidat bila tindakan sesuai: Kolonoskopi→45.23; kolesistektomi laparoskopik → 51.23; THR→81.51; TKR→81.54; ORIF femur→79.35.
 Intramedullary nail saja tidak membuktikan open reduction; ORIF sendiri bukan bukti open fracture.
 Fakoemulsifikasi dan pemasangan IOL merupakan komponen berbeda: 13.41 untuk phaco; 13.71 untuk IOL saat ekstraksi satu tahap; 13.72 untuk pemasangan sekunder. Ikuti code also dan rincian laporan operasi (ICD 9 CM.pdf hal PDF46).
@@ -119,6 +120,7 @@ OMIT CODE: perlu catatan indeks dan bukti bahwa tindakan merupakan akses, bukan 
 
 const PROMPT_SPESIALIS = `
 ## SPESIFISITAS
+Katarak senilis nuklear yang didiagnosis eksplisit → H25.1 (Senile nuclear cataract, WHO 2010); jangan menyamakannya dengan H25.0 incipient.
 J96.x memerlukan diagnosis gagal napas; SpO2 sendiri bukan bukti.
 J18.0 = bronchopneumonia, unspecified; harus ada dokumentasi bronkopneumonia.
 J18.1 = lobar pneumonia, unspecified; dokumentasi pneumonia lobar/lobaris dapat berasal dari laporan radiolog yang mendukung diagnosis pneumonia DPJP (ICS §2.5.2–2.5.3, PDF62–63).
@@ -417,6 +419,11 @@ function auditClinicalCoding(parsed, clinicalText) {
     const morphologyEvidence = input.split(/[;\n.!?]+/).filter(clause => /femur/i.test(clause) && /shaft|diafis|batang|1\s*\/\s*3 tengah/i.test(clause) && !documentationIssue(clause,input)).join('; ');
     const issues = [];
     if (diagnosis.code_system === 'WHO_ICD10_2010' && !/^[A-Z]\d{2}(?:\.\d{1,2})?$/.test(String(diagnosis.code || ''))) issues.push('Format kode tidak cocok dengan skema WHO ICD-10 2010 yang didukung; jangan mengarang digit IM/laterality atau mengambil ICD-10-CM.');
+    if (diagnosis.code === 'H25.0' && supportedQuote && /katarak|cataract/i.test(quote) && /senilis|senile/i.test(quote) && /nuklear|nuclear/i.test(quote)) {
+      diagnosis.code = 'H25.1'; diagnosis.description = 'Senile nuclear cataract'; diagnosis.description_id = null;
+      diagnosis.coding_adjustment = {original_code:'H25.0',proposed_code:'H25.1',rule:'explicit_senile_nuclear_cataract',status:'provisional_requires_review'};
+      issues.push('Kode dikoreksi ke H25.1 untuk diagnosis senile nuclear cataract yang tertulis; perlu tinjau.');
+    }
     const morphologyRules = {
       'S72.30': /\b(?:simple|sederhana)\b/i,
       'S72.31': /\bbutterfly\b/i,
@@ -472,7 +479,13 @@ function auditClinicalCoding(parsed, clinicalText) {
   }
   for (const procedure of parsed.procedures || []) {
     const quote = String(procedure.documentation_quote || '');
-    const issue = documentationIssue(quote,input,true) || (procedure.code === '90.59' && !/mikroskop|microscop/i.test(quote) ? '90.59 memerlukan verifikasi jenis pemeriksaan; bukan kode generik hasil lab.' : null);
+    const quoteIssue = documentationIssue(quote,input,true);
+    if (procedure.code === '87.41' && !quoteIssue && /foto (?:thorax|toraks|dada)|rontgen (?:thorax|toraks|dada)|chest x-ray|\bcxr\b/i.test(quote) && !/\bct\b|c\.a\.t|computed|computerized|tomograf/i.test(input)) {
+      procedure.code = '87.44'; procedure.description = 'Routine chest x-ray'; procedure.description_id = null;
+      procedure.coding_adjustment = {original_code:'87.41',proposed_code:'87.44',rule:'documented_chest_xray_not_ct',status:'provisional_requires_review'};
+      warnings.push({type:'WARNING',message:'87.41 dikoreksi menjadi usulan 87.44: dokumentasi menyebut foto thorax, bukan CT. Periksa kembali tindakan yang dilakukan.'});
+    }
+    const issue = quoteIssue || (procedure.coding_adjustment ? 'Kode tindakan dikoreksi berdasarkan modalitas yang terdokumentasi; perlu tinjau.' : null) || (procedure.code === '90.59' && !/mikroskop|microscop/i.test(quote) ? '90.59 memerlukan verifikasi jenis pemeriksaan; bukan kode generik hasil lab.' : null);
     procedure.clinical_validation = {status:issue ? 'review_required' : 'documentation_present',clinical_validity:'not_certified',issues:issue ? [issue] : []};
     if (issue) warnings.push({type:'WARNING', message:`Prosedur ${procedure.code}: kutipan tindakan belum terbukti; jangan menyimpulkan tindakan dari hasil lab atau kelaziman.`});
     if (procedure.code === '90.59' && !/pemeriksaan darah|blood examination|mikroskop|microscop/i.test(quote)) warnings.push({type:'WARNING',message:'90.59 tidak dibuktikan oleh nilai GDS/HbA1c saja; periksa tindakan dan deskripsi tabular.'});
