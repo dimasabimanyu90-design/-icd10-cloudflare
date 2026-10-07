@@ -1067,6 +1067,14 @@ function resultItemNotice(item, warnings, procedure) {
   if (item.description_source?.source === 'AI_PROPOSAL_UNVERIFIED') return en ? 'AI-proposed description; source match unavailable.' : 'Deskripsi usulan AI; belum cocok dengan sumber.';
   return '';
 }
+function renderDiagnosisIMOptions(item) {
+  if (!Array.isArray(item.im_options) || !item.im_options.length) return '';
+  const en = currentLang !== 'id';
+  return '<details class="result-details im-options"><summary>' + (en ? 'Related IM options' : 'Opsi referensi IM terkait') + ' · ' + item.im_options.length + '</summary><div class="details-body"><p>' +
+    (en ? 'Code-family candidates; confirm clinical documentation before using an IM code. The WHO diagnosis remains unchanged.' : 'Kandidat keluarga kode; cocokkan rincian diagnosis sebelum memakai kode IM. Kode DU/DS WHO tetap digunakan.') + '</p>' +
+    item.im_options.map(option=>'<p><strong>' + escapeHTML(option.code) + '</strong> — ' + escapeHTML(option.description) + '<br><small>' + escapeHTML(option.source_file) + ' · ' + (en ? 'page ' : 'hal. ') + escapeHTML(option.pdf_page) + ' · ' + (en ? 'clinical match needs review' : 'kecocokan klinis perlu ditinjau') + '</small></p>').join('') +
+    (item.im_options_status === 'truncated_requires_review' ? '<p>Daftar dibatasi; tinjau sumber IM lengkap.</p>' : '') + '</div></details>';
+}
 function renderResultCard(item, options) {
   const {procedure, primary, warnings, duReason} = options;
   const en = currentLang !== 'id';
@@ -1085,6 +1093,7 @@ function renderResultCard(item, options) {
     '<div class="diag-desc">' + escapeHTML(item.description || (en ? 'Description unavailable' : 'Deskripsi belum tersedia')) + '</div>' +
     (primary && duReason ? '<p class="primary-reason">' + escapeHTML(conciseResultText(duReason)) + '</p>' : '') + '</div></div>' +
     (notice ? '<div class="item-alert">⚠ ' + escapeHTML(notice) + '</div>' : '') +
+    (!procedure ? renderDiagnosisIMOptions(item) : '') +
     (path ? '<details class="result-details index-reference" open><summary>' + (en ? 'Index path & status' : 'Jalur indeks & status') + '</summary><div class="details-body">' + path + '</div></details>' : '') +
     '<details class="result-details"><summary>' + (en ? 'Coding evidence' : 'Dasar coding') + (warnings.length ? ' · ' + warnings.length + (en ? ' notes' : ' catatan') : '') + '</summary><div class="details-body">' +
     evidence + (item.description_id && !en ? '<p>' + escapeHTML(item.description_id) + '</p>' : '') +
@@ -1118,11 +1127,12 @@ function renderResults(result) {
   document.getElementById('diagList').innerHTML =
     (primary.length ? group(en ? 'Primary diagnosis' : 'Diagnosis utama',primary,true) : '<div class="empty-result">' + (en ? 'Primary diagnosis has not been established.' : 'Diagnosis utama belum ditetapkan.') + '</div>') +
     group(en ? 'Secondary diagnoses' : 'Diagnosis sekunder',secondary,false) +
-    group(en ? 'Role needs review' : 'Peran diagnosis perlu ditinjau',other,false);
+    group(en ? 'Role needs review' : 'Peran diagnosis perlu ditinjau',other,false) +
+    ((result.blocked_diagnoses || []).length ? '<details class="result-details"><summary>' + (en ? 'Held proposals — excluded from DU/DS' : 'Usulan ditahan — tidak masuk DU/DS') + ' · ' + result.blocked_diagnoses.length + '</summary><div class="details-body">' + result.blocked_diagnoses.map(item=>'<p><strong>' + escapeHTML(item.code) + '</strong> — ' + escapeHTML(item.hold_reason) + '</p>').join('') + '</div></details>' : '');
   document.getElementById('procList').innerHTML = procedures.length ? procedures.map(item=>renderResultCard(item,{procedure:true,primary:false,warnings:forItem(item)})).join('') : '<div class="empty-result">' + (en ? 'No procedures proposed.' : 'Tidak ada prosedur yang diusulkan.') + '</div>';
   document.getElementById('diagCount').textContent = primary.length + ' DU · ' + secondary.length + ' DS' + (other.length ? ' · ' + other.length + ' ?' : '');
   document.getElementById('procCount').textContent = procedures.length + (en ? ' codes' : ' kode');
-  document.getElementById('labelDiagTable').textContent = en ? 'Diagnoses' : 'Diagnosis';
+  document.getElementById('labelDiagTable').textContent = en ? 'Diagnoses — WHO ICD-10 2010' : 'Diagnosis — WHO ICD-10 2010';
   document.getElementById('labelProcTable').textContent = en ? 'Procedures' : 'Prosedur';
   document.getElementById('resultStatus').innerHTML = '<a href="#codingDetails">' + (en ? 'Review notes & references' : 'Lihat catatan & referensi') + (actionable.length ? ' · ' + actionable.length : '') + '</a>' +
     (primary.length !== 1 && diagnoses.length ? ' · ⚠ ' + (en ? 'Check the primary diagnosis selection' : 'Periksa pemilihan satu DU') : '') +

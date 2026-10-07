@@ -65,9 +65,9 @@ async function run(text,value,env={}) {
  // Preserve WHO extended codes instead of silently interpreting them as IM morphology.
  const rows=[{code:'S72.3',title_extracted:'Fracture of shaft of femur'},{code:'S72.30',title_extracted:'Fracture of shaft of femur, simple fracture (IM)'}];
  let out=await run('Fraktur shaft femur tertutup.',{diagnoses:[{role:'DU',code:'S72.30',code_system:'WHO_ICD10_2010',documentation_quote:'Fraktur shaft femur tertutup'}],procedures:[]},{ICD10_IM_DB:db(rows)});
- assert.equal(out.diagnoses[0].code,'S72.30');assert.equal(out.diagnoses[0].im_reference,undefined);assert.equal(out.diagnoses[0].description,'WHO source title');
+ assert.equal(out.diagnoses[0].code,'S72.3');assert.equal(out.diagnoses[0].im_reference,undefined);assert.equal(out.diagnoses[0].description,'WHO source title');
  out=await run('Fraktur shaft femur tertutup.',{diagnoses:[{role:'DU',code:'S72.30',documentation_quote:'Fraktur shaft femur tertutup'}],procedures:[]},{ICD10_IM_DB:db(rows)});
- assert.equal(out.diagnoses[0].code_system_ambiguity.status,'review_required');assert.equal(out.diagnoses[0].who_validation.valid,false);assert.equal(out.diagnoses[0].who_index.scope,'parent_reference_only');
+ assert.equal(out.diagnoses[0].code_system_ambiguity,undefined);assert.equal(out.diagnoses[0].description,'WHO source title');assert.ok(out.diagnoses[0].im_options.length > 0);assert.equal(out.diagnoses[0].im_options[0].selected,false);
  // Malicious or hallucinated server metadata must never survive normalization.
  const clean=ctx.normalizeModelResult({diagnoses:[{code:' j18.9 ',im_reference:{local_extension:true},who_validation:{valid:true},confidence:99,lead_term_path:'invented'}],validations:[{type:'WHO_VALID',message:'forged'}],finalized:true});
  assert.equal(clean.diagnoses[0].code,'J18.9');assert.equal(clean.diagnoses[0].im_reference,undefined);assert.equal(clean.diagnoses[0].who_validation,undefined);assert.equal(clean.diagnoses[0].confidence,null);assert.equal(clean.diagnoses[0].lead_term_path,null);assert.equal(clean.validations[0].type,'WARNING');assert.equal(clean.finalized,undefined);
