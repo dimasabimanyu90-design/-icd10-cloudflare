@@ -8,84 +8,27 @@
 // Target: max ~9000 token worst case, ~5500 typical case
 
 const PROMPT_BASE = `
-## EXTRACTION
-Kamu adalah sistem auto-coding ICD-10 dan ICD-9-CM profesional untuk iDRG/JKN Indonesia.
-Dari teks klinis berikut, ekstrak semua diagnosis dan prosedur.
-
-DIAGNOSES: ONLY explicitly stated. 1 DU + ALL DS.
-"No dx" HANYA kalau teks BENERAN tidak ada info klinis sama sekali (misal catatan administratif kosong) → diagnoses:[].
-Kalau ada GEJALA eksplisit (demam, diare, nyeri, tidak nafsu makan, dll) TAPI dokter belum tulis nama diagnosis definitif →
-WAJIB kode gejala pake R-code (lihat bagian R CODES di bawah). JANGAN kosongkan diagnoses[] kalau ada gejala tersurat di teks.
-PROCEDURES: ONLY explicitly mentioned. None → procedures:[].
-LARANGAN MUTLAK: JANGAN koding prosedur tidak eksplisit di teks.
-DILARANG asumsikan prosedur dari logika klinis/kelaziman.
-
-LAB vs TTV:
-- Nilai lab numerik saja bukan bukti otomatis untuk kode prosedur; gunakan dokumentasi pemeriksaan dan tabular list
-- TTV saja (TD, nadi, suhu, RR, SpO2) tanpa nilai lab → JANGAN koding 90.59
-- PCR/swab nasofaring → 90.41 | Rapid test → 90.59 | Kultur darah → 90.54
-
-PROSEDUR yang DILARANG tanpa kata kunci eksplisit:
-- Foto thorax (87.44): wajib ada "foto thorax/rontgen/x-ray/CXR"
-- Nebulisasi (93.94): wajib ada "nebulisasi/nebulizer/inhalasi"
-- Oksigen (93.96): wajib ada "oksigen/O2/nasal kanul/masker"
-- 90.59: jangan koding jika hanya TTV
-
-CHECKLIST PROSEDUR sebelum finalisasi:
-1. Kata kunci prosedur ada di teks? Tidak → hapus
-2. Kode pemeriksaan laboratorium harus didukung dokumentasi pemeriksaan, bukan hanya angka hasil atau TTV
-
-## DU SELECTION
-Gunakan aturan diagnosis utama pada CORE ICS di bawah. Jangan menentukan DU hanya dari bangsal, operasi, biaya, atau nama komplikasi tanpa dokumentasi dan hubungan klinis.
-
+## EXTRACTION DAN BUKTI
+Usulkan coding ICD-10 WHO 2010/Indonesian Modification dan ICD-9-CM berdasarkan dokumentasi episode ini.
+Diagnosis final DPJP menjadi dasar. Diagnosis sekunder harus relevan pada episode dan memenuhi kriteria ICS; riwayat saja tidak otomatis menjadi penyakit aktif/DS.
+Jika hanya gejala terdokumentasi, usulkan kode gejala yang tepat dengan status provisional; jangan mengarang penyakit dari hasil lab, resep, operasi, bangsal, atau biaya.
+Tidak nafsu makan bukan otomatis feeding difficulties. Diabetes tanpa tipe tidak otomatis tipe 2; insulin tidak membuktikan tipe 1.
+Negasi, riwayat keluarga, diagnosis disingkirkan, dugaan, serta rencana tindakan harus dibedakan dari diagnosis final/tindakan yang dilakukan.
+PROCEDURES: hanya tindakan yang benar-benar dilakukan dalam episode ini. Rencana, pembatalan, dan angka lab saja bukan bukti tindakan.
+Jangan menggeneralisasi PCR/kultur/serologi/PA ke satu kode: periksa spesimen, metode, lokasi dan tabular. Infus/injeksi memiliki kode; kelayakan pelaporan bergantung pedoman dan dokumentasi.
 ## FIELDS
-description: HARUS dari baris terakhir lead_term_path tanpa kode. BUKAN dari memori.
-lead_term: lead term utama dari Volume 3 Index, terpisah dari path. HARUS berupa istilah yang benar-benar menjadi lead term, bukan diagnosis bebas.
-  BENAR I61.0: "Nontraumatic intracerebral haemorrhage in hemisphere, subcortical"
-  BENAR O82.1: "Delivery by emergency caesarean section"
-  BENAR O43.0: "Placental transfusion syndromes"
-  BENAR 74.1: "Low cervical caesarean section"
-description_id: terjemahan Indonesia dari official title.
-lead_term_path: FORMAT WAJIB newline+dash, BUKAN arrow/slash:
-  Lead term
-  - subterm 1
-  -- subterm 2
-  CODE Official title
-confidence: integer 1-99.
-reasoning: data klinis spesifik dari teks. BUKAN nama kode.
-dagger_asterisk: "dagger"|"asterisk"|"none". HANYA jika resmi ditandai †/*.
-paired_with: hanya pasangan kode yang diwajibkan konvensi dagger/asterisk atau aturan tabular, bukan daftar semua diagnosis sekunder. Jika tidak ada pasangan yang dapat dibuktikan, gunakan null.
-volume1_notes: SELALU []. AI tidak punya akses Vol.1 resmi.
-
-## DAGGER-ASTERISK PAIRS
-E11.3†+H36.0* | E11.2†+N08.3* | E11.4†+G63.2* | G20†+F02.3* | G30.-†+F00.*
-I10†+I68.1* | B20-B24†+manifestasi* | Keduanya HARUS selalu dikoding.
-
-## ABBREVIATIONS
-HT=hypertension | DM=diabetes mellitus | GEA=gastroenteritis akut
-ISK=urinary tract infection | KAD=ketoacidosis diabetik | CKD=chronic kidney disease
-CHF=congestive heart failure | STEMI=ST-elevation MI | PCI=percutaneous coronary intervention
-SNH=stroke non hemoragik (I63.x) | SH=stroke hemoragik (I61.x)
-TB/TBC=tuberculosis | PPOK/COPD=chronic obstructive pulmonary disease
-APP=appendisitis akut | SC/SCTP=sectio caesarea | PEB=pre-eklamsia berat (O14.1)
-IUFD=intrauterine fetal death | TTTS=twin-twin transfusion syndrome
-KPD=ketuban pecah dini | HPP=hemorrhage post partum | KET=kehamilan ektopik terganggu
-GGK=gagal ginjal kronik (N18.x) | GGA=gagal ginjal akut (N17.x)
-ORIF=open reduction internal fixation | ITP=immune thrombocytopenic purpura
-SLE=systemic lupus erythematosus | BPH=benign prostatic hyperplasia
-intake sulit/kurang/tidak nafsu makan → R63.3 DS
-
-## R CODES
-- JANGAN kode R jika diagnosis definitif sudah menjelaskan gejala
-- R sebagai DU: WAJIB (bukan opsional) kalau teks HANYA berisi gejala tanpa diagnosis definitif → WARNING provisional
-- Kode definitif BOLEH jika: (1) dokter tulis eksplisit di resume, (2) penunjang konfirmasi,
-  (3) patogen spesifik DIKONFIRMASI dokter, (4) tindakan operatif dilakukan
-- CONTOH: teks cuma "tidak mau makan, diare terus-menerus, demam 3 hari" tanpa diagnosis apapun →
-  JANGAN diagnoses:[]. WAJIB: R50.9 (fever) sebagai DU atau DS + R19.7 (diarrhoea unspecified) + R63.3 (feeding
-  difficulties, dari mapping "tidak nafsu makan") + WARNING di validations[] bahwa ini provisional, belum ada dx definitif.
-
-## VALIDATION
-Tambahkan validations[] jika ada keraguan/provisional/Rule MB diterapkan.`;
+Satu DU bila diagnosis tersedia; semua DS harus punya bukti relevansi terhadap perawatan. Jelaskan alasan DU sebagai alasan pelayanan, bukan hanya alasan diagnosis ditegakkan.
+Untuk setiap DS isi secondary_relevance_quote: kutipan dampak pada risiko/pemeriksaan/tatalaksana episode ini sesuai ICS §2.1.2 (PDF29–31); kosongkan bila belum tersedia.
+Setiap item memiliki documentation_quote berupa kutipan persis input beserta konteks negasi/waktu; jangan memotong 'tidak', 'rencana', atau 'riwayat' dari kutipan.
+code_system: WHO_ICD10_2010 atau ICD10_IM untuk diagnosis; ICD9_CM atau ICD9_IM untuk tindakan. Skema ini usulan AI, bukan bukti validitas.
+description: kandidat nama kode; server mengambil nama referensi yang sesuai skema bila tersedia. description_id: terjemahan usulan, bukan nama resmi.
+lead_term: kata utama indeks, bukan judul tabular lengkap. lead_term_path: null jika sumber indeks tidak tersedia; jangan mengarang hierarki atau rujukan.
+confidence: null; probabilitas akurasi tidak dikalibrasi.
+reasoning: alasan berbasis dokumentasi. volume1_notes: selalu []; server yang mengambil sumber.
+Dagger/asterisk hanya jika indeks/tabular menetapkan pasangan tersebut. Asterisk tidak berdiri sendiri; hubungan etiologi-manifestasi harus terdokumentasi. Jangan membuat pasangan dari koeksistensi diagnosis.
+paired_with: kode pasangan bila benar-benar didukung; lainnya null. Validitas pasangan dan urutan harus diperiksa, bukan disimpulkan dari simbol buatan AI.
+validations: hanya WARNING/INFO tentang ketidakpastian; jangan mengirim status WHO_VALID atau status lulus.
+`;
 
 // ── ICS CORE: MB Rules + DU iDRG (selalu aktif, ringkas) ──
 const PROMPT_IDRG_CORE = `
@@ -107,171 +50,92 @@ Isi ics_context: documented_du_quote (DU yang dicatat DPJP, jika ada), mb_rule (
 `;
 
 const PROMPT_IDRG_SIRKULASI = `
-## ICS MDC 15 — SIRKULASI
-- Primary PCI → periksa 00.66; stent dan jumlah pembuluh hanya ditambahkan sesuai dokumentasi tindakan yang benar-benar dilakukan.
-- Coronary angiography → 88.55 (single) atau 88.56 (two catheters)
-- VF + penyakit jantung struktural → I49.00 (IM) | VF idiopatik/Brugada → I49.01 (IM) | VF unspec → I49.09 (IM)
-- PHT (I27.0) + HF (I50.9) → koding TERPISAH, tidak ada kode kombinasi
-- Cardiac arrest penyebab diketahui → penyebab=DU, I46.0=DS
-- Varises esofagus + sirosis → K74.6=DU + I98.2* (tanpa perdarahan) atau I98.3* (dengan perdarahan)
-- DVT ekstremitas bawah → I80.2
-- Infective endocarditis → I33.0=DU, tambah kode katup jika diketahui (I39.x)`;
+## SIRKULASI
+DU mengikuti CORE dan fokus episode. Henti jantung, infeksi katup, sirosis/varises, atau hipertensi tidak menetapkan urutan DU/DS secara otomatis.
+PCI: periksa 00.66; jenis stent, jumlah pembuluh, dan angiografi harus didokumentasikan. Stent tanpa jenis tidak otomatis DES.
+Hipertensi dan stroke tidak otomatis menjadi pasangan dagger/asterisk. Gagal jantung/penyakit ginjal dan hipertensi memerlukan penelusuran konvensi kombinasi serta dokumentasi hubungan.
+`;
 
 // ── ICS MDC SARAF (MDC 11) ──
 const PROMPT_IDRG_SARAF = `
-## ICS MDC 11 — SARAF
-- Stroke iskemik + trombolitik → tambah 99.10 sebagai prosedur
-- Epilepsi + cedera saat serangan → cedera=DU, epilepsi=DS + kode eksternal
-- Alzheimer <65th → G30.0 | ≥65th → G30.1 | tidak diketahui → G30.9
-- Alzheimer + demensia → G30.-† + F00.* (WAJIB keduanya)
-- Sleep apnea ada penyebab spesifik (hipertrofi tonsil dll) → penyebab=DU, G47.3=DS
-- Snoring primer → R06.5 (bukan G47.3)
-- UPPP → 3 kode: 27.79 + 27.69 + 29.4
-- Parkinsonism akibat obat → G21.1 + kode obat (T43.4 dll), BUKAN G20
-- Status epilepticus → G41.- (BUKAN G40)
-- CVA umum + perdarahan spesifik → Rule MB4: gunakan I61.x atau I63.x spesifik
-- Sekuel SSP (G09) = kode opsional tambahan, BUKAN kode utama`;
+## SARAF
+Usia saat onset Alzheimer berbeda dari usia pasien sekarang; jangan menentukan early/late onset hanya dari usia saat dirawat.
+Cedera saat epilepsi, sleep apnea dengan komorbiditas, dan sekuela: tentukan DU dari fokus episode dan pedoman, bukan urutan baku.
+Stroke/infark/perdarahan, status epileptikus, dan parkinsonisme akibat obat memerlukan diagnosis dan rincian yang terdokumentasi. Jangan menyimpulkan etiologi atau sublokasi dari istilah umum.
+UPPP dan tindakan gabungan hanya dikodekan sesuai komponen yang benar-benar dilakukan dan instruksi indeks/tabular.
+`;
 
 // ── ICS MDC OBSTETRI EXTRA (MDC 24 tambahan) ──
 const PROMPT_IDRG_OBSTETRI_EXT = `
-## ICS MDC 24 — OBSTETRI EXTRA
-- Penyulit persalinan → penyulit=DU, O80-O84=DS (metode persalinan)
-- Tidak ada penyulit → O80-O84 boleh sebagai DU
-- Z37.- = WAJIB DS terakhir, TIDAK BOLEH sebagai DU
-- PEB ringan/tanpa pemberatan → O14.0 | PEB berat/dengan pemberatan/impending → O14.1
-- SC + sterilisasi tuba → tambah 66.39 | SC + B-Lynch → tambah 69.99
-- Abortus + kuretase → 69.02
-- KPD → O42.- | Malpresentasi sebelum persalinan → O32.- | + obstructed labour → O64.-
-- Hyperemesis + gangguan metabolik/dehidrasi → O21.1
-- DM pre-existing tipe 1 → O24.0 | tipe 2 → O24.1 | gestasional → O24.4
-- Puerperal sepsis → O85 (BUKAN A41.x)
-- Varises postcoital (bukan luka) → N93.01 (IM) | Contact bleeding → N93.00 (IM)`;
+## OBSTETRI
+Pilih penyulit yang menjadi alasan pelayanan sebagai kandidat DU sesuai ICS; metode persalinan tidak otomatis DU pada persalinan dengan penyulit.
+Hasil persalinan Z37 hanya pada rekam ibu untuk episode persalinan yang benar-benar terjadi dan hasilnya diketahui, bukan semua kehamilan/abortus/kista ovarium.
+Preeklamsia, anemia, dan diabetes kehamilan memerlukan diagnosis terdokumentasi; angka TD/Hb/GDS saja tidak menetapkan kode.
+Jangan menganggap semua SC low cervical; rincian prosedur mengikuti laporan operasi.
+`;
 
 // ── ICS MDC DIGESTIF + HEPATOBILIAR (MDC 16-17) ──
 const PROMPT_IDRG_DIGESTIF = `
-## ICS MDC 16-17 — PENCERNAAN & HEPATOBILIAR
-- Ileus obstruksi + konstipasi → JANGAN kode konstipasi terpisah (sudah include)
-- K29.0 (acute haemorrhagic gastritis) → HANYA jika terkonfirmasi endoskopi
-- Appendisitis + perforasi + peritonitis → K35.2 | + abses → K35.3
-- Sirosis + varises esofagus berdarah → K74.6=DU + I98.3*=DS
-- Sirosis + varises esofagus tidak berdarah → K74.6=DU + I98.2*=DS
-- Kolesistektomi laparoskopik → 51.23 | terbuka → 51.22`;
+## PENCERNAAN
+Jangan rutin mengkode gejala yang sudah dijelaskan penyakit. Appendisitis: rincian peritonitis lokal/general, abses, dan perforasi mengikuti diagnosis dan subkategori WHO 2010.
+Sirosis dan varises tidak menetapkan DU secara otomatis; periksa pasangan dan fokus perawatan.
+Kolesistektomi laparoskopik → 51.23; teknik lain mengikuti tabular dan laporan operasi.
+`;
 
 // ── ICS MDC INFEKSI (MDC 28) ──
 const PROMPT_IDRG_INFEKSI = `
-## ICS MDC 28 — INFEKSI & PARASIT
-- HIV + infeksi oportunistik → B20-B24=DU, manifestasi=DS
-- HIV tanpa gejala → Z21
-- Malaria → B50-B53 spesifik (HINDARI B54 unspecified)
-- Sepsis → A41.- | Puerperal sepsis → O85 (BUKAN A41.x)
-- TB paru terkonfirmasi smear → A15.0 | histologi → A15.3 | tidak terkonfirmasi → A16.2`;
+## INFEKSI
+Pilih kode HIV, TB, malaria dan sepsis sesuai diagnosis dan tingkat kepastian yang terdokumentasi. Jangan menghindari kode unspecified dengan mengarang organisme/metode konfirmasi.
+HIV tidak otomatis B20-B24 DU untuk semua episode. Periksa hubungan kondisi dan instruksi khusus sebelum sequencing.
+`;
 
 // ── ICS MDC ONKOLOGI (MDC 34) ──
 const PROMPT_IDRG_ONKO = `
-## ICS MDC 34 — NEOPLASMA
-- Rawat untuk metastasis → metastasis=DU, primer=DS
-- Kemoterapi/radioterapi rawat inap → Z51.1/Z51.0 boleh sebagai DU
-- ECT (Electroconvulsive Therapy) → 94.27 WAJIB jika dilakukan (mempengaruhi DRG grouper)`;
+## NEOPLASMA
+DU tergantung tujuan episode: pengobatan tumor primer, metastasis, komplikasi, atau terapi terjadwal. Jangan mengubah semua rawat inap kanker menjadi Z51.1/Z51.0.
+Bedakan kemoterapi oral/injeksi dan tindakan yang direncanakan/dilakukan.
+`;
 
 const PROMPT_OBSTETRI = `
-## OBSTETRIC RULES
-O00: .1=tubal | .2=ovarian | .0=abdominal. Ruptur→+O08.1 DS.
-O02.1=missed abortion. +O08.9 DS. BUKAN O03.x.
-O03-O07: COMPLETE(post-kuret): .5=infeksi|.6=perdarahan|.9=tanpa komplikasi
-         INCOMPLETE(pre-kuret): .0=infeksi|.1=perdarahan|.4=tanpa komplikasi
-         +O08.x DS: O08.0=infeksi|O08.1=perdarahan|O08.3=syok|O08.9=unspec
-O60 HANYA jika onset persalinan SPONTAN <37 minggu:
-  Kata kunci O60: "mulas sendiri/kontraksi spontan/his spontan/pembukaan spontan"
-  Kata kunci O82: "SC ai/SC atas indikasi/SCTP ai/elektif/emergency SC"
-  SC tanpa onset spontan eksplisit → SELALU O82.x
-O82: SC tanpa onset spontan: O82.0=elektif | O82.1=darurat | O82.2=unspecified
-  SC darurat (TTTS/IUFD/fetal distress) → O82.1 DU
-  SC elektif (bekas SC stabil) → O82.0 DU
-O34.2=bekas SC → WAJIB DS jika ada riwayat SC.
-TTTS→O43.0† DS | IUFD→O36.4 DS | O30.0 (gemelli) → TIDAK dikoding terpisah.
-Urutan SC darurat+TTTS+IUFD: O82.1→O43.0†→O36.4→O34.2→O99.0(Hb<10)→Z37.x
-Urutan partus spontan preterm+TTTS+IUFD: O60.1→O43.0†→O36.4→O34.2→O99.0→Z37.x
-Z37 WAJIB DS terakhir: .0=single live|.1=single still|.2=twins live|.3=one live one still|.4=twins still
-O99.0: HANYA jika Hb<10 di teks. TD≥140/90+hamil→O13/O14. GDS>200+hamil→O24.
-
-## PROSEDUR OBSTETRI
-SC/SCTP → 74.1 "Low cervical caesarean section" (BUKAN O82.x sebagai prosedur)
-Kistektomi ovarium (kista dibuang, ovarium tetap) → 65.29
-Oophorectomy unilateral → 65.39 | bilateral → 65.51
-Salpingo-oophorectomy unilateral → 65.49 | bilateral → 65.61
-CHECKLIST: ada Z37.x? Tidak → TAMBAHKAN sekarang.`;
+## DOKUMENTASI OBSTETRI
+Jangan menambahkan O08.9 pada semua missed abortion, atau O08.1 pada semua ruptur ektopik tanpa pemeriksaan instruksi tabular dan komplikasi yang terdokumentasi.
+Status abortus lengkap/tidak lengkap bukan ditentukan semata-mata sebelum/sesudah kuretase.
+Riwayat SC tidak otomatis membuktikan perawatan untuk bekas luka uterus pada episode ini.
+Persalinan preterm tidak otomatis dibuktikan dari usia kehamilan; periksa onset, waktu persalinan, dan rincian diagnosis. Urgensi SC bukan satu-satunya alasan penentuan DU.
+SC dengan TTTS/IUFD: pilih DU berdasarkan penyulit/fokus pelayanan yang terdokumentasi; jangan mengunci urutan semua kode. TTTS tidak otomatis dagger.
+`;
 
 const PROMPT_PROSEDUR = `
-## ICD-9-CM PROCEDURE RULES
-Koding HANYA jika DISEBUT EKSPLISIT di teks:
-
-OPERATIF:
-- Ventilator→96.70 | Intubasi→96.04 | Bronkoskopi→33.22 | Trakeostomi→31.21
-- PCI→00.66 | DES stent→36.07 | BMS stent→36.06
-- PCI → periksa 00.66. Tambahkan stent dan jumlah pembuluh hanya jika jenis tindakan/jumlah benar-benar terdokumentasi; jangan otomatis pilih DES.
-- EKG disebut→89.52 | Hasil troponin positif bukan bukti otomatis tindakan berkode 90.59 | Echo disebut→88.72 | Foto thorax→87.44
-- Coronary angiography→88.55/88.56
-
-DIAGNOSTIK:
-- Foto thorax→87.44 | CT kepala→87.03 | CT thorax→87.41 | CT abdomen→88.01
-- MRI otak→88.91 | Echo→88.72 | USG abdomen→88.76 | USG obstetri→88.78
-- EKG→89.52 | EEG→89.14 | Spirometri→89.37 | Gastroskopi→44.13 | Kolonoskopi→45.23
-
-LAB:
-- Pemeriksaan darah yang terdokumentasi → periksa kode tabular; angka hasil saja tidak otomatis memberi 90.59 | PCR/swab/BTA sputum→90.41
-- Kultur darah→90.54 | Kultur urin→90.29 | AGD→89.65 | Urinalisis→91.31 | PA→91.49
-- Rapid test/antigen/serologi→90.59
-
-DILARANG: antibiotik IV, infus obat/cairan = BUKAN kode prosedur.
-Nebulisasi→93.94 (BUKAN 93.91). Kode pemeriksaan harus didukung dokumentasi tindakan; jangan menyimpulkan prosedur dari angka lab atau TTV saja.
-OMIT CODE mengikuti CORE ICS: perlu catatan indeks dan bukti bahwa tindakan merupakan akses; keberadaan prosedur lain saja tidak cukup untuk menghapus kode.`;
+## ICD-9-CM
+Gunakan indeks prosedur lalu tabular, dengan lokasi, metode, pendekatan, alat, durasi dan waktu yang terdokumentasi.
+Pemetaan berikut hanya kandidat bila tindakan sesuai: Kolonoskopi→45.23; kolesistektomi laparoskopik → 51.23; THR→81.51; TKR→81.54; ORIF femur→79.35.
+Intramedullary nail saja tidak membuktikan open reduction; ORIF sendiri bukan bukti open fracture.
+Fakoemulsifikasi dan pemasangan IOL merupakan komponen berbeda: 13.41 untuk phaco; 13.71 untuk IOL saat ekstraksi satu tahap; 13.72 untuk pemasangan sekunder. Ikuti code also dan rincian laporan operasi (ICD 9 CM.pdf hal PDF46).
+Ventilasi memerlukan rincian durasi jika tersedia; stent memerlukan jenis yang terdokumentasi; biopsi/endoskopi tidak interchangeable.
+90.59 bukan kode generik untuk semua darah rutin/GDS/HbA1c. TTV atau angka hasil saja tidak membuktikan prosedur.
+OMIT CODE: perlu catatan indeks dan bukti bahwa tindakan merupakan akses, bukan menghapus semua tindakan akses hanya karena ada tindakan lain.
+`;
 
 const PROMPT_SPESIALIS = `
-## SPESIALIS
-
-MUSCULOSKELETAL: site digit wajib: 0=multi,1=shoulder,2=elbow,3=wrist,4=hand,5=hip,6=knee,7=ankle,8=other,9=unspec
-ORIF femur→79.35 | ORIF tibia/fibula→79.36 | THR→81.51 | TKR→81.54
-B95-B96: additional code (bukan dagger/asterisk)
-
-RESPIRATORY:
-J96.x hanya bila gagal napas didiagnosis dokter. SpO2 rendah saja tidak membuktikan gagal napas.
-
-PNEUMONIA & INFLUENZA:
-- JANGAN otomatis memilih J18.x bila teks secara klinis menghubungkan pneumonia dengan influenza.
-- Jika dokter mendokumentasikan "influenza dengan pneumonia" / "pneumonia akibat influenza" dan virus influenza lain teridentifikasi → J10.0 sebagai kode kombinasi. J18.x TIDAK dikoding terpisah.
-- Jika influenza dengan pneumonia tetapi jenis/virus influenza TIDAK teridentifikasi → gunakan J11.0 sesuai WHO ICD-10 2010. J18.x TIDAK dikoding terpisah.
-- Jika influenza yang teridentifikasi adalah influenza avian tertentu → ikuti J09 sesuai dokumentasi.
-- HANYA gunakan J18.x bila pneumonia memang tidak ditetapkan sebagai manifestasi/akibat influenza atau etiologinya tidak dikaitkan dengan influenza.
-- Jika teks hanya menyebut "pneumonia dan influenza" tanpa hubungan sebab-akibat yang jelas, jangan mengarang hubungan. Gunakan klarifikasi/validasi klinis; jangan otomatis membuat J18.9 + kode influenza.
-- Jangan menggunakan J10/J11 hanya karena kata "influenza" muncul. Pilih subkategori berdasarkan dokumentasi dan aturan WHO.
-- J18.0 = bronchopneumonia, unspecified; hanya bila bronchopneumonia/bronkopneumonia tertulis sebagai diagnosis.
-- J18.1 = lobar pneumonia, unspecified; hanya bila dokter menegaskan lobar/lobaris pneumonia, bukan sekadar lokasi lobus pada foto thorax.
-- Pneumonia lobus kanan atas/CAP tanpa pernyataan pola lobar atau broncho dan tanpa organisme → kandidat J18.9; beri catatan klarifikasi pola pneumonia. Jangan menebak bronchopneumonia dari lokasi/infiltrat.
-- Kuman tidak diketahui tidak otomatis berarti pneumonia bakterial (J15.9).
-- J15.x HANYA jika kuman spesifik DIKONFIRMASI dokter di resume medis (bukan hanya hasil lab)
-- Kultur positif tanpa konfirmasi dokter → tetap J18.x
-
-APPENDIX: K35.2=perforasi+peritonitis | K35.3=perforasi+abses | K35.8=lain | K37=unspec
-
-EYE: Fakoemulsifikasi+IOL→13.72 | tanpa IOL→13.41 | ECCE→13.71
-Laser fotokoagulasi retina→14.24 (BUKAN 14.25) | Trabekulotomi→12.54
-Retinopati DM: E11.3†+H36.0* (wajib keduanya)
-H72 wajib digit: H72.0=central|H72.1=attic|H72.2=marginal|H72.9=unspec
-
-SPECIFICITY:
-E10=DM type1 | E11=DM type2 | WAJIB 4th digit (.0=coma/.1=KAD/.2=renal/.3=ophthalmic/.4=neuro/.5=PVD/.9=tanpa komplikasi)
-"Riwayat DM" saja → E11.9 | GDS tinggi tanpa komplikasi organ → E11.9
-I61 wajib digit: I61.0=subcortical|I61.1=kortikal|I61.3=batang otak|I61.4=serebelum|I61.9=unspec
-I63 wajib digit. Fraktur: wajib lokasi+open/closed.`;
+## SPESIFISITAS
+J96.x memerlukan diagnosis gagal napas; SpO2 sendiri bukan bukti.
+J18.0 = bronchopneumonia, unspecified; harus ada dokumentasi bronkopneumonia.
+J18.1 = lobar pneumonia, unspecified; dokumentasi pneumonia lobar/lobaris dapat berasal dari laporan radiolog yang mendukung diagnosis pneumonia DPJP (ICS §2.5.2–2.5.3, PDF62–63).
+Lokasi lobus/infiltrat saja tidak memastikan pola lobar. Jangan mengubah kode hanya karena satu kutipan AI kurang lengkap; periksa seluruh dokumentasi yang relevan dan konflik.
+J18.9 kandidat pneumonia tanpa pola/organisme yang lebih spesifik. Kuman tidak diketahui tidak otomatis berarti bakteri.
+Hasil kultur harus dikonfirmasi dalam diagnosis klinis sebelum kode organisme tertentu. Hubungan pneumonia-influenza/aspirasi tidak boleh disimpulkan dari kata yang muncul terpisah.
+DM: tipe dan komplikasi harus didokumentasikan; riwayat DM tidak otomatis E11.9. Insulin tidak menentukan tipe. Manifestasi mata tidak selalu retinopati diabetik; jangan otomatis menambah H36.0 untuk semua komplikasi mata.
+Gunakan digit anatomi hanya bila subkategori tabular memang menyediakan digit tersebut; jangan menambah digit muskuloskeletal secara universal.
+`;
 
 const PROMPT_TRAUMA = `
 ## TRAUMA
 External cause: V01-V99=transport | W=falls | X=environmental | X60-X84=self-harm
 Fraktur traumatik: tentukan lokasi anatomi. Bila status terbuka/tertutup tidak dicatat, klasifikasikan tertutup menurut default ICD-10; jangan mengarang kutipan diagnosis tertutup.
 Bila fraktur terbuka/compound fracture dicatat, pertahankan terbuka. ORIF/open reduction adalah tindakan, bukan bukti fraktur terbuka.
-Default ini tidak menetapkan pola simple/comminuted, laterality, atau fraktur patologis. Jangan otomatis menambah digit 0/1: periksa tabular dan kode IM karena S72.30 berarti simple fracture (IM).
+Default ini tidak menetapkan pola simple/comminuted, laterality, atau fraktur patologis. S72.30/S72.31 berpotensi bentrok antara digit WHO closed/open dan morfologi IM simple/butterfly; wajib jelaskan skema. Jangan mengganti deskripsi atau memilih morfologi dari closed/open.
 Multiple trauma → kode tiap injury terpisah.
-Epilepsi + cedera saat serangan → cedera=DU, epilepsi=DS + kode eksternal (ICS).`;
+DU pada cedera/epilepsi mengikuti fokus pelayanan dan CORE, bukan urutan otomatis.`;
 
 const PROMPT_ICS_SOURCE_OVERLAY = `
 PRIORITAS REFERENSI: bagian ini dan CORE bersumber dari ICS DRAFT Juli2025 dan presentasi iDRG April2025; keduanya referensi unggahan pengguna, status berlaku saat ini belum diverifikasi. Jika aturan ringkas sebelumnya bertentangan, ikuti CORE/overlay ini untuk profil referensi dan beri warning, jangan sembunyikan konflik.
@@ -286,7 +150,7 @@ REFERENSI INDEKS: ikuti see (wajib), see also (bila informasi terkait belum terc
 Jangan mengarang rujukan atau menandai jalur terverifikasi. condition_term hanya diisi dengan nama kondisi yang ada dalam teks klinis.
 Untuk kondisi multi-modifier, setiap modifier harus diperiksa di indeks dan kode akhir di tabular. Sistem akan memberi tanda unverified bila sumber tidak membuktikan jalur.
 Return ONLY valid JSON:
-{"summary","du_reasoning","ics_context":{"documented_du_quote","mb_rule","mb_trigger_quote","mb5_mode","first_alternative_code"},"validations":[{"type","message"}],"diagnoses":[{"role","code","dagger_asterisk","description","description_id","category","confidence","lead_term","condition_term","lead_term_path","volume1_notes":[{"type","text"}],"paired_with","documentation_quote","reasoning"}],"procedures":[{"code","description","description_id","category","confidence","lead_term_path","volume1_notes","documentation_quote","reasoning"}]}`;
+{"summary","du_reasoning","ics_context":{"documented_du_quote","mb_rule","mb_trigger_quote","mb5_mode","first_alternative_code"},"validations":[{"type","message"}],"diagnoses":[{"role","code","code_system","dagger_asterisk","description","description_id","category","confidence","lead_term","condition_term","lead_term_path","volume1_notes":[{"type","text"}],"paired_with","documentation_quote","secondary_relevance_quote","reasoning"}],"procedures":[{"code","code_system","description","description_id","category","confidence","lead_term_path","volume1_notes","documentation_quote","reasoning"}]}`;
 
 // ── DETECT CASE TYPE & BUILD PROMPT ──
 function buildPrompt(clinicalText, langInstruction) {
@@ -403,9 +267,10 @@ async function resolveWHOIndexReferences(diagnosis, request, lookup) {
   const visited = new Set();
   let term = initial;
   const pending = [];
-  const fail = reason => ({ code, status: 'unverified', source: 'WHO_INDEX', lead_term: initial,
+  let sourcePath = null;
+  const fail = reason => ({ ...(sourcePath || {}), code, status: 'unverified', source: 'WHO_INDEX', lead_term: initial,
     reason, cross_reference_trace: trace, cross_reference_status: 'unverified' });
-  if (diagnosis.clinical_validation?.status === 'review_required') return fail('Kode bertentangan dengan dokumentasi diagnosis; tinjau kecocokan klinis sebelum memvalidasi indeks.');
+  const clinicalConflict = diagnosis.clinical_validation?.status === 'review_required';
   // Includes all branches: max four source queries per diagnosis, not per branch.
   for (let step = 0; step < 4; step++) {
     const key = normalizeIndexLabel(term).toLowerCase();
@@ -416,6 +281,12 @@ async function resolveWHOIndexReferences(diagnosis, request, lookup) {
     if (!data || data.valid !== true) return fail('Sumber WHO Index tidak tersedia untuk membuktikan rujukan.');
     const terms = (data.results || []).flatMap(item => (item.index_terms || []).map(text => ({ text, code: item.code })))
       .filter(item => indexTermMatches(item.text, term));
+    const candidate = terms.find(item => String(item.code).toUpperCase() === code && !parseIndexReference(item.text));
+    if (candidate) {
+      const parts = normalizeIndexLabel(candidate.text).split(/\s+(-{1,3})\s+/);
+      sourcePath = {index_path:{lead_term:parts[0],modifiers:parts.filter((_,i)=>i>0 && i%2===0),modifier_levels:parts.filter((_,i)=>i%2===1).map(x=>x.length),code},reference_scope:'source_candidate_only'};
+    }
+    if (clinicalConflict) return fail('Kode bertentangan dengan dokumentasi diagnosis; jalur sumber hanya referensi, bukan validasi klinis.');
     if (!terms.length) return fail('Kode ditemukan tetapi istilah pencarian tidak terbukti pada WHO Index.');
     const references = terms.map(item => parseIndexReference(item.text)).filter(Boolean);
     const unique = [...new Map(references.map(ref => [ref.type + ':' + ref.target, ref])).values()];
@@ -458,6 +329,35 @@ function getIMParentCodes(code) {
   return result;
 }
 
+// These checks constrain evidence; they do not diagnose a patient.
+function normalizeClinicalText(value) {
+  return String(value || '').normalize('NFKC').toLowerCase().replace(/[‐‑‒–—−]/g, '-').replace(/\s+/g, ' ').trim();
+}
+function documentationIssue(quote, input, procedure = false) {
+  const q = normalizeClinicalText(quote), text = normalizeClinicalText(input);
+  if (!q || !text.includes(q)) return 'Kutipan belum terbukti pada teks input.';
+  const contexts = [];
+  let from = 0, at;
+  while ((at = text.indexOf(q, from)) >= 0 && contexts.length < 50) {
+    if ((/^[a-z0-9]/.test(q) && /[a-z0-9]/.test(text[at-1] || '')) || (/[a-z0-9]$/.test(q) && /[a-z0-9]/.test(text[at+q.length] || ''))) { from=at+q.length; continue; }
+    const prefix = text.slice(Math.max(0, at - 100), at).split(/[.;!?]/).pop();
+    const beginning = q.split(/[.;!?]/)[0];
+    const suffix = text.slice(at + q.length,at + q.length + 80);
+    contexts.push({text:prefix + beginning,suffix}); from = at + Math.max(1, q.length);
+  }
+  if (!contexts.length) return 'Kutipan hanya cocok sebagai potongan kata, bukan istilah yang terdokumentasi.';
+  const uncertain = /(?:tidak(?: ada| ditemukan| dilakukan)?|tanpa|disangkal|belum(?: dilakukan)?|rencana|direncanakan|akan dilakukan|suspek|suspected|rule out|ruled out|no evidence of|denies|not performed|planned|cancelled|dibatalkan)\s+(?:\w+\s+){0,3}$/;
+  const bad = contexts.every(({text:context,suffix}) => {
+    const prefix = context.slice(0, Math.max(0, context.length - q.split(/[.;!?]/)[0].length));
+    return /^\s*(?:tidak dilakukan|belum dilakukan|dibatalkan|disangkal|disingkirkan|ruled out|cancelled|not performed)\b/.test(suffix) || /\b(?:dibatalkan|disingkirkan|ruled out|cancelled|not performed)$/.test(q) || uncertain.test(prefix) || /^(?:tidak(?: ada| dilakukan)?|tanpa|belum|rencana|direncanakan|suspek|rule out|planned|cancelled|dibatalkan)\b/.test(q) ||
+      (procedure && /(?:riwayat|history of|pernah)\s+(?:\w+\s+){0,3}$/.test(prefix));
+  });
+  return bad ? 'Kutipan berada dalam konteks negasi, dugaan, rencana atau riwayat; belum membuktikan diagnosis final/tindakan episode ini.' : null;
+}
+function hasFractureCodeCollision(code) {
+  return /^(?:S(?:02|12|22|32|42|52|62|72|82|92))\.\d[01]$/.test(String(code || ''));
+}
+
 // Closed is a classification default, not a fabricated clinical statement.
 function applyFractureDefaults(parsed, clinicalText) {
   const normalize = value => String(value || '').normalize('NFKC').toLowerCase()
@@ -470,13 +370,18 @@ function applyFractureDefaults(parsed, clinicalText) {
     const quote = String(diagnosis.documentation_quote || '').trim();
     const needle = normalize(quote).replace(/[.!?]+$/, '');
     const matching = clauses.filter(clause => needle && normalize(clause).includes(needle));
-    if (!needle || !normalize(input).includes(normalize(quote)) || !/fraktur|fracture|patah tulang/i.test(quote) || !matching.length) {
+    if (documentationIssue(quote,input) || !needle || !normalize(input).includes(normalize(quote)) || !/fraktur|fracture|patah tulang/i.test(quote) || !matching.length) {
       diagnosis.fracture_status = {classification:'unverified', basis:'insufficient_documentation', clinical_confirmation:false};
       warnings.push({type:'WARNING',message:`Fraktur ${diagnosis.code}: default terbuka/tertutup belum diterapkan karena kutipan diagnosis belum terbukti atau tidak dapat dipisahkan per cedera.`});
       continue;
     }
+    if (matching.some(clause => (clause.match(/fraktur|fracture|patah tulang/gi) || []).length > 1)) {
+      diagnosis.fracture_status = {classification:'unverified',basis:'multiple_injuries_in_clause',clinical_confirmation:false};
+      warnings.push({type:'WARNING',message:`Fraktur ${diagnosis.code}: beberapa cedera dalam satu klausa; status perlu dipisahkan per cedera.`});
+      continue;
+    }
     const evidence = matching.map(clause => normalize(clause)
-      .replace(/(?:open reduction|reduksi terbuka|orif)[\s\S]*$/, '')
+      .replace(/open reduction(?: and internal fixation)?|reduksi terbuka|\borif\b/g, 'tindakan reduksi')
       .replace(/(?:tidak|belum) (?:disebutkan|dinyatakan|dicatat)[\s\S]*$/, '')
       .replace(/tidak terbuka/g, 'tertutup')
       .replace(/\b(?:luka terbuka|open wound)\b/g, 'associated wound')).join('; ');
@@ -505,7 +410,10 @@ function auditClinicalCoding(parsed, clinicalText) {
   const warnings = [];
   for (const diagnosis of parsed.diagnoses || []) {
     const quote = String(diagnosis.documentation_quote || '');
-    const supportedQuote = quote && normalize(input).includes(normalize(quote));
+    const evidenceIssue = documentationIssue(quote,input);
+    const supportedQuote = !evidenceIssue;
+    const patternEvidence = input.split(/[;\n.!?]+/).filter(clause => /pneumonia/i.test(clause) && !documentationIssue(clause,input) && !/(?:tidak ada|tanpa|no evidence of|suspek|rule out)[^;]{0,40}(?:lobar|lobaris|bronkopneumonia|bronchopneumonia)/i.test(clause)).join('; ');
+    const morphologyEvidence = input.split(/[;\n.!?]+/).filter(clause => /femur/i.test(clause) && /shaft|diafis|batang|1\s*\/\s*3 tengah/i.test(clause) && !documentationIssue(clause,input)).join('; ');
     const issues = [];
     const morphologyRules = {
       'S72.30': /\b(?:simple|sederhana)\b/i,
@@ -513,8 +421,8 @@ function auditClinicalCoding(parsed, clinicalText) {
       'S72.32': /\b(?:comminuted|kominutif|kominuta)\b/i,
       'S72.37': /\b(?:bifocal|bifokal|segmental|multiple|multipel)\b/i
     };
-    if (supportedQuote && morphologyRules[diagnosis.code] && /femur/i.test(quote) && /shaft|diafis|batang|1\s*\/\s*3 tengah/i.test(quote) &&
-        !morphologyRules[diagnosis.code].test(quote)) {
+    if (supportedQuote && morphologyRules[diagnosis.code] && (!hasFractureCodeCollision(diagnosis.code) || diagnosis.code_system === 'ICD10_IM') && /femur/i.test(quote) && /shaft|diafis|batang|1\s*\/\s*3 tengah/i.test(quote) &&
+        !morphologyRules[diagnosis.code].test(morphologyEvidence)) {
       const originalCode = diagnosis.code;
       diagnosis.code = 'S72.3';
       diagnosis.description = 'Fracture of shaft of femur';
@@ -530,10 +438,10 @@ function auditClinicalCoding(parsed, clinicalText) {
     }
     const unspecifiedOrganism = /(?:tidak ada|tanpa) (?:kuman|organisme) spesifik|(?:kuman|organisme)(?: penyebab)? (?:belum|tidak) (?:diketahui|teridentifikasi)|(?:tidak|belum) (?:menyebut(?:kan)?|mencantumkan|mengidentifikasi|menentukan) (?:kuman|organisme|patogen)(?: spesifik)?|organism (?:unknown|unspecified)/i.test(normalize(input));
     const unsupportedPattern = diagnosis.code === 'J18.0'
-      ? !/bronchopneumonia|bronkopneumonia|bronchial pneumonia/i.test(quote)
-      : diagnosis.code === 'J18.1' && !/\b(?:lobar|lobaris)\b/i.test(quote);
+      ? !/bronchopneumonia|bronkopneumonia|bronchial pneumonia/i.test(patternEvidence)
+      : diagnosis.code === 'J18.1' && !/\b(?:lobar|lobaris)\b/i.test(patternEvidence);
     if (supportedQuote && unsupportedPattern && unspecifiedOrganism && /pneumonia/i.test(quote) &&
-        !/aspiras|aspirat|bakter|bacter|viral|virus|influenza|hipost|hypost|pneumococc|streptococc|staphylococc|klebsiella|haemophilus|mycoplasma/i.test(quote)) {
+        !/aspiras|aspirat|bakter|bacter|viral|virus|influenza|hipost|hypost|pneumococc|streptococc|staphylococc|klebsiella|haemophilus|mycoplasma/i.test(input)) {
       const originalCode = diagnosis.code;
       diagnosis.code = 'J18.9';
       diagnosis.description = 'Pneumonia, unspecified';
@@ -546,22 +454,25 @@ function auditClinicalCoding(parsed, clinicalText) {
       diagnosis.coding_adjustment = {original_code: originalCode, proposed_code: 'J18.9',
         rule: 'pneumonia_location_without_documented_pattern', status: 'provisional_requires_clarification'};
       warnings.push({type:'WARNING',message:`Usulan ${originalCode} dikoreksi sementara menjadi J18.9: lokasi lobus bukan bukti pola broncho/lobar; klarifikasi diagnosis dokter tetap diperlukan.`});
-      if (diagnosis.role === 'DU') parsed.du_reasoning = 'Pneumonia diusulkan sebagai DU berdasarkan diagnosis dokter dan alasan perawatan dalam teks. Organisme belum diketahui; pola pneumonia perlu klarifikasi. Penempatan DM sebagai DS tetap perlu bukti pengaruhnya terhadap perawatan.';
+      issues.push('Kode dikoreksi sementara; keputusan klinis dan DU tetap perlu ditinjau.');
     }
-    if (!supportedQuote) issues.push('Kutipan diagnosis belum terbukti di input.');
-    if (diagnosis.code === 'J18.0' && (!supportedQuote || !/\b(?:broncho(?:pneumonia)?|bronko(?:pneumonia)?|bronchial pneumonia)\b/i.test(quote)))
+    if (!supportedQuote) issues.push(evidenceIssue);
+    if (diagnosis.code === 'J18.0' && (!supportedQuote || !/\b(?:bronchopneumonia|bronkopneumonia|bronchial pneumonia)\b/i.test(patternEvidence)))
       issues.push('J18.0 memerlukan diagnosis bronchopneumonia/bronkopneumonia; lokasi lobus atau infiltrat saja tidak cukup.');
-    if (diagnosis.code === 'J18.1' && (!supportedQuote || !/\b(?:lobar|lobaris)\b/i.test(quote)))
-      issues.push('J18.1 memerlukan dokumentasi lobar/lobaris pneumonia; lokasi lobus saja perlu klarifikasi.');
+    if (diagnosis.code === 'J18.1' && (!supportedQuote || !/\b(?:lobar|lobaris)\b/i.test(patternEvidence)))
+      issues.push('J18.1 memerlukan dokumentasi lobar/lobaris pneumonia, termasuk laporan radiolog yang relevan; lokasi lobus saja perlu klarifikasi.');
     if (/^J96\./.test(diagnosis.code) && (!supportedQuote || !/gagal napas|respiratory failure/i.test(quote)))
       issues.push('SpO2 saja tidak membuktikan diagnosis gagal napas.');
+    if (diagnosis.dagger_asterisk && diagnosis.dagger_asterisk !== 'none') issues.push('Usulan dagger/asterisk dan pasangan belum diverifikasi terhadap konvensi tabular.');
     diagnosis.clinical_validation = {status: issues.length ? 'review_required' : 'no_targeted_contradiction',
       clinical_validity: 'not_certified', issues};
     for (const issue of issues) warnings.push({type:'WARNING',message: `Ketidaksesuaian dokumentasi ${diagnosis.code}: ${issue}`});
   }
   for (const procedure of parsed.procedures || []) {
     const quote = String(procedure.documentation_quote || '');
-    if (!quote || !normalize(input).includes(normalize(quote))) warnings.push({type:'WARNING', message:`Prosedur ${procedure.code}: kutipan tindakan belum terbukti; jangan menyimpulkan tindakan dari hasil lab atau kelaziman.`});
+    const issue = documentationIssue(quote,input,true) || (procedure.code === '90.59' && !/mikroskop|microscop/i.test(quote) ? '90.59 memerlukan verifikasi jenis pemeriksaan; bukan kode generik hasil lab.' : null);
+    procedure.clinical_validation = {status:issue ? 'review_required' : 'documentation_present',clinical_validity:'not_certified',issues:issue ? [issue] : []};
+    if (issue) warnings.push({type:'WARNING', message:`Prosedur ${procedure.code}: kutipan tindakan belum terbukti; jangan menyimpulkan tindakan dari hasil lab atau kelaziman.`});
     if (procedure.code === '90.59' && !/pemeriksaan darah|blood examination|mikroskop|microscop/i.test(quote)) warnings.push({type:'WARNING',message:'90.59 tidak dibuktikan oleh nilai GDS/HbA1c saja; periksa tindakan dan deskripsi tabular.'});
   }
   return warnings;
@@ -583,6 +494,8 @@ function validateCodingStructure(parsed) {
       if (!pattern.test(code)) warnings.push({ type: 'WARNING', message: `${key}: format kode tidak sesuai; verifikasi manual.` });
       if (seen.has(code)) warnings.push({ type: 'WARNING', message: `${key}: kode ${code} berulang; periksa duplikasi.` });
       seen.add(code);
+      if (key === 'diagnoses' && !['DU','DS'].includes(item.role)) warnings.push({type:'WARNING',message:`Diagnosis ${code}: peran DU/DS tidak valid.`});
+      if (item.dagger_asterisk === 'asterisk' && (!item.paired_with || !(parsed.diagnoses || []).some(d => d.code === item.paired_with))) warnings.push({type:'WARNING',message:`Kode asterisk ${code} tidak memiliki pasangan etiologi yang tercantum.`});
       if (key === 'procedures' && /^\d{2}(?:\.\d)?$/.test(code)) warnings.push({ type: 'WARNING', message: `Prosedur ${code}: periksa apakah kategori ini memerlukan subkode lebih rinci.` });
     }
   }
@@ -615,6 +528,7 @@ function auditICSContext(parsed, clinicalText) {
     for (const [index, item] of items.entries()) check(`${kind}_documentation_${index}`, hasQuote(item.documentation_quote),
       `Bukti tertulis untuk ${kind} nomor ${index + 1} belum cocok dengan teks klinis; verifikasi dokumentasi.`, 'Pedoman iDRG April2025, hal8');
   }
+  for (const [i,d] of diagnoses.entries()) if (d.role === 'DS') check(`secondary_relevance_${i}`,hasQuote(d.secondary_relevance_quote),`Relevansi DS ${d.code} terhadap episode/perawatan belum terbukti; riwayat saja tidak cukup.`,'ICS §2.1.2, hal28–30');
   const context = parsed.ics_context && typeof parsed.ics_context === 'object' ? parsed.ics_context : {};
   if (diagnoses.length) check('documented_primary', hasQuote(context.documented_du_quote),
     'DU yang dicatat DPJP belum dapat dibuktikan dari teks input; usulan AI perlu ditinjau.', 'ICS §2.1.1, hal23–24');
@@ -648,11 +562,9 @@ function auditICSContext(parsed, clinicalText) {
 
 const PROC_KEYWORDS = {
   '87.44': ['foto thorax','rontgen dada','chest x-ray','rontgen thorax','x-ray dada','foto dada','cxr'],
-  '87.49': ['foto thorax','rontgen','chest x-ray','x-ray thorax'],
-  '87.03': ['ct scan kepala','ct head','ct-scan kepala','ct kepala','ct otak','ct scan','computed tomography','hiperdensitas','hiperdens','hipodens','ct-scan'],
+  '87.03': ['ct scan kepala','ct head','ct-scan kepala','ct kepala','ct otak'],
   '87.41': ['ct scan thorax','ct thorax','ct scan dada','ct dada'],
   '88.01': ['ct scan abdomen','ct abdomen','ct scan perut','ct perut'],
-  '88.38': ['ct scan lumbar','ct spine','ct lumbal','ct tulang belakang'],
   '88.91': ['mri brain','mri kepala','mri otak'],
   '88.92': ['mri chest','mri thorax','mri dada'],
   '88.93': ['mri spine','mri tulang belakang','mri lumbal'],
@@ -666,27 +578,20 @@ const PROC_KEYWORDS = {
   '89.14': ['eeg','elektroensefalogram','electroencephalogram'],
   '89.37': ['spirometri','spirometry','fev','fvc','uji fungsi paru'],
   '90.59': ['pemeriksaan darah','darah rutin','blood test','cbc','pemeriksaan laboratorium','kimia darah','analisis darah'],
-  '90.41': ['kultur sputum','sputum culture','kultur dahak','biakan sputum','pcr','swab nasofaring','swab tenggorok','bta sputum','sputum bta'],
   '90.54': ['kultur darah','blood culture','biakan darah'],
-  '90.29': ['kultur urin','urine culture','biakan urin'],
-  '91.31': ['urinalisis','urin rutin','urinalysis','urine rutin','pemeriksaan urin'],
-  '91.49': ['histopatologi','pa ','patologi anatomi','biopsi','histologi'],
   '93.94': ['nebulisasi','nebulizer','inhalasi','nebul'],
   '93.96': ['oksigen','o2 ','nasal kanul','masker oksigen','nasal prong','oxygen','suplemen oksigen','pemberian o2'],
   '93.91': ['ippb','intermittent positive pressure'],
   '96.04': ['intubasi','endotracheal tube','ett','intubation','pasang ett'],
   '96.70': ['ventilator','mechanical ventilation','ventilasi mekanik','ventilasi invasif'],
   '33.22': ['bronkoskopi','bronchoscopy','bronkos','fiber optic bronchoscopy'],
-  '33.23': ['bronkoskopi terapeutik','therapeutic bronchoscopy'],
   '00.66': ['pci','angioplasti','balloon','ptca','kateterisasi intervensi','primary pci','percutaneous coronary','angioplasty'],
   '36.06': ['bare metal stent','bms','stent bms'],
-  '36.07': ['drug eluting stent','des','stent des','drug-eluting stent','stent koroner','pemasangan stent','stent lad','stent rca','stent lcx'],
+  '36.07': ['drug eluting stent','des','stent des','drug-eluting stent'],
 
   '37.21': ['kateterisasi jantung kanan','right heart cath'],
-  '37.22': ['kateterisasi jantung kiri','left heart cath','coronary angiography','angiografi koroner'],
 
   '54.11': ['laparotomi','laparotomy','eksplorasi laparotomi'],
-  '54.19': ['laparotomi','laparotomy'],
   '47.01': ['appendektomi laparoskopik','laparoscopic appendectomy','apendektomi laparoskopik'],
   '47.09': ['appendektomi','apendektomi','appendectomy','operasi usus buntu'],
   '51.23': ['kolesistektomi laparoskopik','laparoscopic cholecystectomy','lap chole'],
@@ -701,15 +606,10 @@ const PROC_KEYWORDS = {
   '44.13': ['gastroskopi','gastroscopy','endoskopi atas','upper endoscopy','ugie'],
   '45.23': ['kolonoskopi','colonoscopy'],
   '45.13': ['endoskopi usus halus','small bowel endoscopy'],
-  '52.14': ['ercp','endoscopic retrograde'],
-  '51.11': ['ercp','erc','cholangiography'],
-  '57.6':  ['sistektomi total','total cystectomy'],
 
-  '60.29': ['prostatektomi','prostatectomy'],
-  '79.05': ['reduksi tertutup','closed reduction'],
 
-  '79.35': ['nail intramedular','intramedullary nail','im nail','nailing femur'],
-  '79.36': ['nail tibia','tibia nail','im nail tibia'],
+  '79.35': ['orif femur','open reduction internal fixation femur','reduksi terbuka femur'],
+  '79.36': ['orif tibia','orif fibula','reduksi terbuka tibia'],
   '81.51': ['total hip replacement','thr','hip replacement','ganti sendi panggul'],
   '81.54': ['total knee replacement','tkr','knee replacement','ganti sendi lutut'],
   '77.35': ['osteotomi femur','osteotomy femur'],
@@ -719,44 +619,30 @@ const PROC_KEYWORDS = {
   '65.39': ['oophorectomy unilateral','angkat ovarium unilateral'],
   '65.51': ['bilateral oophorectomy','angkat kedua ovarium'],
   '65.61': ['bilateral salpingo-oophorectomy','angkat kedua ovarium dan tuba bilateral'],
-  '13.72': ['fakoemulsifikasi','phacoemulsification','phaco','iol','intraocular lens','lensa tanam'],
   '13.41': ['fakoemulsifikasi','phacoemulsification','phaco'],
 
   '14.24': ['laser fotokoagulasi','photocoagulation','laser retina','laser fotokoagulasi retina','laser photocoagulation','destruction of chorioretinal'],
   '14.25': ['fotokoagulasi tipe tidak spesifik','photocoagulation unspecified type'],
   '16.49': ['enukleasi','enucleation','angkat bola mata'],
 
-  '01.24': ['kraniotomi','craniotomy','trepanasi','bur hole'],
-  '02.12': ['kraniektomi','craniectomy','dekompresi kranial','decompressive craniectomy'],
   '03.09': ['laminektomi','laminectomy','eksplorasi spinal','dekompresi spinal'],
 
 
-  '34.04': ['chest tube','wsd','water seal drainage','selang dada','torakostomi','thoracostomy','pungsi pleura','pleural tap'],
-  '34.09': ['torakoskopi','thoracoscopy','vats','video assisted thoracoscopy'],
+  '34.04': ['chest tube','wsd','water seal drainage','selang dada','torakostomi','thoracostomy'],
   '31.1':  ['trakeostomi permanen','permanent tracheostomy'],
   '31.21': ['trakeostomi','tracheostomy','trakeostomi temporer'],
 
-  '42.10': ['esofagoskopi','esophagoscopy','endoskopi esofagus'],
-  '43.19': ['gastrektomi','gastrectomy','reseksi lambung'],
-  '48.50': ['reseksi rektum','rectal resection','hartmann','lar','anterior resection'],
-  '52.12': ['biopsi pankreas','pancreas biopsy','biopsi pankreas'],
 
   '55.23': ['biopsi ginjal','renal biopsy','kidney biopsy'],
   '55.51': ['nefrektomi','nephrectomy','angkat ginjal'],
-  '56.0':  ['nefrostomi','nephrostomy','pielostomi','pyelostomy'],
-  '59.8':  ['dj stent','double j','stent ureter','ureteral stent','pemasangan stent ureter'],
 
 
-  '90.09': ['pcr darah','blood pcr','pemeriksaan darah lain'],
-  '91.71': ['analisa cairan pleura','pleural fluid','pungsi pleura','torakosentesis','thoracocentesis'],
-  '91.61': ['lumbal pungsi','lumbar puncture','lp ','cairan serebrospinal','csf','pungsi lumbal'],
 
   '99.04': ['transfusi','transfusion','prc','wbc transfusi','transfusi darah','packed red cell'],
   '99.17': ['injeksi insulin','insulin injection','insulin drip','infus insulin'],
   '99.15': ['nutrisi parenteral','parenteral nutrition','tpn'],
   '57.94': ['kateter urin','foley catheter','foley','pemasangan kateter','dauer catheter','dc '],
   '38.93': ['cvp','cvc','central venous','pemasangan cvp','pemasangan cvc','central line'],
-  '89.11': ['konsultasi neurologi','neurology consult','penilaian neurologis'],
 };
 
 /**
@@ -774,7 +660,11 @@ function validateProcedures(procedures, inputText) {
     const keywords = PROC_KEYWORDS[proc.code];
     if (!keywords) continue; // kode tidak ada di map → tidak dapat dinilai oleh pemeriksaan kata kunci
 
-    const found = keywords.some(kw => lowerInput.includes(kw.toLowerCase()));
+    const found = keywords.some(kw => {
+      const escaped = kw.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const matches = [...lowerInput.matchAll(new RegExp('\\b' + escaped + '\\b','g'))];
+      return matches.some(m => !documentationIssue(m[0], inputText, true));
+    });
     if (!found) {
       warnings.push({
         code: proc.code,
@@ -854,4 +744,5 @@ function isIMCode(item) {
   return Boolean(ref && (ref.local_extension || (ref.entries || []).some(entry => /\(IM\)/i.test(entry.title_extracted || ''))));
 }
 
-export { getIMParentCodes, applyFractureDefaults, auditClinicalCoding, buildPrompt, extractLeadTerm, normalizeIndexLabel, parseIndexReference, formatIndexTrace, indexTermMatches, buildWHOIndexPath, resolveWHOIndexReferences, referenceWarnings, validateCodingStructure, ICS_REFERENCE_PROFILE, auditICSContext, validateProcedures, validateDiagnosisCode, validateDiagnoses, isIMCode };
+export { documentationIssue, hasFractureCodeCollision, getIMParentCodes, applyFractureDefaults, auditClinicalCoding, buildPrompt, extractLeadTerm, normalizeIndexLabel, parseIndexReference, formatIndexTrace, indexTermMatches, buildWHOIndexPath, resolveWHOIndexReferences, referenceWarnings, validateCodingStructure, ICS_REFERENCE_PROFILE, auditICSContext, validateProcedures, validateDiagnosisCode, validateDiagnoses, isIMCode };
+

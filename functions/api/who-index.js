@@ -18,12 +18,12 @@ function json(data, status = 200) {
   });
 }
 
-async function getWHOAccessToken(clientId, clientSecret) {
+async function getWHOAccessToken(clientId, clientSecret, fetchReference = fetch) {
   const cached = TOKEN_CACHE.get(clientId);
   if (cached && cached.expiresAt > Date.now() + 60000) return cached.token;
 
   const basic = btoa(clientId + ":" + clientSecret);
-  const response = await fetch(WHO_TOKEN_URL, {
+  const response = await fetchReference(WHO_TOKEN_URL, {
     method: "POST",
     headers: {
       Authorization: "Basic " + basic,
@@ -82,7 +82,7 @@ function parseIndexHierarchy(term, code = "") {
 
   const normalizedCode = String(code || "").trim().toUpperCase();
   if (normalizedCode) {
-    text = text.replace(new RegExp("^" + normalizedCode + "\s*[-:]?\s*", "i"), "").trim();
+    text = text.replace(new RegExp("^" + normalizedCode + "\\s*[-:]?\\s*", "i"), "").trim();
   }
 
   // Contoh:
@@ -167,8 +167,8 @@ function extractBrowserIndexResults(html) {
   return results;
 }
 
-async function searchBrowserIndex(term) {
-  const response = await fetch('https://icd.who.int/browse10/2010/en/ACSearch', {
+async function searchBrowserIndex(term, fetchReference = fetch) {
+  const response = await fetchReference('https://icd.who.int/browse10/2010/en/ACSearch', {
     method: 'POST', signal: AbortSignal.timeout(12000), headers: {'Content-Type': 'application/x-www-form-urlencoded'},
     body: new URLSearchParams({q: term}).toString()
   });
@@ -176,8 +176,8 @@ async function searchBrowserIndex(term) {
     results: response.ok ? extractBrowserIndexResults(await response.text()) : []};
 }
 
-async function getEntity(code, token) {
-  const response = await fetch(WHO_BASE_URL + "/" + encodeURIComponent(code), {
+async function getEntity(code, token, fetchReference = fetch) {
+  const response = await fetchReference(WHO_BASE_URL + "/" + encodeURIComponent(code), {
     headers: {
       Authorization: "Bearer " + token,
       "API-Version": "v2",
@@ -193,12 +193,15 @@ async function getEntity(code, token) {
   return { ok: response.ok, status: response.status, data };
 }
 
-async function buildParentChain(code, token, maxDepth = 12) {
+async function buildParentChain(code, token, maxDepth = 6, fetchReference = fetch) {
   const chain = [];
   let current = code;
+  const visited = new Set();
 
   for (let i = 0; i < maxDepth && current; i++) {
-    const result = await getEntity(current, token);
+    if (visited.has(current)) break;
+    visited.add(current);
+    const result = await getEntity(current, token, fetchReference);
     if (!result.ok || !result.data) break;
 
     const data = result.data;
@@ -225,7 +228,18 @@ export async function onRequestGet(context) {
     const url = new URL(context.request.url);
     const term = String(url.searchParams.get("term") || "").trim();
     const requestedCode = String(url.searchParams.get("code") || "").trim().toUpperCase();
-    const limit = Math.min(Math.max(Number(url.searchParams.get("limit") || 10), 1), 20);
+    const requestedLimit = Number(url.searchParams.get("limit") || 10);
+    const limit = Number.isFinite(requestedLimit) ? Math.min(Math.max(Math.trunc(requestedLimit),1),20) : 10;
+    if (term.length > 200 || (requestedCode && !/^[A-Z]\d{2}(?:\.\d{1,3})?$/.test(requestedCode))) return json({valid:false,error:"Invalid search parameters"},400);
+    let calls = 0; const deadline = Date.now() + 18000; const cache = new Map();
+    const fetchReference = async (url, options = {}) => {
+      const key = String(url) + String(options.body || "");
+      if (cache.has(key)) return (await cache.get(key)).clone();
+      const remaining = deadline - Date.now();
+      if (++calls > 18 || remaining <= 0) throw new Error("WHO lookup budget exhausted");
+      const promise = fetch(url,{...options,signal:AbortSignal.timeout(Math.max(1,Math.min(6000,remaining)))});
+      cache.set(key,promise); return (await promise).clone();
+    };
 
     if (term.length < 2) {
       return json({ valid: false, error: "Parameter term minimal 2 karakter. Contoh: ?term=pneumonia" }, 400);
@@ -237,13 +251,13 @@ export async function onRequestGet(context) {
       return json({ valid: false, error: "WHO API credentials are not configured in Cloudflare Pages" }, 500);
     }
 
-    const token = await getWHOAccessToken(clientId, clientSecret);
+    const token = await getWHOAccessToken(clientId, clientSecret, fetchReference);
     const searchUrl = new URL(WHO_BASE_URL + "/search");
     searchUrl.searchParams.set("q", term);
     searchUrl.searchParams.set("useFlexisearch", "true");
     searchUrl.searchParams.set("flatResults", "true");
 
-    const response = await fetch(searchUrl.toString(), {
+    const response = await fetchReference(searchUrl.toString(), {
       headers: {
         Authorization: "Bearer " + token,
         "API-Version": "v2",
@@ -260,7 +274,7 @@ export async function onRequestGet(context) {
     let browserStatus = null;
     if (!response.ok || !matches.some(item => item.index_terms.length &&
         (!requestedCode || String(item.code).toUpperCase() === requestedCode))) {
-      const browser = await searchBrowserIndex(term).catch(() => ({status: 0, results: []}));
+      const browser = await searchBrowserIndex(term, fetchReference).catch(() => ({status: 0, results: []}));
       browserStatus = browser.status;
       matches = [...browser.results, ...matches];
     }
@@ -283,7 +297,7 @@ export async function onRequestGet(context) {
         }, 502);
       }
 
-      const direct = await getEntity(requestedCode, token);
+      const direct = await getEntity(requestedCode, token, fetchReference);
       if (!direct.ok || !direct.data) {
         return json({
           valid: false,
@@ -336,7 +350,7 @@ export async function onRequestGet(context) {
     // ambil entity kode secara langsung. Ini tetap aman karena kita hanya
     // menerima fallback jika lead term benar-benar muncul sebagai WHO index term.
     if (requestedCode && !matches.some(item => String(item.code || '').toUpperCase() === requestedCode)) {
-      const direct = await getEntity(requestedCode, token);
+      const direct = await getEntity(requestedCode, token, fetchReference);
       if (direct.ok && direct.data) {
         const rawTerms = direct.data.indexTerm || direct.data.IndexTerm || [];
         const directTerms = Array.isArray(rawTerms) ? rawTerms.map(labelOf).filter(Boolean) : [];
@@ -362,14 +376,20 @@ export async function onRequestGet(context) {
     }
 
     const results = [];
-
+    const uniqueMatches = new Map();
     for (const match of matches) {
-      if (!match.code || (requestedCode && String(match.code).toUpperCase() !== requestedCode)) {
+      const previous = uniqueMatches.get(match.code);
+      uniqueMatches.set(match.code,previous ? {...previous,index_terms:[...new Set([...previous.index_terms,...match.index_terms])]} : match);
+    }
+    let enriched = 0;
+    for (const match of uniqueMatches.values()) {
+      if (enriched >= 1 || !match.code || (requestedCode && String(match.code).toUpperCase() !== requestedCode)) {
         results.push({ ...match, tabular_path: [], path_display: [] });
         continue;
       }
 
-      const entityResult = await getEntity(match.code, token);
+      enriched++;
+      const entityResult = await getEntity(match.code, token, fetchReference);
       let indexTerms = match.index_terms;
 
       if (entityResult.ok && entityResult.data) {
@@ -379,7 +399,7 @@ export async function onRequestGet(context) {
         }
       }
 
-      const tabularPath = await buildParentChain(match.code, token);
+      const tabularPath = await buildParentChain(match.code, token, 6, fetchReference);
 
       const uniqueIndexTerms = [...new Set(indexTerms)];
       const indexHierarchy = chooseIndexHierarchy(uniqueIndexTerms, match.code);
@@ -420,4 +440,5 @@ export async function onRequestGet(context) {
     }, 500);
   }
 }
+
 

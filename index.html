@@ -283,7 +283,7 @@ window.isIMCode = isIMCode;
       </div>
       <div id="diagList"></div>
       <div class="legend">
-        <div class="legend-item"><span style="color:var(--red);font-size:13px">†</span> <span id="lgDagger">Dagger = kode etiologi (DU jika berpasangan)</span></div>
+        <div class="legend-item"><span style="color:var(--red);font-size:13px">†</span> <span id="lgDagger">Dagger = usulan etiologi; pasangan dan urutan perlu verifikasi</span></div>
         <div class="legend-item"><span style="color:var(--blue);font-size:13px">*</span> <span id="lgAsterisk">Asterisk = kode manifestasi (DS)</span></div>
         <div class="legend-item"><span style="background:var(--red);color:#fff;padding:1px 5px;border-radius:2px;font-size:9px">DU</span> <span id="lgDU">Diagnosis Utama</span></div>
         <div class="legend-item"><span style="background:var(--blue-light);color:var(--blue);padding:1px 5px;border-radius:2px;font-size:9px;border:1px solid #93c5fd">DS</span> <span id="lgDS">Diagnosis Sekunder</span></div>
@@ -328,7 +328,7 @@ const T = {
     btnAnalyzing: 'Menganalisis...',
     btnClear: 'Clear',
     emptyMsg: 'Masukkan catatan klinis untuk memulai coding iDRG',
-    lgDagger: 'Dagger = kode etiologi (DU jika berpasangan)',
+    lgDagger: 'Dagger = usulan etiologi; pasangan dan urutan perlu verifikasi',
     lgAsterisk: 'Asterisk = kode manifestasi (DS)',
     lgDU: 'Diagnosis Utama',
     lgDS: 'Diagnosis Sekunder',
@@ -355,7 +355,7 @@ const T = {
     btnAnalyzing: 'Analyzing...',
     btnClear: 'Clear',
     emptyMsg: 'Enter clinical notes to start iDRG coding',
-    lgDagger: 'Dagger = etiology code (PDx if paired)',
+    lgDagger: 'Dagger = proposed etiology; pairing and sequence require review',
     lgAsterisk: 'Asterisk = manifestation code (SDx)',
     lgDU: 'Principal Diagnosis',
     lgDS: 'Secondary Diagnosis',
@@ -435,12 +435,14 @@ function clearAll() {
 }
 function setLoading(on) {
   const btn = document.getElementById('analyzeBtn');
-  btn.disabled = on;
+  btn.disabled = on || Date.now() < cooldownUntil;
   document.getElementById('btnSpinner').style.display = on ? 'inline' : 'none';
   document.getElementById('btnLabel').textContent = on ? T[currentLang].btnAnalyzing : T[currentLang].btnAnalyze;
 }
 let cooldownTimer = null;
+let cooldownUntil = 0;
 function startCooldown(seconds) {
+  cooldownUntil = Date.now() + seconds * 1000;
   let remaining = seconds;
   const btn = document.getElementById('analyzeBtn');
   const label = document.getElementById('btnLabel');
@@ -451,7 +453,8 @@ function startCooldown(seconds) {
     label.textContent = `Tunggu ${remaining}s...`;
     if (remaining <= 0) {
       clearInterval(cooldownTimer);
-      btn.disabled = false;
+      cooldownUntil = 0;
+      btn.disabled = analysisInProgress;
       label.textContent = T[currentLang].btnAnalyze;
     }
   }, 1000);
@@ -460,7 +463,7 @@ function startCooldown(seconds) {
 function showError(msg) {
   document.getElementById('resultsSection').style.display = 'block';
   document.getElementById('emptyState').style.display = 'none';
-  document.getElementById('summaryBox').innerHTML = `<div class="error-box">⚠ ${msg}</div>`;
+  document.getElementById('summaryBox').innerHTML = `<div class="error-box">⚠ ${escapeHTML(msg)}</div>`;
   document.getElementById('diagList').innerHTML = '';
   document.getElementById('procList').innerHTML = '';
   document.getElementById('diagCount').textContent = 'Error';
@@ -520,9 +523,12 @@ function extractMBRules(validations) {
   );
 }
 
+let analysisInProgress = false;
 async function analyze() {
+  if (analysisInProgress || Date.now() < cooldownUntil) return;
   const input = document.getElementById('clinicalInput').value.trim();
   if (!input) return;
+  analysisInProgress = true;
   setLoading(true);
 
   const langInstruction = currentLang === 'id'
@@ -531,6 +537,7 @@ async function analyze() {
 
   try {
     const resp = await fetch("/api/claude", {
+      signal: AbortSignal.timeout(150000),
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ clinicalText: input, langInstruction: langInstruction })
@@ -551,81 +558,22 @@ async function analyze() {
     const raw = data.text;
     if (!raw || raw.trim() === '') throw new Error("Empty response. Please try again.");
 
-    function fixLiteralNewlines(str) {
-      let result = '', inString = false, escaped = false;
-      for (let i = 0; i < str.length; i++) {
-        const ch = str[i];
-        if (escaped) { result += ch; escaped = false; continue; }
-        if (ch === '\\') { escaped = true; result += ch; continue; }
-        if (ch === '"') { inString = !inString; result += ch; continue; }
-        if (inString && ch === '\n') { result += '\\n'; continue; }
-        if (inString && ch === '\r') { result += '\\r'; continue; }
-        if (inString && ch === '\t') { result += '\\t'; continue; }
-        result += ch;
-      }
-      return result;
-    }
-
-    let clean = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
-    clean = fixLiteralNewlines(clean);
-    const match = clean.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error("Invalid response format. Please try again.");
-    clean = match[0];
-
-    function repairJSON(str) {
-      str = str.replace(/,\s*"[^"]*":\s*$/, '');
-      str = str.replace(/,\s*\{[^{}]*$/, '');
-      str = str.replace(/,\s*$/, '');
-      const opens  = (str.match(/\[/g)||[]).length - (str.match(/\]/g)||[]).length;
-      const braces = (str.match(/\{/g)||[]).length - (str.match(/\}/g)||[]).length;
-      for (let i = 0; i < opens;  i++) str += ']';
-      for (let i = 0; i < braces; i++) str += '}';
-      return str;
-    }
-
     let result;
-    try { result = JSON.parse(clean); }
-    catch(e) {
-      try { result = JSON.parse(repairJSON(clean)); }
-      catch(e2) { throw new Error("Failed to parse AI response. Please try again."); }
-    }
-
+    try { result = JSON.parse(raw); }
+    catch { throw new Error('Hasil server tidak lengkap; analisis ulang diperlukan.'); }
     if (!Array.isArray(result.diagnoses))   result.diagnoses   = [];
     if (!Array.isArray(result.procedures))  result.procedures  = [];
     if (!Array.isArray(result.validations)) result.validations = [];
 
-    function fixConf(val) {
-      if (val === null || val === undefined || val === '' || val === '-') return 85;
-      const n = parseFloat(String(val).replace('%', '').trim());
-      if (isNaN(n) || n <= 0) return 85;
-      const pct = n <= 1 ? Math.round(n * 100) : Math.round(n);
-      return Math.min(99, Math.max(1, pct));
-    }
-    result.diagnoses  = result.diagnoses.map(d => ({ ...d, confidence: fixConf(d.confidence) }));
-    result.procedures = result.procedures.map(p => ({ ...p, confidence: fixConf(p.confidence) }));
+    // No invented confidence score and no unverified local Vol.1 note injection.
+    result.diagnoses = result.diagnoses.map(d => ({...d,confidence:null,volume1_notes:[]}));
+    result.procedures = result.procedures.map(p => ({...p,confidence:null}));
 
-    // Inject Vol.1 notes dari known-paths.js — KHUSUS diagnosis (ICD-10).
-    // Prosedur (ICD-9-CM) SUDAH dapet volume1_notes dari server (D1, lewat
-    // enrichWithD1 di claude.js). JANGAN panggil ini buat procedures lagi —
-    // known-paths.js gak punya data prosedur sama sekali (sengaja dipisah,
-    // lihat header known-paths.js), jadi kalau dipanggil bakal nimpa
-    // volume1_notes yang server udah isi jadi kosong [] lagi.
-    function injectVol1ForDiagnoses(items) {
-      return items.map(item => {
-        const entry = (typeof getKnownPath === 'function') ? getKnownPath(item.code) : null;
-        if (entry && Array.isArray(entry.vol1) && entry.vol1.length > 0) {
-          return { ...item, volume1_notes: entry.vol1 };
-        }
-        return { ...item, volume1_notes: [] };
-      });
-    }
-    result.diagnoses = injectVol1ForDiagnoses(result.diagnoses);
-    // result.procedures TIDAK disentuh di sini — volume1_notes-nya udah final dari server.
-
-    renderResults(result);
+    if (document.getElementById('clinicalInput').value.trim() === input) renderResults(result);
   } catch(err) {
     showError(T[currentLang].errorPrefix + err.message);
   } finally {
+    analysisInProgress = false;
     setLoading(false);
   }
 }
@@ -686,7 +634,14 @@ function normalizeDashesShared(line) {
 }
 
 const codeRe = /\b([A-Z]\d{2}(\.\d+)?|\d{2}(\.\d+)*)\b/g;
+function escapeHTML(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+}
+function safeMessage(value) {
+  return escapeHTML(value).replace(/&lt;(\/?)(strong|em)&gt;/g,'<$1$2>');
+}
 function highlightCodes(s) {
+  s = escapeHTML(s);
   return s.replace(codeRe, m => `<span class="lp-code">${m}</span>`);
 }
 
@@ -866,7 +821,7 @@ function renderVol1Notes(notes) {
   };
   const items = notes.map(n => {
     const t = typeMap[n.type] || { cls: 'vnt-note', label: n.type };
-    return `<div class="vol1-note"><span class="vol1-note-type ${t.cls}">${t.label}</span><span>${n.text}</span></div>`;
+    return `<div class="vol1-note"><span class="vol1-note-type ${t.cls}">${escapeHTML(t.label)}</span><span>${escapeHTML(n.text)}</span></div>`;
   }).join('');
   if (!items) return '';
   return `<div class="vol1-box"><div class="vol1-label">${T[currentLang].labelVol1}</div><div class="vol1-notes">${items}</div></div>`;
@@ -880,7 +835,7 @@ function renderWHOIndexPath(index) {
     const parentLabel = nearest ? escape(nearest.code + ' — ' + nearest.description) : escape(index.parent_code);
     const known = window.KNOWN_PATHS?.[index.who_anchor_code];
     const parentVerified = index.parent_index?.status === 'verified';
-    const referencePath = parentVerified ? renderWHOIndexPath(index.parent_index)
+    const referencePath = (parentVerified || index.parent_index?.index_path?.lead_term) ? renderWHOIndexPath(index.parent_index)
       : known?.path ? '<div class="lead-term-box"><div class="lead-label">Jalur parent tersimpan — belum diverifikasi WHO</div><div class="lead-path">' + renderLeadPath(known.path,index.who_anchor_code,'') + '</div></div>'
       : index.parent_index ? renderWHOIndexPath(index.parent_index) : '';
     return '<div class="vol1-box" style="margin-top:8px"><div class="vol1-label">Volume 3 — referensi parent untuk ' + escape(index.code) + '</div>' +
@@ -984,7 +939,7 @@ function renderWHOIndexPath(index) {
       '<div class="vol1-label">▸ Volume 1 Tabular</div>' +
       '<div class="lead-path">' +
       tabular.map(x => '<div class="lp-line"><span class="lp-indent">' +
-        String(x.prefix || '-') + ' </span>' +
+        escapeHTML(x.prefix || '-') + ' </span>' +
         highlightCodes(String(x.code || '') + (x.title ? ' ' + x.title : '')) +
       '</div>').join('') +
       '</div></div>'
@@ -1001,10 +956,10 @@ function renderWHOIndexPath(index) {
 function renderWHOGuidance(guidance) {
   if (!guidance) return '';
   const sections = [];
-  if (Array.isArray(guidance.inclusion) && guidance.inclusion.length) sections.push('<strong>Includes:</strong> ' + guidance.inclusion.join('; '));
-  if (Array.isArray(guidance.exclusion) && guidance.exclusion.length) sections.push('<strong>Excludes:</strong> ' + guidance.exclusion.map(x => x.term || '').filter(Boolean).join('; '));
-  if (Array.isArray(guidance.note) && guidance.note.length) sections.push('<strong>WHO Note:</strong> ' + guidance.note.join('; '));
-  if (Array.isArray(guidance.codingHint) && guidance.codingHint.length) sections.push('<strong>Coding Hint:</strong> ' + guidance.codingHint.join('; '));
+  if (Array.isArray(guidance.inclusion) && guidance.inclusion.length) sections.push('<strong>Includes:</strong> ' + guidance.inclusion.map(escapeHTML).join('; '));
+  if (Array.isArray(guidance.exclusion) && guidance.exclusion.length) sections.push('<strong>Excludes:</strong> ' + guidance.exclusion.map(x => escapeHTML(x.term || '')).filter(Boolean).join('; '));
+  if (Array.isArray(guidance.note) && guidance.note.length) sections.push('<strong>WHO Note:</strong> ' + guidance.note.map(escapeHTML).join('; '));
+  if (Array.isArray(guidance.codingHint) && guidance.codingHint.length) sections.push('<strong>Coding Hint:</strong> ' + guidance.codingHint.map(escapeHTML).join('; '));
   if (!sections.length) return '';
   return '<div class="vol1-box" style="margin-top:8px"><div class="vol1-label">WHO Coding Guidance</div><div class="vol1-notes">' + sections.map(s => '<div class="vol1-note"><span>' + s + '</span></div>').join('') + '</div></div>';
 }
@@ -1020,7 +975,7 @@ function renderValidations(validations) {
   // Render MB Rule banner khusus (ungu)
   if (mbRules.length > 0) {
     const mbItems = mbRules.map(v =>
-      `<div class="val-item"><span>📋</span><span>${v.message}</span></div>`
+      `<div class="val-item"><span>📋</span><span>${safeMessage(v.message)}</span></div>`
     ).join('');
     html += `<div class="mb-rule-banner"><strong>${T[currentLang].labelMBRule}</strong>${mbItems}</div>`;
   }
@@ -1037,21 +992,21 @@ function renderValidations(validations) {
       if (match) {
         return `<div class="val-item"><span>✅</span><span><strong>${match[1]}</strong> — ${match[2]}</span></div>`;
       }
-      return `<div class="val-item"><span>✅</span><span>${v.message}</span></div>`;
+      return `<div class="val-item"><span>✅</span><span>${safeMessage(v.message)}</span></div>`;
     }).join('');
     html += `<div class="validation-banner"><strong>WHO ICD-10 2010</strong>${whoItems}</div>`;
   }
 
   if (whoIndexValid.length > 0) {
     const items = whoIndexValid.map(v =>
-      `<div class="val-item"><span>📚</span><span>${v.message}</span></div>`
+      `<div class="val-item"><span>📚</span><span>${safeMessage(v.message)}</span></div>`
     ).join('');
     html += `<div class="validation-banner"><strong>WHO Vol. 3 Index</strong>${items}</div>`;
   }
 
   if (otherNonWho.length > 0) {
     const items = otherNonWho.map(v =>
-      `<div class="val-item"><span>${iconMap[v.type]||'ℹ'}</span><span><strong>${v.type}:</strong> ${v.message}</span></div>`
+      `<div class="val-item"><span>${iconMap[v.type]||'ℹ'}</span><span><strong>${escapeHTML(v.type)}:</strong> ${safeMessage(v.message)}</span></div>`
     ).join('');
     html += `<div class="validation-banner"><strong>${T[currentLang].labelValidasi}</strong>${items}</div>`;
   }
@@ -1071,9 +1026,9 @@ function renderResults(result) {
     ? validateDiagnoses(result.diagnoses) : [];
 
   document.getElementById('summaryBox').innerHTML = `
-    <div class="summary-strip"><strong>${t.labelSummary}</strong>${result.summary || ''}</div>
+    <div class="summary-strip"><strong>${t.labelSummary}</strong>${escapeHTML(result.summary || '')}</div>
     ${result.du_reasoning ? `<div class="summary-strip" style="background:#eff6ff;border-color:#bfdbfe;border-left-color:#2563eb;color:#1e3a5f;margin-top:8px">
-      <strong style="color:#1d4ed8">${t.labelDUReason}</strong>${result.du_reasoning}</div>` : ''}
+      <strong style="color:#1d4ed8">${t.labelDUReason}</strong>${escapeHTML(result.du_reasoning)}</div>` : ''}
     ${renderValidations(result.validations)}`;
 
   const diagnoses = result.diagnoses;
@@ -1085,8 +1040,8 @@ function renderResults(result) {
   if (_diagWarnings && _diagWarnings.length > 0) {
     const _diagWarnHTML = `<div class="validation-banner diag-validator-banner" style="border-radius:0;border-left-width:4px;border-left-color:#f59e0b;background:#fffbeb;border-color:#fde68a;color:#92400e;margin-bottom:0">
       <strong>⚠ KODE DIAGNOSIS PERLU VERIFIKASI</strong>
-      ${_diagWarnings.map(w => `<div class="val-item"><span>🟡</span><span>${w.message}</span></div>`).join('')}
-      <div style="font-size:10px;margin-top:6px;opacity:0.65;font-style:italic">Format tidak valid = kemungkinan halusinasi AI. Belum terverifikasi + confidence rendah = cek manual ke ICD-10 IM.</div>
+      ${_diagWarnings.map(w => `<div class="val-item"><span>🟡</span><span>${safeMessage(w.message)}</span></div>`).join('')}
+      <div style="font-size:10px;margin-top:6px;opacity:0.65;font-style:italic">Format tidak valid = kemungkinan halusinasi AI. Referensi belum terverifikasi = tinjau sumber dan dokumentasi.</div>
     </div>`;
     document.querySelector('.coding-table-header').insertAdjacentHTML('afterend', _diagWarnHTML);
   }
@@ -1095,44 +1050,41 @@ function renderResults(result) {
     const isAsterisk = d.dagger_asterisk === 'asterisk';
     const isIM       = isIMCode(d);
     const badgeClass = d.role === 'DU' ? 'du' : 'ds';
-    const dagMark    = isDagger   ? `<span class="dagger-mark" title="Etiology code">†</span>` : '';
-    const astMark    = isAsterisk ? `<span class="asterisk-mark" title="Manifestation code">*</span>` : '';
+    const dagMark    = isDagger   ? `<span class="dagger-mark" title="Usulan etiologi — pasangan belum terverifikasi">†</span>` : '';
+    const astMark    = isAsterisk ? `<span class="asterisk-mark" title="Usulan manifestasi — pasangan belum terverifikasi">*</span>` : '';
     const imBadge    = isIM       ? `<span class="im-badge" title="Indonesian Modification">IM</span>` : '';
-    const pairNote   = d.paired_with ? `<span style="font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;"> → ${t.labelPasangan}: ${d.paired_with}</span>` : '';
-    const descAlt    = currentLang === 'id' && d.description_id ? `<div class="diag-desc-alt">🇮🇩 ${d.description_id}</div>` : '';
+    const pairNote   = d.paired_with ? `<span style="font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;"> → ${t.labelPasangan}: ${escapeHTML(d.paired_with)}</span>` : '';
+    const descAlt    = currentLang === 'id' && d.description_id ? `<div class="diag-desc-alt">🇮🇩 ${escapeHTML(d.description_id)}</div>` : '';
     return `<div class="diag-item" style="animation-delay:${i*0.06}s">
       <div class="diag-main">
-        <div><span class="du-badge ${badgeClass}">${d.role}</span></div>
+        <div><span class="du-badge ${badgeClass}">${escapeHTML(d.role)}</span></div>
         <div>
-          <div class="diag-code-row"><span class="diag-code">${d.code}</span>${dagMark}${astMark}${imBadge}${pairNote}</div>
-          <div class="diag-desc">${d.description}</div>
+          <div class="diag-code-row"><span class="diag-code">${escapeHTML(d.code)}</span>${dagMark}${astMark}${imBadge}${pairNote}</div>
+          <div class="diag-desc">${escapeHTML(d.description)}</div>
           ${descAlt}
-          <div class="diag-category">${d.category}</div>
+          <div class="diag-category">${escapeHTML(d.category)}</div>
         </div>
         <div class="conf-wrap">
-          <div class="conf-val">${d.confidence}%</div>
-          <div class="conf-bar"><div class="conf-fill" style="width:${d.confidence}%"></div></div>
+          <div class="conf-val">—</div>
+          <div class="conf-bar"><div class="conf-fill" style="width:0%"></div></div>
         </div>
       </div>
-      ${d.who_index ? renderWHOIndexPath(d.who_index) : (d.lead_term_path ? `<div class="lead-term-box">
-        <div class="lead-label"><span>${t.labelVol3}</span>
-        <button class="copy-btn" onclick="copyPath(this,\`${getCleanPath(d.lead_term_path,d.code,d.description).replace(/`/g,"'")}\`)">📋 Copy</button></div>
-        <div class="lead-path">${renderLeadPath(d.lead_term_path, d.code, d.description)}</div>
-      </div>` : '')}
+      ${renderWHOIndexPath(d.who_index || {code:d.code,status:'unverified',reason:'Jalur indeks belum tersedia.'})}
       ${renderVol1Notes(d.volume1_notes)}
       ${renderWHOGuidance(d.who_guidance)}
-      ${d.reasoning ? `<div class="reasoning-box">${t.labelReasoning}${d.reasoning}</div>` : ''}
+      ${d.reasoning ? `<div class="reasoning-box">${t.labelReasoning}${escapeHTML(d.reasoning)}</div>` : ''}
     </div>`;
   }).join('');
 
   const procedures = result.procedures;
   document.getElementById('procCount').textContent = `${procedures.length} ${currentLang === 'id' ? 'kode' : 'codes'}`;
 
-  // ── Render hallucination warnings ──
+  // Clear previous results even when the new analysis has no warnings.
+  document.querySelector('.proc-validator-banner')?.remove();
   if (_procWarnings && _procWarnings.length > 0) {
     const _warnHTML = `<div class="validation-banner proc-validator-banner" style="border-radius:0;border-left-width:4px;border-left-color:#f59e0b;background:#fffbeb;border-color:#fde68a;color:#92400e;margin-bottom:0">
       <strong>⚠ PROSEDUR TIDAK TERVERIFIKASI DI TEKS INPUT</strong>
-      ${_procWarnings.map(w => `<div class="val-item"><span>🟡</span><span>${w.message}</span></div>`).join('')}
+      ${_procWarnings.map(w => `<div class="val-item"><span>🟡</span><span>${safeMessage(w.message)}</span></div>`).join('')}
       <div style="font-size:10px;margin-top:6px;opacity:0.65;font-style:italic">Verifikasi manual — kemungkinan halusinasi AI karena kata kunci tidak ditemukan di teks</div>
     </div>`;
     const _oldBanner = document.querySelector('.proc-validator-banner');
@@ -1140,45 +1092,38 @@ function renderResults(result) {
     document.querySelector('.proc-header').insertAdjacentHTML('afterend', _warnHTML);
   }
 
-  const _warnedCodes = new Set((_procWarnings || []).map(w => w.code));
-  const _filteredProcs = procedures.filter(p => {
-    if (p.code === '90.59' && _warnedCodes.has('90.59')) return false;
-    return true;
-  });
-  const _removedCount = procedures.length - _filteredProcs.length;
-  if (_removedCount > 0) {
-    document.getElementById('procCount').textContent = `${_filteredProcs.length} ${currentLang === 'id' ? 'kode' : 'codes'}`;
-  }
+  const _filteredProcs = procedures;
 
   document.getElementById('procList').innerHTML = _filteredProcs.map((p, i) => {
     const isIM    = isIMCode(p);
     const imBadge = isIM ? `<span class="im-badge" title="Indonesian Modification">IM</span>` : '';
-    const descAlt = currentLang === 'id' && p.description_id ? `<div class="diag-desc-alt">🇮🇩 ${p.description_id}</div>` : '';
+    const descAlt = currentLang === 'id' && p.description_id ? `<div class="diag-desc-alt">🇮🇩 ${escapeHTML(p.description_id)}</div>` : '';
     return `<div class="diag-item" style="animation-delay:${(diagnoses.length+i)*0.06}s">
       <div class="diag-main">
         <div><span class="du-badge proc">PROC</span></div>
         <div>
-          <div class="diag-code-row"><span class="diag-code">${p.code}</span>${imBadge}</div>
-          <div class="diag-desc">${p.description}</div>
+          <div class="diag-code-row"><span class="diag-code">${escapeHTML(p.code)}</span>${imBadge}</div>
+          <div class="diag-desc">${escapeHTML(p.description)}</div>
           ${descAlt}
-          <div class="diag-category">${p.category}</div>
+          <div class="diag-category">${escapeHTML(p.category)}</div>
         </div>
         <div class="conf-wrap">
-          <div class="conf-val">${p.confidence}%</div>
-          <div class="conf-bar"><div class="conf-fill" style="width:${p.confidence}%"></div></div>
+          <div class="conf-val">—</div>
+          <div class="conf-bar"><div class="conf-fill" style="width:0%"></div></div>
         </div>
       </div>
       ${p.lead_term_path ? `<div class="lead-term-box">
-        <div class="lead-label"><span>${t.labelVol3proc}</span>
-        <button class="copy-btn" onclick="copyPath(this,\`${getCleanPath(p.lead_term_path,p.code,p.description).replace(/`/g,"'")}\`)">📋 Copy</button></div>
+        <div class="lead-label"><span>${t.labelVol3proc} — referensi tersimpan, belum terverifikasi</span>
+</div>
         <div class="lead-path">${renderLeadPath(p.lead_term_path, p.code, p.description)}</div>
       </div>` : ''}
       ${renderVol1Notes(p.volume1_notes)}
-      ${p.reasoning ? `<div class="reasoning-box">${t.labelReasoning}${p.reasoning}</div>` : ''}
+      ${p.reasoning ? `<div class="reasoning-box">${t.labelReasoning}${escapeHTML(p.reasoning)}</div>` : ''}
     </div>`;
   }).join('');
 }
 </script>
 </body>
 </html>
+
 

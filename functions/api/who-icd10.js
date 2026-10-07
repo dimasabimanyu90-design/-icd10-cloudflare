@@ -40,7 +40,7 @@ async function getWHOAccessToken(clientId, clientSecret) {
   const basic = btoa(clientId + ":" + clientSecret);
 
   const response = await fetch(WHO_TOKEN_URL, {
-    method: "POST",
+    method: "POST", signal: AbortSignal.timeout(8000),
     headers: {
       "Authorization": "Basic " + basic,
       "Content-Type": "application/x-www-form-urlencoded"
@@ -98,7 +98,7 @@ async function validateAgainstWHO(code, token) {
   const url = WHO_BASE_URL + "/" + encodeURIComponent(code);
 
   const response = await fetch(url, {
-    method: "GET",
+    method: "GET", signal: AbortSignal.timeout(8000),
     headers: {
       "Authorization": "Bearer " + token,
       // WHO ICD API v2 is the current supported API version.
@@ -127,7 +127,7 @@ async function validateAgainstWHO(code, token) {
 export async function onRequestPost(context) {
   try {
     const body = await context.request.json().catch(() => ({}));
-    const code = normalizeCode(body.code);
+    const code = normalizeCode(body?.code);
 
     if (!code) {
       return json({
@@ -196,6 +196,8 @@ export async function onRequestPost(context) {
     }
 
     const entity = compactEntity(data, code);
+    const sourceCode = firstValue(data.code);
+    if (!sourceCode || String(sourceCode).toUpperCase() !== code || !entity.title) return json({valid:false,source:'WHO',code,error:'WHO entity identity/title did not match requested code'},502);
 
     return json({
       valid: true,
@@ -239,3 +241,4 @@ export async function onRequestGet(context) {
     request
   });
 }
+
