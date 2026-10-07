@@ -1061,6 +1061,7 @@ function renderResults(result) {
         <div>
           <div class="diag-code-row"><span class="diag-code">${escapeHTML(d.code)}</span>${dagMark}${astMark}${imBadge}${pairNote}</div>
           <div class="diag-desc">${escapeHTML(d.description)}</div>
+          ${d.description_source?.source === 'AI_PROPOSAL_UNVERIFIED' ? '<div class="diag-category">⚠ Deskripsi usulan AI — belum dicocokkan dengan sumber</div>' : ''}
           ${descAlt}
           <div class="diag-category">${escapeHTML(d.category)}</div>
         </div>
@@ -1104,6 +1105,7 @@ function renderResults(result) {
         <div>
           <div class="diag-code-row"><span class="diag-code">${escapeHTML(p.code)}</span>${imBadge}</div>
           <div class="diag-desc">${escapeHTML(p.description)}</div>
+          ${p.description_source?.source === 'AI_PROPOSAL_UNVERIFIED' ? '<div class="diag-category">⚠ Deskripsi usulan AI — belum dicocokkan dengan sumber</div>' : ''}
           ${descAlt}
           <div class="diag-category">${escapeHTML(p.category)}</div>
         </div>

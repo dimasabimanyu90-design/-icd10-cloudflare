@@ -162,7 +162,10 @@ async function validateDiagnosesWithWHO(diagnoses, request, fetchReference = fet
         // AI tetap boleh memberi description_id/penjelasan Indonesia,
         // tetapi description tidak boleh mengarang judul ICD-10.
         if (whoTitle) {
-          if (!diagnosis.description_source) diagnosis.description = whoTitle;
+          if (!diagnosis.description_source) {
+            diagnosis.description = whoTitle; diagnosis.description_id = null;
+            diagnosis.description_source = {source:'WHO_ICD10_2010',code};
+          }
           diagnosis.who_official_title = whoTitle;
         }
 
@@ -586,6 +589,10 @@ export async function onRequestPost(context) {
           if (parsed.procedures.some(p => p._d1_unavailable)) parsed.validations.push({ type: 'WARNING', message: 'Lookup ICD-9-CM dasar tidak tersedia; verifikasi manual.' });
           parsed.procedures = parsed.procedures.map(({ _d1_not_found, _d1_unavailable, ...rest }) => rest);
 
+        }
+        for (const item of [...parsed.diagnoses,...parsed.procedures]) {
+          item.confidence = null;
+          if (!item.description_source) item.description_source = {source:'AI_PROPOSAL_UNVERIFIED',code:item.code};
         }
         enrichedText = JSON.stringify(parsed);
       } catch(e) {

@@ -20,6 +20,7 @@ Jangan menggeneralisasi PCR/kultur/serologi/PA ke satu kode: periksa spesimen, m
 Satu DU bila diagnosis tersedia; semua DS harus punya bukti relevansi terhadap perawatan. Jelaskan alasan DU sebagai alasan pelayanan, bukan hanya alasan diagnosis ditegakkan.
 Untuk setiap DS isi secondary_relevance_quote: kutipan dampak pada risiko/pemeriksaan/tatalaksana episode ini sesuai ICS §2.1.2 (PDF29–31); kosongkan bila belum tersedia.
 Setiap item memiliki documentation_quote berupa kutipan persis input beserta konteks negasi/waktu; jangan memotong 'tidak', 'rencana', atau 'riwayat' dari kutipan.
+Jangan meminjam kode ICD-10-CM Amerika atau menambahkan digit laterality buatan ke kode WHO 2010. Jika subkode IM belum diketahui, usulkan kode dasar yang didukung dokumentasi dan nyatakan kebutuhan lookup.
 code_system: WHO_ICD10_2010 atau ICD10_IM untuk diagnosis; ICD9_CM atau ICD9_IM untuk tindakan. Skema ini usulan AI, bukan bukti validitas.
 description: kandidat nama kode; server mengambil nama referensi yang sesuai skema bila tersedia. description_id: terjemahan usulan, bukan nama resmi.
 lead_term: kata utama indeks, bukan judul tabular lengkap. lead_term_path: null jika sumber indeks tidak tersedia; jangan mengarang hierarki atau rujukan.
@@ -415,6 +416,7 @@ function auditClinicalCoding(parsed, clinicalText) {
     const patternEvidence = input.split(/[;\n.!?]+/).filter(clause => /pneumonia/i.test(clause) && !documentationIssue(clause,input) && !/(?:tidak ada|tanpa|no evidence of|suspek|rule out)[^;]{0,40}(?:lobar|lobaris|bronkopneumonia|bronchopneumonia)/i.test(clause)).join('; ');
     const morphologyEvidence = input.split(/[;\n.!?]+/).filter(clause => /femur/i.test(clause) && /shaft|diafis|batang|1\s*\/\s*3 tengah/i.test(clause) && !documentationIssue(clause,input)).join('; ');
     const issues = [];
+    if (diagnosis.code_system === 'WHO_ICD10_2010' && !/^[A-Z]\d{2}(?:\.\d{1,2})?$/.test(String(diagnosis.code || ''))) issues.push('Format kode tidak cocok dengan skema WHO ICD-10 2010 yang didukung; jangan mengarang digit IM/laterality atau mengambil ICD-10-CM.');
     const morphologyRules = {
       'S72.30': /\b(?:simple|sederhana)\b/i,
       'S72.31': /\bbutterfly\b/i,

@@ -42,6 +42,10 @@ async function run(text,value,env={}) {
  const afterORIF={diagnoses:[{code:'S72.3',documentation_quote:'fraktur femur terbuka'}]};
  ctx.applyFractureDefaults(afterORIF,'Dilakukan ORIF untuk fraktur femur terbuka.');
  assert.equal(afterORIF.diagnoses[0].fracture_status.classification,'open');
+ const inventedWHO={diagnoses:[{code:'S72.302',code_system:'WHO_ICD10_2010',documentation_quote:'Fraktur shaft femur kiri'}],procedures:[]};
+ ctx.auditClinicalCoding(inventedWHO,'Fraktur shaft femur kiri.');
+ assert.equal(inventedWHO.diagnoses[0].clinical_validation.status,'review_required');
+ assert.ok(inventedWHO.diagnoses[0].clinical_validation.issues.some(x=>x.includes('Format kode')));
  // Preserve WHO extended codes instead of silently interpreting them as IM morphology.
  const rows=[{code:'S72.3',title_extracted:'Fracture of shaft of femur'},{code:'S72.30',title_extracted:'Fracture of shaft of femur, simple fracture (IM)'}];
  let out=await run('Fraktur shaft femur tertutup.',{diagnoses:[{role:'DU',code:'S72.30',code_system:'WHO_ICD10_2010',documentation_quote:'Fraktur shaft femur tertutup'}],procedures:[]},{ICD10_IM_DB:db(rows)});
