@@ -423,7 +423,7 @@ function repairDocumentedRetinopathy(parsed, input) {
   // Conflicting types or multiple diagnostic statements need manual review.
   if (explicit.length !== 1 || /\b(?:dm|diabetes(?: mellitus)?)\s*(?:tipe|type)\s*1\b/i.test(input)) return warnings;
   const quote = explicit[0];
-  const candidates = (parsed.diagnoses || []).filter(d=>['E11.32','E11.3'].includes(d.code));
+  const candidates = (parsed.diagnoses || []).filter(d=>['E11','E11.9','E11.32','E11.3'].includes(d.code));
   if (candidates.length !== 1) return warnings;
   const etiology = candidates[0];
   if (etiology.documentation_quote && documentationIssue(etiology.documentation_quote,input)) return warnings;
@@ -443,6 +443,11 @@ function repairDocumentedRetinopathy(parsed, input) {
     parsed.diagnoses.push(manifestation);
   }
   manifestation.dagger_asterisk = 'asterisk'; manifestation.paired_with = 'E11.3';
+  const primary = parsed.diagnoses.filter(d=>d.role==='DU');
+  if (primary.length === 1 && primary[0] === manifestation) {
+    etiology.role='DU'; manifestation.role='DS';
+    warnings.push({type:'WARNING',message:'H36.0 asterisk tidak dipakai sendiri sebagai DU; diagnosis retinopati diabetik yang tertulis dipasangkan dengan etiologi E11.3 sebagai usulan DU. Tinjau episode pelayanan.'});
+  }
   const laser = clauses.filter(x=>/laser/i.test(x) && /fotokoagulasi|photocoagulation/i.test(x) && /retina/i.test(x) && !/\b(?:rencana|planned|planning|batal|dibatalkan|cancelled|canceled|ditunda|deferred|riwayat|history|tidak|belum|tanpa|not)\b/i.test(x) && !documentationIssue(x,input,true));
   if (laser.length === 1 && !/retinal (?:tear|detachment)|robekan retina|ablasio|ablasi retina/i.test(input)) {
     manifestation.secondary_relevance_quote = laser[0];

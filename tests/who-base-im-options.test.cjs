@@ -17,6 +17,7 @@ async function run(code='S72.30',scheme='WHO_ICD10_2010',binding=db){model={diag
  whoStatus='offline';r=await run();assert.equal(r.diagnoses.length,0);assert.equal(r.blocked_diagnoses[0].who_validation.status,'unverified');
  whoStatus='valid';r=await run('S72.30','WHO_ICD10_2010',null);assert.equal(r.diagnoses[0].code,'S72.30');assert.equal(r.diagnoses[0].im_options_status,'unavailable');
  r=await run('S72.301');assert.equal(r.diagnoses.length,0,'no digit truncation or invented child approval');
+ const category=ctx.selectWHOBaseDiagnoses([{code:'E11',who_validation:{source:'WHO',valid:true,title:'Category',has_subcategories:true}}]);assert.equal(category.accepted.length,0);assert.equal(category.blocked.length,1);
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');const ui=vm.createContext({currentLang:'id',escapeHTML:s=>String(s||'').replaceAll('<','&lt;').replaceAll('>','&gt;')});vm.runInContext(html.slice(html.indexOf('function renderDiagnosisIMOptions('),html.indexOf('function renderResultCard(')),ui);
  const output=ui.renderDiagnosisIMOptions({im_options:[{code:'S72.30',description:'<script>unsafe</script>',source_file:'source.pdf',pdf_page:83}]});assert.ok(!output.includes('<script>'));assert.match(output,/Kode DU\/DS WHO tetap digunakan/);assert.match(html,/Usulan ditahan — tidak masuk DU\/DS/);
  console.log('PASS: WHO-only DU/DS, invalid and offline quarantine, no truncation, IM collision isolation, independent titles, no automatic IM selection, binding failure and escaped UI');

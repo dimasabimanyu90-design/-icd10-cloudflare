@@ -12,4 +12,5 @@ for(const text of [clinical.replace('Tindakan: Laser','Rencana: Laser'),clinical
 p=ctx.normalizeModelResult({diagnoses:[{role:' secondary ',code:'H36.0'},{role:'unknown',code:'E11.3'}]});assert.equal(p.diagnoses[0].role,'DS');assert.equal(p.diagnoses[1].role,'unknown');
 p=ctx.normalizeModelResult(model());p.diagnoses[0].role='DS';ctx.auditClinicalCoding(p,clinical);assert.ok(p.diagnoses.every(x=>x.role==='DS'),'do not promote DS to DU');
 p=ctx.normalizeModelResult(model());p.diagnoses[0].documentation_quote='fabricated';ctx.auditClinicalCoding(p,clinical);assert.equal(p.diagnoses[0].code,'E11.32');
+p=ctx.normalizeModelResult({diagnoses:[{role:'DU',code:'H36.0'},{role:'DS',code:'E11'}],procedures:[]});ctx.auditClinicalCoding(p,clinical);assert.equal(p.diagnoses.find(d=>d.code==='E11.3').role,'DU');assert.equal(p.diagnoses.find(d=>d.code==='H36.0').role,'DS');
 console.log('PASS: reported retinopathy case, role aliases, WHO pair, retinal laser, repeat safety, no inferred diabetes/retinopathy, canceled/planned procedures, type conflict and invalid quotes');

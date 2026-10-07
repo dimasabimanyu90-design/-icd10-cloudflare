@@ -154,6 +154,7 @@ async function validateDiagnosesWithWHO(diagnoses, request, fetchReference = fet
           source: 'WHO',
           version: 'ICD-10 2010',
           title: whoTitle,
+          has_subcategories:Array.isArray(data.entity?.child) && data.entity.child.length > 0,
           parent: data.entity?.parent || null,
           who_guidance: buildWHOGuidance(data.entity)
         };
@@ -325,12 +326,13 @@ function selectWHOBaseDiagnoses(diagnoses) {
   const accepted = [], blocked = [];
   for (const item of diagnoses || []) {
     if (/^[A-Z]\d{2}(?:\.\d{1,2})?$/.test(item.code) && item.code_system !== 'ICD10_IM' && item.who_validation?.source === 'WHO' &&
-        item.who_validation?.valid === true && item.who_validation?.title) {
+        item.who_validation?.valid === true && item.who_validation?.title && item.who_validation.has_subcategories !== true) {
       accepted.push({...item,code_system:'WHO_ICD10_2010',description:item.who_validation.title,
         description_id:null,description_source:{source:'WHO_ICD10_2010',code:item.code}});
     } else {
       blocked.push({...item,coding_status:'held',hold_reason:item.code_system === 'ICD10_IM'
         ? 'Usulan IM tidak dipakai sebagai DU/DS WHO; pilih kode dasar WHO yang didukung dokumentasi.'
+        : item.who_validation?.has_subcategories ? 'Kategori WHO masih memiliki subkode; kode rinci belum ditetapkan.'
         : item.who_validation?.status === 'invalid' ? 'Kode tidak ditemukan pada WHO ICD-10 2010.'
         : 'Keberadaan kode dan judul WHO belum terverifikasi; usulan ditahan.'});
     }
