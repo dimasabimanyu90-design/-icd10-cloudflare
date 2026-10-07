@@ -113,6 +113,7 @@ Foto thorax/routine chest X-ray→87.44; CT thorax→87.41. Jangan menyamakan ke
 Pemetaan berikut hanya kandidat bila tindakan sesuai: Kolonoskopi→45.23; kolesistektomi laparoskopik → 51.23; THR→81.51; TKR→81.54; ORIF femur→79.35.
 Intramedullary nail saja tidak membuktikan open reduction; ORIF sendiri bukan bukti open fracture.
 Fakoemulsifikasi dan pemasangan IOL merupakan komponen berbeda: 13.41 untuk phaco; 13.71 untuk IOL saat ekstraksi satu tahap; 13.72 untuk pemasangan sekunder. Ikuti code also dan rincian laporan operasi (ICD 9 CM.pdf hal PDF46).
+Laser fotokoagulasi lesi retina/retinopati diabetik → 14.24; bukan 67.01. Jangan samakan dengan laser repair retinal tear (14.34).
 Ventilasi memerlukan rincian durasi jika tersedia; stent memerlukan jenis yang terdokumentasi; biopsi/endoskopi tidak interchangeable.
 90.59 bukan kode generik untuk semua darah rutin/GDS/HbA1c. TTV atau angka hasil saja tidak membuktikan prosedur.
 OMIT CODE: perlu catatan indeks dan bukti bahwa tindakan merupakan akses, bukan menghapus semua tindakan akses hanya karena ada tindakan lain.
@@ -128,6 +129,7 @@ Lokasi lobus/infiltrat saja tidak memastikan pola lobar. Jangan mengubah kode ha
 J18.9 kandidat pneumonia tanpa pola/organisme yang lebih spesifik. Kuman tidak diketahui tidak otomatis berarti bakteri.
 Hasil kultur harus dikonfirmasi dalam diagnosis klinis sebelum kode organisme tertentu. Hubungan pneumonia-influenza/aspirasi tidak boleh disimpulkan dari kata yang muncul terpisah.
 DM: tipe dan komplikasi harus didokumentasikan; riwayat DM tidak otomatis E11.9. Insulin tidak menentukan tipe. Manifestasi mata tidak selalu retinopati diabetik; jangan otomatis menambah H36.0 untuk semua komplikasi mata.
+DM tipe 2 dengan retinopati diabetik yang tertulis: E11.3† dengan H36.0* sesuai WHO 2010. Jangan memakai subkode ICD-10-CM seperti E11.32, atau mengarang digit proliferatif/bilateral. Pertahankan rincian klinis pada kutipan. Etiologi dan manifestasi harus dipasangkan; DU tetap mengikuti episode pelayanan.
 Gunakan digit anatomi hanya bila subkategori tabular memang menyediakan digit tersebut; jangan menambah digit muskuloskeletal secara universal.
 `;
 
@@ -373,7 +375,7 @@ function applyFractureDefaults(parsed, clinicalText) {
     .replace(/[‐‑‒–—−]/g, '-').replace(/\s+/g, ' ').trim();
   const input = String(clinicalText || '');
   const clauses = input.split(/[;\n.!?]+|,\s*(?=(?:fraktur|fracture|open fracture|closed fracture))/i);
-  const warnings = [];
+  const warnings = repairDocumentedRetinopathy(parsed, input);
   for (const diagnosis of parsed.diagnoses || []) {
     if (!/^(?:S(?:02|12|22|32|42|52|62|72|82|92)|T(?:02|08|10|12))(?:\.|$)|^T14\.2/.test(String(diagnosis.code || ''))) continue;
     const quote = String(diagnosis.documentation_quote || '').trim();
@@ -412,11 +414,55 @@ function applyFractureDefaults(parsed, clinicalText) {
   return warnings;
 }
 
+// Narrow source-backed repair for the documented diabetic-retinopathy failure.
+// Do not derive diabetes, retinopathy, or performed laser treatment from labs.
+function repairDocumentedRetinopathy(parsed, input) {
+  const warnings = [];
+  const clauses = String(input || '').split(/[\n;.!?]+/).map(x=>x.trim()).filter(Boolean);
+  const explicit = clauses.filter(x=>/^(?:diagnosis|diagnosa)\s*:/i.test(x) && /\b(?:dm|diabetes(?: mellitus)?)\s*(?:tipe|type)\s*2\b/i.test(x) && /retinopati diabetik|diabetic retinopathy/i.test(x) && !/\b(?:suspek|suspected|possible|rule out|belum pasti|tidak ada|tanpa|no|not)\b/i.test(x) && !documentationIssue(x,input));
+  // Conflicting types or multiple diagnostic statements need manual review.
+  if (explicit.length !== 1 || /\b(?:dm|diabetes(?: mellitus)?)\s*(?:tipe|type)\s*1\b/i.test(input)) return warnings;
+  const quote = explicit[0];
+  const candidates = (parsed.diagnoses || []).filter(d=>['E11.32','E11.3'].includes(d.code));
+  if (candidates.length !== 1) return warnings;
+  const etiology = candidates[0];
+  if (etiology.documentation_quote && documentationIssue(etiology.documentation_quote,input)) return warnings;
+  const original = etiology.code;
+  etiology.code = 'E11.3'; etiology.code_system = 'WHO_ICD10_2010';
+  etiology.description = 'Non-insulin-dependent diabetes mellitus with ophthalmic complications';
+  etiology.description_id = 'Diabetes mellitus tipe 2 dengan komplikasi mata';
+  etiology.documentation_quote = quote; etiology.lead_term = 'Diabetes';
+  etiology.dagger_asterisk = 'dagger'; etiology.paired_with = 'H36.0';
+  if (original !== etiology.code) {
+    etiology.coding_adjustment = {original_code:original,proposed_code:'E11.3',rule:'documented_type2_diabetic_retinopathy_who2010',status:'provisional_requires_review'};
+    warnings.push({type:'WARNING',message:original + ' dikoreksi ke E11.3 dengan pasangan H36.0 berdasarkan diagnosis retinopati diabetik tipe 2 yang tertulis; rincian proliferatif/bilateral tidak dibuat menjadi digit WHO tambahan.'});
+  }
+  let manifestation = (parsed.diagnoses || []).find(d=>d.code==='H36.0');
+  if (!manifestation) {
+    manifestation = {code:'H36.0',role:'DS',code_system:'WHO_ICD10_2010',description:'Diabetic retinopathy',description_id:'Retinopati diabetik',documentation_quote:quote,lead_term:'Retinopathy',confidence:null,lead_term_path:null,volume1_notes:[],reasoning:'Manifestasi retinopati diabetik yang tercatat; pasangan etiologi E11.3 menurut WHO 2010.'};
+    parsed.diagnoses.push(manifestation);
+  }
+  manifestation.dagger_asterisk = 'asterisk'; manifestation.paired_with = 'E11.3';
+  const laser = clauses.filter(x=>/laser/i.test(x) && /fotokoagulasi|photocoagulation/i.test(x) && /retina/i.test(x) && !/\b(?:rencana|planned|planning|batal|dibatalkan|cancelled|canceled|ditunda|deferred|riwayat|history|tidak|belum|tanpa|not)\b/i.test(x) && !documentationIssue(x,input,true));
+  if (laser.length === 1 && !/retinal (?:tear|detachment)|robekan retina|ablasio|ablasi retina/i.test(input)) {
+    manifestation.secondary_relevance_quote = laser[0];
+    for (const procedure of parsed.procedures || []) {
+      if (procedure.code !== '67.01' || (procedure.documentation_quote && documentationIssue(procedure.documentation_quote,input,true))) continue;
+      procedure.code='14.24'; procedure.code_system='ICD9_CM';
+      procedure.description='Destruction of chorioretinal lesion by laser photocoagulation'; procedure.description_id=null;
+      procedure.documentation_quote=laser[0]; procedure.lead_term='Photocoagulation';
+      procedure.coding_adjustment={original_code:'67.01',proposed_code:'14.24',rule:'documented_retinal_laser_photocoagulation',status:'provisional_requires_review'};
+      warnings.push({type:'WARNING',message:'67.01 dikoreksi ke usulan 14.24 berdasarkan tindakan laser fotokoagulasi retina yang tertulis. Tinjau rincian tindakan.'});
+    }
+  }
+  return warnings;
+}
+
 // Targeted contradiction checks; this is not a complete clinical coding engine.
 function auditClinicalCoding(parsed, clinicalText) {
   const input = String(clinicalText || '');
   const normalize = value => String(value || '').normalize('NFKC').toLowerCase().replace(/[‐‑‒–—−]/g, '-').replace(/\s+/g, ' ').trim();
-  const warnings = [];
+  const warnings = repairDocumentedRetinopathy(parsed, input);
   for (const diagnosis of parsed.diagnoses || []) {
     const quote = String(diagnosis.documentation_quote || '');
     const evidenceIssue = documentationIssue(quote,input);
