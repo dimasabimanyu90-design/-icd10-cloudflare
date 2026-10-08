@@ -240,7 +240,8 @@ button:focus-visible { outline:2px solid #2563eb; outline-offset:3px; }
 .disclaimer { margin-top:24px; padding:14px 20px; background:#fff9ed; border:1px solid #ecd6a7; border-radius:10px; font-family:'IBM Plex Sans',sans-serif; font-size:12px; letter-spacing:0; line-height:1.7; }
 .footer-mark { margin-top:16px; padding:20px 0; }
 .footer-name { font-family:'IBM Plex Sans',sans-serif; font-style:normal; font-size:12px; }
-.footer-groq,.footer-ics { border-radius:5px; }
+.footer-groq,.footer-ics,.footer-model { border-radius:5px; }
+.footer-model { background:#eaf0f7; color:#314f71; padding:3px 8px; font-size:11px; font-weight:500; overflow-wrap:anywhere; }
 @media(max-width:760px) { header { padding:0 16px; } .logo-designer,.logo-sep2,.htag { display:none; } .logo-wrap { gap:10px; } .ics-banner { padding:9px 16px; } .ics-source { display:none; } }
 @media(max-width:600px) { main { padding:24px 12px 36px; } header { gap:12px; } .logo-main { font-size:18px; } .logo-sub,.logo-sep { display:none; } .input-card-header,.coding-table-header,.proc-header { padding:14px 16px; } .input-card-body { padding:16px; } .input-card-title { font-size:12px; } .result-card { margin:8px 10px 12px; } .result-card .diag-main { padding:16px 12px; gap:10px; } .result-card.primary .diag-code { font-size:26px; } .result-card.primary .diag-desc { font-size:16px; } .item-alert { margin:0 12px 10px; } .details-body { padding:10px 12px 12px; } .action-row { flex-wrap:wrap; } .btn-analyze { flex:1; justify-content:center; } .result-group-title { padding:16px 16px 6px; } }
 
@@ -395,7 +396,9 @@ window.isIMCode = isIMCode;
 <div class="footer-mark">
   <span class="footer-name">Created by Dimas Abimanyu</span>
   <span class="footer-sep">·</span>
-  <span class="footer-powered">Powered by <span class="footer-groq">Groq AI</span></span>
+  <span class="footer-powered">Model <span class="footer-model" id="footerModel" title="openai/gpt-oss-120b">GPT-OSS 120B</span></span>
+  <span class="footer-sep">·</span>
+  <span class="footer-powered">API <span class="footer-groq">Groq</span></span>
   <span class="footer-sep">·</span>
   <span class="footer-powered">Referensi <span class="footer-ics">ICS v1 Kemenkes RI</span></span>
 </div>
@@ -556,6 +559,16 @@ function showError(msg) {
   document.getElementById('procCount').textContent = 'Error';
 }
 
+// Use returned model metadata, independently of the API provider label.
+function updateModelLabel(model) {
+  if (typeof model !== 'string' || !model.trim()) return;
+  const id=model.trim().slice(0,120);
+  const names={'openai/gpt-oss-120b':'GPT-OSS 120B','openai/gpt-oss-20b':'GPT-OSS 20B'};
+  const label=document.getElementById('footerModel');
+  label.textContent=names[id] || id;
+  label.title=id;
+}
+
 // ── QUOTA BAR ──
 function barColor(pct) {
   if (pct === null) return '#333';
@@ -639,6 +652,7 @@ async function analyze() {
     const data = await resp.json();
     if (data.error) throw new Error(data.error);
 
+    updateModelLabel(data.model_used || data.quota?.model);
     if (data.quota) updateQuotaBar(data.quota);
 
     const raw = data.text;
