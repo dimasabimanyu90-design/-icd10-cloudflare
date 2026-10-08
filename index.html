@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;1,400&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --ink: #1c1917; --paper: #faf7f2; --cream: #f2ede4; --rule: #ddd6ca; --muted: #78716c;
+  --ink: #182c43; --paper: #f5f7fa; --cream: #f0f4f8; --rule: #dce4ed; --muted: #586b80;
   --red: #b91c1c; --red-light: #fee2e2; --blue: #1d4ed8; --blue-light: #dbeafe;
   --green: #15803d; --green-light: #dcfce7; --gold: #92400e; --gold-light: #fef3c7;
   --purple: #6d28d9; --purple-light: #ede9fe;
@@ -18,7 +18,7 @@
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: var(--paper); font-family: 'IBM Plex Sans', sans-serif; color: var(--ink); min-height: 100vh; }
-body::before { content: ''; position: fixed; inset: 0; background-image: radial-gradient(circle, #c8bfb0 1px, transparent 1px); background-size: 28px 28px; opacity: 0.25; pointer-events: none; z-index: 0; }
+body::before { display:none; }
 header { position: relative; z-index: 10; background: var(--ink); color: var(--paper); padding: 0 40px; display: flex; align-items: center; justify-content: space-between; height: 60px; border-bottom: 3px solid var(--red); }
 .logo-wrap { display: flex; align-items: baseline; gap: 14px; }
 .logo-main { font-family: 'Playfair Display', serif; font-size: 18px; color: #fff; }
@@ -160,39 +160,89 @@ textarea::placeholder { color: #b8b0a6; font-style: italic; }
   .ics-banner{padding:6px 12px; gap:8px;} .ics-source{display:none;}
 }
 
-/* Results: diagnoses first, evidence progressively disclosed. */
-#resultStatus { margin:0 0 14px; font-size:12px; color:var(--muted); }
-#resultStatus a { color:var(--blue); text-underline-offset:3px; }
-.result-group-title { padding:18px 22px 8px; margin:0; font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); }
-.result-card { margin:8px 16px 16px; border:1px solid var(--rule); border-radius:9px; background:#fff; overflow:hidden; }
-.result-card.primary { border-color:#b9c9dc; border-left:4px solid #234e70; background:#f8fbff; }
-.result-card .diag-main { grid-template-columns:auto minmax(0,1fr); padding:18px; gap:12px; }
-.result-card.primary .diag-code { font-size:27px; letter-spacing:.2px; color:#163b59; }
-.result-card .diag-code { font-size:19px; letter-spacing:0; }
-.result-card .diag-code-row { flex-wrap:wrap; gap:8px; margin-bottom:7px; }
-.result-card .diag-desc { font-size:15px; line-height:1.5; overflow-wrap:anywhere; }
-.result-card.primary .diag-desc { font-size:18px; font-weight:600; }
-.result-card .du-badge.du { background:#234e70; }
-.source-chip { font-size:10px; font-weight:500; background:#eef2f6; color:#536273; padding:3px 7px; border-radius:4px; }
-.review-chip { display:inline-flex; align-items:center; font-size:10px; padding:3px 7px; background:#fff3d6; color:#805400; border-radius:4px; }
-.primary-reason { font-size:12px; color:#536273; line-height:1.6; margin:9px 0 0; }
-.item-alert { margin:0 18px 12px; padding:9px 11px; border-radius:5px; border:1px solid #f1d69e; background:#fff8e8; color:#805400; font-size:12px; line-height:1.5; overflow-wrap:anywhere; }
+/* Shared visual system: neutral surfaces, consistent spacing, clear DU hierarchy. */
+header { border-bottom:0; padding:0 32px; min-height:68px; }
+.logo-main { font-family:'IBM Plex Sans',sans-serif; font-size:20px; font-weight:600; }
+.logo-sub { color:#c3cedb; font-size:10px; }
+.logo-designer { font-family:'IBM Plex Sans',sans-serif; color:#b0becf; font-style:normal; font-size:11px; }
+.logo-sep,.logo-sep2 { background:#456078; }
+.htag { border-radius:5px; letter-spacing:0; }
+.htag-red,.htag-purple,.htag-green { background:#294560; color:#dce8f4; }
+.htag-outline { border-color:#456078; color:#dce8f4; }
+.lang-switch { background:#213d58; border-color:#456078; border-radius:6px; }
+.lang-btn { padding:7px 10px; color:#c3cedb; }
+.lang-btn.active { background:#fff; color:var(--ink); }
+.ics-banner { background:#eaf0f7; color:#465d76; border-bottom:1px solid var(--rule); padding:10px 32px; gap:12px; }
+.ics-badge { background:#dce6f2; color:#314f71; border-radius:5px; padding:4px 8px; }
+.ics-rule,.ics-source { color:#586b80; }
+main { max-width:1000px; padding:32px 24px 48px; }
+.section-rule-label { font-family:'IBM Plex Sans',sans-serif; font-size:12px; font-weight:600; letter-spacing:.7px; }
+.input-card,.coding-table-wrap,.proc-table-wrap,.overall-details { border:1px solid var(--rule); border-radius:12px; box-shadow:0 2px 8px #182c4305; background:#fff; }
+.input-card-header,.coding-table-header,.proc-header { background:#fff; border-bottom:1px solid var(--rule); padding:16px 20px; color:var(--ink); }
+.input-card-title,.coding-table-title,.proc-header-title { font-family:'IBM Plex Sans',sans-serif; font-size:14px; font-weight:600; letter-spacing:0; text-transform:none; }
+.input-card-body { padding:20px; }
+textarea { border-radius:8px; background:#fbfcfe; padding:16px; min-height:180px; }
+textarea:focus { border-color:#406e9a; box-shadow:0 0 0 3px #dce8f4; }
+.ex-btn { font-family:'IBM Plex Sans',sans-serif; padding:7px 10px; border-radius:6px; background:#f5f7fa; color:#465d76; }
+.btn-analyze,.btn-clear { border-radius:8px; min-height:44px; }
+.btn-analyze { background:#234e70; }
+.btn-analyze:hover:not(:disabled) { background:#183c5b; box-shadow:0 3px 8px #234e7020; }
+button:focus-visible { outline:2px solid #2563eb; outline-offset:3px; }
+#resultStatus { margin:0 0 16px; font-size:12px; color:var(--muted); line-height:1.7; }
+#resultStatus a { color:#234e70; text-underline-offset:3px; }
+.coding-count,#procCount { font-family:'IBM Plex Sans',sans-serif; color:var(--muted) !important; font-size:12px; white-space:nowrap; }
+.coding-table-header,.proc-header { gap:12px; flex-wrap:wrap; }
+.result-group-title { padding:18px 20px 6px; margin:0; font-family:'IBM Plex Sans',sans-serif; font-size:12px; font-weight:600; letter-spacing:0; color:var(--muted); text-transform:none; }
+.result-card { margin:8px 16px 16px; border:1px solid var(--rule); border-radius:10px; background:#fff; overflow:hidden; }
+.result-card.primary { border-color:#b9cddd; border-left:4px solid #234e70; background:#f8fbff; }
+.result-card .diag-main { grid-template-columns:44px minmax(0,1fr); padding:18px 16px; gap:12px; }
+.result-card .diag-code { font-size:21px; letter-spacing:0; line-height:1.25; }
+.result-card.primary .diag-code { font-size:28px; color:#183c5b; }
+.result-card .diag-code-row { flex-wrap:wrap; gap:8px; margin-bottom:6px; }
+.result-card .diag-desc { font-size:14px; line-height:1.5; font-weight:500; margin:0; overflow-wrap:anywhere; }
+.result-card.primary .diag-desc { font-size:17px; font-weight:600; }
+.du-badge { display:inline-flex; justify-content:center; min-width:40px; padding:5px 6px; border-radius:5px; font-size:10px; letter-spacing:0; }
+.result-card .du-badge.du { background:#234e70; color:#fff; }
+.result-card .du-badge.ds { background:#eaf0f7; color:#314f71; border:1px solid #d0deec; }
+.result-card .du-badge.proc { background:#edf6f1; color:#26734d; border:1px solid #cce6d7; }
+.result-card .du-badge.review { background:#fff6e5; color:#805400; border:1px solid #ecd6a7; }
+.result-meta { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+.source-chip,.review-chip { display:inline-flex; align-items:center; font-family:'IBM Plex Sans',sans-serif; font-size:11px; font-weight:500; line-height:1.4; padding:3px 7px; border-radius:5px; }
+.source-chip { background:#eef2f6; color:#536273; }
+.review-chip { background:#fff3d6; color:#805400; }
+.primary-reason { font-size:12px; color:#536273; line-height:1.6; margin:10px 0 0; }
+.item-alert { margin:0 16px 12px; padding:10px 12px; border-radius:7px; border:1px solid #ecd6a7; background:#fff9ed; color:#805400; font-size:12px; line-height:1.6; overflow-wrap:anywhere; }
+.coding-table-wrap > .item-alert { margin-top:16px; }
+.item-alert p { margin-top:4px; }
 .result-details { border-top:1px solid var(--rule); }
-.result-details > summary, .overall-details > summary { padding:12px 18px; cursor:pointer; font-size:12px; font-weight:500; color:#44566a; }
-.result-details > summary:focus-visible, .overall-details > summary:focus-visible { outline:2px solid #2563eb; outline-offset:-3px; }
-.result-details[open] > summary { background:var(--cream); }
-.details-body { padding:0 18px 16px; font-size:12px; line-height:1.7; overflow-wrap:anywhere; }
-.details-body .lead-term-box,.details-body .vol1-box,.details-body .reasoning-box { padding:12px; margin:8px 0 0; border-radius:5px; }
+.result-details > summary,.overall-details > summary { padding:12px 16px; cursor:pointer; font-size:12px; font-weight:500; color:#465d76; line-height:1.5; }
+.result-details > summary:hover,.overall-details > summary:hover { background:#f5f7fa; }
+.result-details > summary:focus-visible,.overall-details > summary:focus-visible { outline:2px solid #2563eb; outline-offset:-3px; }
+.result-details[open] > summary { background:#f0f4f8; }
+.details-body { padding:12px 16px 16px; font-size:12px; line-height:1.7; overflow-wrap:anywhere; }
+.details-body p + p { margin-top:8px; }
+.index-reference > .details-body { max-height:240px; overflow:auto; scrollbar-width:thin; }
+.index-reference > .details-body:focus-visible { outline:2px solid #2563eb; outline-offset:-3px; }
+.details-body .lead-term-box,.details-body .vol1-box,.details-body .reasoning-box { padding:12px; margin:8px 0 0; border:1px solid var(--rule); background:#f8fafc; border-radius:7px; }
+.details-body .lead-label,.details-body .vol1-label { font-family:'IBM Plex Sans',sans-serif; font-size:11px; text-transform:none; letter-spacing:0; }
 .details-body .lp-line { white-space:normal; overflow-wrap:anywhere; }
-.details-body blockquote { margin:6px 0 12px; border-left:2px solid #b9c9dc; padding-left:12px; color:var(--muted); }
-.overall-details { margin:8px 0 24px; background:#fff; border:1px solid var(--rule); border-radius:8px; }
-.overall-details .summary-strip { margin-bottom:12px; }
-.empty-result { padding:18px 22px; color:var(--muted); font-size:13px; }
-.coding-table-header,.proc-header { background:#fff; color:var(--ink); border-bottom:1px solid var(--rule); padding:15px 20px; }
-.coding-count,#procCount { color:var(--muted) !important; }
-.coding-table-wrap,.proc-table-wrap { border-radius:10px; }
+.details-body .lp-final { border-left-color:#406e9a; border-radius:5px; }
+.details-body blockquote { margin:6px 0 12px; border-left:3px solid #b9cddd; padding-left:12px; color:var(--muted); }
+.overall-details { margin:8px 0 24px; }
+.validation-banner,.mb-rule-banner,.summary-strip,.error-box { border-radius:8px; padding:12px; margin:8px 0 12px; }
+.validation-banner { background:#fff9ed; border:1px solid #ecd6a7; color:#805400; }
+.mb-rule-banner { background:#f3f1fa; border:1px solid #ddd6ef; color:#594f7b; }
+.validation-banner strong,.mb-rule-banner strong { font-size:11px; letter-spacing:0; text-transform:none; }
+.val-item { gap:8px; margin-top:8px; }
+.empty-result { padding:18px 20px; color:var(--muted); font-size:13px; }
 .coding-table-wrap > .legend { display:none; }
-@media(max-width:600px) { .result-card { margin:8px 10px 12px; } .result-card .diag-main { padding:14px 12px; gap:9px; } .item-alert { margin:0 12px 10px; } .result-card.primary .diag-code { font-size:24px; } .result-card.primary .diag-desc { font-size:16px; } .details-body { padding:0 12px 12px; } }
+.empty-state { padding:40px 20px; }
+.disclaimer { margin-top:24px; padding:14px 20px; background:#fff9ed; border:1px solid #ecd6a7; border-radius:10px; font-family:'IBM Plex Sans',sans-serif; font-size:12px; letter-spacing:0; line-height:1.7; }
+.footer-mark { margin-top:16px; padding:20px 0; }
+.footer-name { font-family:'IBM Plex Sans',sans-serif; font-style:normal; font-size:12px; }
+.footer-groq,.footer-ics { border-radius:5px; }
+@media(max-width:760px) { header { padding:0 16px; } .logo-designer,.logo-sep2,.htag { display:none; } .logo-wrap { gap:10px; } .ics-banner { padding:9px 16px; } .ics-source { display:none; } }
+@media(max-width:600px) { main { padding:24px 12px 36px; } header { gap:12px; } .logo-main { font-size:18px; } .logo-sub,.logo-sep { display:none; } .input-card-header,.coding-table-header,.proc-header { padding:14px 16px; } .input-card-body { padding:16px; } .input-card-title { font-size:12px; } .result-card { margin:8px 10px 12px; } .result-card .diag-main { padding:16px 12px; gap:10px; } .result-card.primary .diag-code { font-size:26px; } .result-card.primary .diag-desc { font-size:16px; } .item-alert { margin:0 12px 10px; } .details-body { padding:10px 12px 12px; } .action-row { flex-wrap:wrap; } .btn-analyze { flex:1; justify-content:center; } .result-group-title { padding:16px 16px 6px; } }
 
 </style>
 <script src="known-paths.js"></script>
@@ -313,7 +363,7 @@ window.isIMCode = isIMCode;
     <div id="resultStatus" aria-live="polite"></div>
     <div class="coding-table-wrap">
       <div class="coding-table-header">
-        <div class="coding-table-title" id="labelDiagTable">Diagnosis — ICD-10 2010 with Indonesian Modification</div>
+        <div class="coding-table-title" id="labelDiagTable">Diagnosis — WHO ICD-10 2010</div>
         <div class="coding-count" id="diagCount">–</div>
       </div>
       <div id="diagList"></div>
@@ -327,7 +377,7 @@ window.isIMCode = isIMCode;
     </div>
     <div class="proc-table-wrap">
       <div class="proc-header">
-        <div class="proc-header-title" id="labelProcTable">Prosedur — ICD-9-CM with Indonesian Modification</div>
+        <div class="proc-header-title" id="labelProcTable">Prosedur — ICD-9-CM</div>
         <div class="coding-count" id="procCount" style="color:#86efac">–</div>
       </div>
       <div id="procList"></div>
@@ -358,8 +408,8 @@ const T = {
     labelInput: 'Input Klinis',
     labelCardTitle: 'Catatan SOAP / Anamnesa / Resume Medis',
     labelHasil: 'Hasil Coding',
-    labelDiagTable: 'Diagnosis — ICD-10 2010 with Indonesian Modification',
-    labelProcTable: 'Prosedur — ICD-9-CM with Indonesian Modification',
+    labelDiagTable: 'Diagnosis — WHO ICD-10 2010',
+    labelProcTable: 'Prosedur — ICD-9-CM',
     btnAnalyze: 'Analyze & Code',
     btnAnalyzing: 'Menganalisis...',
     btnClear: 'Clear',
@@ -385,8 +435,8 @@ const T = {
     labelInput: 'Clinical Input',
     labelCardTitle: 'SOAP Note / Anamnesis / Medical Resume',
     labelHasil: 'Coding Results',
-    labelDiagTable: 'Diagnosis — ICD-10 2010 with Indonesian Modification',
-    labelProcTable: 'Procedure — ICD-9-CM with Indonesian Modification',
+    labelDiagTable: 'Diagnosis — WHO ICD-10 2010',
+    labelProcTable: 'Procedures — ICD-9-CM',
     btnAnalyze: 'Analyze & Code',
     btnAnalyzing: 'Analyzing...',
     btnClear: 'Clear',
@@ -1082,7 +1132,7 @@ function renderResultCard(item, options) {
   const {procedure, primary, warnings, duReason} = options;
   const en = currentLang !== 'id';
   const label = procedure ? 'PROC' : item.role || '?';
-  const badge = procedure ? 'proc' : primary ? 'du' : 'ds';
+  const badge = procedure ? 'proc' : primary ? 'du' : item.role === 'DS' ? 'ds' : 'review';
   const notice = resultItemNotice(item,warnings,procedure);
   const symbol = item.dagger_asterisk === 'dagger' ? '†' : item.dagger_asterisk === 'asterisk' ? '*' : '';
   const source = isIMCode(item) ? 'IM' : item.who_validation?.valid === true ? 'WHO 2010' : procedure && item.description_source?.source === 'ICD9_DB' ? 'ICD-9-CM' : en ? 'Proposal' : 'Usulan';
@@ -1091,13 +1141,13 @@ function renderResultCard(item, options) {
   const evidence = item.documentation_quote ? '<p><strong>' + (en ? 'Documentation' : 'Bukti dokumentasi') + '</strong></p><blockquote>' + escapeHTML(item.documentation_quote) + '</blockquote>' : '';
   const path = procedure ? (item.lead_term_path ? '<div class="lead-term-box"><div class="lead-label">ICD-9-CM — ' + (en ? 'reference, unverified' : 'referensi, belum terverifikasi') + '</div><div class="lead-path">' + renderLeadPath(item.lead_term_path,item.code,item.description) + '</div></div>' : '') : renderWHOIndexPath(item.who_index || {code:item.code,status:'unverified',reason:en ? 'Index unavailable.' : 'Jalur indeks belum tersedia.'});
   return '<article class="result-card' + (primary ? ' primary' : '') + '"><div class="diag-main"><div><span class="du-badge ' + badge + '">' + escapeHTML(label) + '</span></div><div>' +
-    '<div class="diag-code-row"><span class="diag-code">' + escapeHTML(item.code) + escapeHTML(symbol) + '</span><span class="source-chip">' + source + '</span>' +
-    (indexUnverified ? '<span class="review-chip">' + indexNote + '</span>' : '') + '</div>' +
+    '<div class="diag-code-row"><span class="diag-code">' + escapeHTML(item.code) + escapeHTML(symbol) + '</span></div>' +
     '<div class="diag-desc">' + escapeHTML(item.description || (en ? 'Description unavailable' : 'Deskripsi belum tersedia')) + '</div>' +
+    '<div class="result-meta"><span class="source-chip">' + source + '</span>' + (indexUnverified ? '<span class="review-chip">' + indexNote + '</span>' : '') + '</div>' +
     (primary && duReason ? '<p class="primary-reason">' + escapeHTML(conciseResultText(duReason)) + '</p>' : '') + '</div></div>' +
     (notice ? '<div class="item-alert">⚠ ' + escapeHTML(notice) + '</div>' : '') +
     (!procedure ? renderDiagnosisIMOptions(item) : '') +
-    (path ? '<details class="result-details index-reference" open><summary>' + (en ? 'Index path & status' : 'Jalur indeks & status') + '</summary><div class="details-body">' + path + '</div></details>' : '') +
+    (path ? '<details class="result-details index-reference" open><summary>' + (en ? 'Index path & status' : 'Jalur indeks & status') + '</summary><div class="details-body" tabindex="0" role="region" aria-label="' + (en ? 'Index references' : 'Referensi indeks') + '">' + path + '</div></details>' : '') +
     '<details class="result-details"><summary>' + (en ? 'Coding evidence' : 'Dasar coding') + (warnings.length ? ' · ' + warnings.length + (en ? ' notes' : ' catatan') : '') + '</summary><div class="details-body">' +
     evidence + (item.description_id && !en ? '<p>' + escapeHTML(item.description_id) + '</p>' : '') +
     (item.paired_with ? '<p>' + (en ? 'Proposed pair: ' : 'Usulan pasangan: ') + escapeHTML(item.paired_with) + '</p>' : '') +
