@@ -165,11 +165,75 @@ Untuk kondisi multi-modifier, setiap modifier harus diperiksa di indeks dan kode
 Return ONLY valid JSON:
 {"summary","du_reasoning","ics_context":{"documented_du_quote","mb_rule","mb_trigger_quote","mb5_mode","first_alternative_code"},"validations":[{"type","message"}],"diagnoses":[{"role","code","code_system","dagger_asterisk","description","description_id","category","confidence","lead_term","condition_term","lead_term_path","volume1_notes":[{"type","text"}],"paired_with","documentation_quote","secondary_relevance_quote","reasoning"}],"procedures":[{"code","code_system","description","description_id","category","confidence","lead_term_path","volume1_notes","documentation_quote","reasoning"}]}`;
 
+// Indonesian clinical shorthand: interpretation hints, never coding evidence.
+// Scope and references: data/INDONESIAN_ABBREVIATIONS.md.
+const INDONESIAN_MEDICAL_ABBREVIATIONS = [
+  ['DM', 'diabetes melitus; tipe dan komplikasi tidak tersirat'],
+  ['HT', 'hipertensi dalam konteks diagnosis; pastikan konteks'],
+  ['PPOK', 'penyakit paru obstruktif kronik'],
+  ['ISK', 'infeksi saluran kemih; lokasi/organisme tidak tersirat'],
+  ['ISPA', 'infeksi saluran pernapasan akut; tidak otomatis infeksi saluran atas'],
+  ['DBD', 'demam berdarah dengue'],
+  ['GEA', 'gastroenteritis akut; etiologi tidak tersirat'],
+  ['CKD', 'chronic kidney disease / penyakit ginjal kronik; stadium harus terdokumentasi'],
+  ['GGK', 'gagal ginjal kronik; jangan menebak stadium'],
+  ['AKI', 'acute kidney injury pada catatan klinis; dapat berarti angka kematian ibu pada statistik'],
+  ['CHF', 'congestive heart failure / gagal jantung kongestif; subtipe tidak tersirat'],
+  ['SNH', 'stroke nonhemoragik; jangan menebak lokasi atau mekanisme'],
+  ['SH', 'stroke hemoragik dalam konteks neurologi; lokasi harus terdokumentasi'],
+  ['KPD', 'ketuban pecah dini pada konteks obstetri; bedakan dari kpd = kepada'],
+  ['PEB', 'preeklamsia berat'],
+  ['HEG', 'hiperemesis gravidarum'],
+  ['KET', 'kehamilan ektopik terganggu; rincian komplikasi perlu dokumentasi'],
+  ['IUFD', 'intrauterine fetal death / kematian janin intrauterin; bedakan rekam ibu dan bayi'],
+  ['TTTS', 'twin-to-twin transfusion syndrome; tidak menetapkan DU atau hubungan sebab akibat sendiri'],
+  ['BBLR', 'bayi berat lahir rendah; tidak otomatis prematur'],
+  ['BPH', 'benign prostatic hyperplasia / pembesaran prostat jinak'],
+  ['ORIF', 'open reduction and internal fixation; bukan bukti fraktur terbuka'],
+  ['HD', 'hemodialisis dalam konteks ginjal; jadwal/riwayat bukan bukti tindakan episode ini'],
+  ['EKG', 'elektrokardiografi; rencana bukan bukti sudah dilakukan'],
+  ['USG', 'ultrasonografi; organ dan pelaksanaan harus jelas'],
+  ['GDS', 'gula darah sewaktu; nilai bukan diagnosis diabetes'],
+  ['GDP', 'gula darah puasa; nilai bukan diagnosis diabetes'],
+  ['Hb', 'hemoglobin; nilai saja bukan diagnosis anemia'],
+  ['TD', 'tekanan darah; nilai saja bukan diagnosis hipertensi'],
+  ['KU', 'keadaan umum dalam pemeriksaan atau keluhan utama dalam anamnesis'],
+  ['RPD', 'riwayat penyakit dahulu; bukan otomatis penyakit aktif'],
+  ['RPK', 'riwayat penyakit keluarga; bukan diagnosis pasien'],
+  ['RPS', 'riwayat penyakit sekarang'],
+  ['DPJP', 'dokter penanggung jawab pelayanan; bukan diagnosis'],
+  ['SC', 'AMBIGU: sectio caesarea pada persalinan atau subkutan pada rute obat; gunakan konteks setempat, jangan samakan semua kemunculan'],
+  ['TB', 'AMBIGU: tuberkulosis atau tinggi badan; TB 170 cm adalah ukuran, bukan diagnosis'],
+  ['MS', 'AMBIGU: mitral stenosis, multiple sclerosis, atau arti lokal; perlu kepanjangan/konteks'],
+  ['PT', 'AMBIGU: prothrombin time pada lab atau arti lokal; jangan tetapkan diagnosis'],
+  ['OD', 'AMBIGU: oculus dexter pada mata atau sekali sehari pada instruksi obat; jangan inferensi dosis/laterality tanpa konteks'],
+  ['OS', 'oculus sinister hanya pada konteks mata; jangan tambahkan digit laterality WHO buatan'],
+  ['ODS', 'oculus dexter et sinister hanya pada konteks mata'],
+  ['ec', 'et causa / disebabkan oleh; pertahankan apakah hubungan ini dugaan atau final'],
+  ['dd', 'diagnosis banding; bukan semua diagnosis terkonfirmasi'],
+  ['suspek', 'dugaan; pertahankan tingkat kepastian'],
+  ['a/i', 'atas indikasi; bukan otomatis bukti prosedur sudah dilakukan']
+];
+
+function buildIndonesianAbbreviationHints(clinicalText) {
+  // Match whole tokens, not substrings such as HT in THORAX or DM in ADMIN.
+  // All emitted meanings are static; original clinical text is never rewritten.
+  const tokens = new Set((String(clinicalText || '').match(/[A-Za-z]+(?:\/[A-Za-z]+)?/g) || []).map(t => t.toLowerCase()));
+  const matches = INDONESIAN_MEDICAL_ABBREVIATIONS.filter(([term]) => tokens.has(term.toLowerCase()));
+  const compactObstetric = /\b(?:G\s*\d+\s*P\s*\d+\s*A\s*\d+|P\s*\d+\s*A\s*\d+)\b/i.test(clinicalText);
+  if (!matches.length && !compactObstetric) return '';
+  const lines = matches.map(([term, meaning]) => `${term}: ${meaning}`);
+  if (compactObstetric) lines.push('G/P/A: gravida/paritas/abortus pada riwayat obstetri. Pertahankan angka asli; bukan kode diagnosis, bukan jumlah bayi hidup, dan bukan bukti abortus aktif.');
+  return '\n## BANTUAN SINGKATAN MEDIS INDONESIA (BUKAN BUKTI DIAGNOSIS)\n' +
+    'Kepanjangan berikut adalah bantuan baca, bukan kamus baku semua RS. Definisi eksplisit dalam dokumen lebih diutamakan. Tafsirkan setiap kemunculan sesuai kalimat/bagian catatan; jangan membawa arti dari kalimat lain. Bila ambigu/tidak dikenal, jangan mengunci arti atau kode: tulis kebutuhan klarifikasi di validations dan reasoning.\n' +
+    'Jangan mengganti TEKS KLINIS. documentation_quote dan secondary_relevance_quote harus tetap kutipan persis teks asli, termasuk singkatannya. Pertahankan negasi (-)/tidak/disangkal, suspek/dd, riwayat/bekas, keluarga, rencana/batal dan status pelaksanaan. Singkatan tidak membuktikan DU/DS, hubungan sebab-akibat, jenis, stadium atau tindakan telah dilakukan.\n' + lines.join('\n');
+}
+
 // ── DETECT CASE TYPE & BUILD PROMPT ──
 function buildPrompt(clinicalText, langInstruction) {
   const t = clinicalText.toLowerCase();
 
-  const isObstetri  = /hamil|partus|sc\b|sectio|caesar|obstet|gravida|trimester|janin|fetus|persalinan|nifas|postpartum|abortus|keguguran|ektopik|gemelli|kembar|kista ovarium|kistektomi|iufd|ttts|ketuban|peb|eklampsia|hpp|g\dpa|g\dp\da/.test(t);
+  const isObstetri  = /\b(?:kpd|peb|heg|ket)\b|\b(?:g\s*\d+\s*p\s*\d+\s*a\s*\d+|p\s*\d+\s*a\s*\d+)\b|hamil|partus|sectio|caesar|obstet|gravida|trimester|janin|fetus|persalinan|nifas|postpartum|abortus|keguguran|ektopik|gemelli|kembar|kista ovarium|kistektomi|iufd|ttts|ketuban|peb|eklampsia|hpp|g\dpa|g\dp\da/.test(t);
   const isTrauma    = /fraktur|fracture|trauma|kecelakaan|luka|vulnus|dislokasi|orif|amputasi|combustio|luka bakar/.test(t);
   const isSpesialis = /orif|\bthr\b|\btkr\b|arthroplast|ortopedi|penggantian sendi|dm|diabetes|stroke|infark|stemi|pci|pneumonia|asma|ppok|copd|appendis|katarak|glaukoma|retinopati|gout|artritis|spondil|hernia|jantung|cardiac|hepatitis|sirosis|gagal ginjal|ckd|aki|leukemia|limfoma|tumor|kanker|neoplasm|karsinoma|tiroid|tb\b|tuberkulosis|alzheimer|epilep|sleep apnea/.test(t);
   const isSirkulasi = /jantung|cardiac|stemi|nstemi|pci|ptca|cabg|stent|aritmia|fibrilasi|ventrikel|atrial|infark|koroner|angiografi|kateterisasi|dvt|emboli|varises|sirosis|hipertensi pulmonal/.test(t);
@@ -193,7 +257,7 @@ function buildPrompt(clinicalText, langInstruction) {
   if (isSpesialis) rules += '\n' + PROMPT_SPESIALIS;
   if (isTrauma)    rules += '\n' + PROMPT_TRAUMA;
 
-  return rules + '\n' + PROMPT_ICS_SOURCE_OVERLAY + '\n\n' + langInstruction + '\n\nTEKS KLINIS:\n' + clinicalText + '\n\n' + PROMPT_JSON;
+  return rules + buildIndonesianAbbreviationHints(clinicalText) + '\n' + PROMPT_ICS_SOURCE_OVERLAY + '\n\n' + langInstruction + '\n\nTEKS KLINIS:\n' + clinicalText + '\n\n' + PROMPT_JSON;
 }
 
 
@@ -927,5 +991,6 @@ function isIMCode(item) {
   return Boolean(ref && (ref.local_extension || (ref.entries || []).some(entry => /\(IM\)/i.test(entry.title_extracted || ''))));
 }
 
-export { documentationIssue, hasFractureCodeCollision, getIMParentCodes, applyFractureDefaults, auditClinicalCoding, buildPrompt, extractLeadTerm, normalizeIndexLabel, parseIndexReference, formatIndexTrace, indexTermMatches, buildWHOIndexPath, resolveWHOIndexReferences, referenceWarnings, validateCodingStructure, ICS_REFERENCE_PROFILE, auditICSContext, validateProcedures, validateDiagnosisCode, validateDiagnoses, isIMCode };
+export { buildIndonesianAbbreviationHints, documentationIssue, hasFractureCodeCollision, getIMParentCodes, applyFractureDefaults, auditClinicalCoding, buildPrompt, extractLeadTerm, normalizeIndexLabel, parseIndexReference, formatIndexTrace, indexTermMatches, buildWHOIndexPath, resolveWHOIndexReferences, referenceWarnings, validateCodingStructure, ICS_REFERENCE_PROFILE, auditICSContext, validateProcedures, validateDiagnosisCode, validateDiagnoses, isIMCode };
+
 
