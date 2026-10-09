@@ -17,3 +17,9 @@ The remaining entries are a curated starting vocabulary, not a claim that every 
 ## Verification
 
 `node --test tests/*.test.cjs` includes token boundaries, case variants, selective prompt size, obstetric notation, insulin SC vs obstetric contexts, mixed SC meanings, unchanged evidence text, and preservation instructions for negation/history/uncertainty/planning. Existing tests cover source quote auditing and clinical review gates. No real-model accuracy improvement has been measured yet; these tests verify software behavior, not clinical correctness.
+
+## Follow-up: Indonesian documentation status
+
+The shared evidence checker now flags full-quote negation (`DM disangkal`), negative notation (`DM (-)`), family/past-history headers (RPK/RPD), differential markers (`dd:`), and `bekas SC` as requiring review. Line boundaries delimit clauses; recognized section headings bound RPK/RPD scope. Separate affirmative occurrences remain eligible as documentary evidence. Procedure proposals in the 74 family supported only by an insulin/heparin injection-route SC quote receive an explicit mismatch warning. Proposals are preserved for coder review rather than silently deleted or recoded.
+
+Initial targeted replay: 12 of 25 checks failed before this repair. Final full suite: 48 passing tests, including an API replay with a deliberately incorrect, mocked model response. No external AI requests, live patient data, database mutations, or production deployment were used. This is bounded lexical checking, not comprehensive Indonesian language understanding: unfamiliar headings, complex scope, abbreviations and mixed-status multi-condition quotes still require coder review. Historical coding categories and obstetric contexts also need human interpretation; review flags do not mean the underlying code must always be removed.

@@ -423,7 +423,9 @@ function normalizeClinicalText(value) {
   return String(value || '').normalize('NFKC').toLowerCase().replace(/[‐‑‒–—−]/g, '-').replace(/\s+/g, ' ').trim();
 }
 function documentationIssue(quote, input, procedure = false) {
-  const q = normalizeClinicalText(quote), text = normalizeClinicalText(input);
+  // Preserve line boundaries for section scope while keeping quote matching normalized.
+  const normalize = value => normalizeClinicalText(String(value || '').replace(/\r?\n/g, ';'));
+  const q = normalize(quote), text = normalize(input);
   if (!q || !text.includes(q)) return 'Kutipan belum terbukti pada teks input.';
   const contexts = [];
   let from = 0, at;
@@ -432,13 +434,29 @@ function documentationIssue(quote, input, procedure = false) {
     const prefix = text.slice(Math.max(0, at - 100), at).split(/[.;!?]/).pop();
     const beginning = q.split(/[.;!?]/)[0];
     const suffix = text.slice(at + q.length,at + q.length + 80);
-    contexts.push({text:prefix + beginning,suffix}); from = at + Math.max(1, q.length);
+    const preceding = text.slice(0, at);
+    const headers = [...preceding.matchAll(/(?:^|[;.!?])\s*(rpk|riwayat keluarga|riwayat penyakit keluarga|rpd|riwayat penyakit dahulu|diagnosis(?: akhir| utama)?|diagnosa(?: akhir| utama)?|asesmen|assessment|rps|riwayat penyakit sekarang|tindakan|terapi|pemeriksaan(?: fisik)?)\s*:/g)];
+    const section = headers.length ? headers[headers.length - 1][1] : '';
+    contexts.push({text:prefix + beginning,suffix,section}); from = at + Math.max(1, q.length);
   }
   if (!contexts.length) return 'Kutipan hanya cocok sebagai potongan kata, bukan istilah yang terdokumentasi.';
   const uncertain = /(?:tidak(?: ada| ditemukan| dilakukan)?|tanpa|disangkal|belum(?: dilakukan)?|rencana|direncanakan|akan dilakukan|suspek|suspected|rule out|ruled out|no evidence of|denies|not performed|planned|cancelled|dibatalkan)\s+(?:\w+\s+){0,3}$/;
-  const bad = contexts.every(({text:context,suffix}) => {
+  const bad = contexts.every(({text:context,suffix,section}) => {
     const prefix = context.slice(0, Math.max(0, context.length - q.split(/[.;!?]/)[0].length));
-    return /^\s*(?:tidak dilakukan|belum dilakukan|dibatalkan|disangkal|disingkirkan|ruled out|cancelled|not performed)\b/.test(suffix) || /\b(?:dibatalkan|disingkirkan|ruled out|cancelled|not performed)$/.test(q) || uncertain.test(prefix) || /^(?:tidak(?: ada| dilakukan)?|tanpa|belum|rencana|direncanakan|suspek|rule out|planned|cancelled|dibatalkan)\b/.test(q) ||
+    // Full quotes must retain the same negation/history checks as clipped quotes.
+    const local = context + suffix.split(/[;.!?]/)[0];
+    const familyOrHistory = /^(?:rpk|rpd|riwayat keluarga|riwayat penyakit keluarga|riwayat penyakit dahulu)$/.test(section) ||
+      /\b(?:rpk|rpd|riwayat (?:penyakit )?keluarga|riwayat penyakit dahulu)\s*:?\s+/.test(context) ||
+      /\b(?:pada|diderita oleh)\s+(?:ibu(?!\s+(?:hamil|bersalin|nifas|pasien))|ayah|orang tua|saudara|kakak|adik)\b/.test(local);
+    const negativeEnding = /(?:\b(?:disangkal|disingkirkan|dibatalkan|belum dilakukan|tidak dilakukan|ruled out|not performed|cancelled)\b|\(\s*-\s*\))\s*[.,;]?\s*$/.test(q) ||
+      /^\s*[:=]?\s*\(\s*-\s*\)/.test(suffix);
+    const differential = /\b(?:dd|d\/d|diagnosis banding|diagnosa banding|suspek|suspected)\s*:?\s*(?:[a-z0-9]+\s+){0,5}$/.test(prefix) ||
+      /^(?:dd|d\/d|diagnosis banding|diagnosa banding|suspek|suspected)\b/.test(q);
+    const historicalProcedure = procedure && (/\b(?:bekas|riwayat|history of|pernah)\s*(?:operasi\s+)?$/.test(prefix) || /^(?:bekas|riwayat|history of|pernah)\b/.test(q));
+    // A same-line new diagnosis heading ends an earlier family/history section.
+    const explicitCurrent = /\b(?:diagnosis|diagnosa|asesmen|assessment)(?: akhir| utama| pasien)?\s*:\s*[^;.!?]*$/.test(context);
+    if ((familyOrHistory && !explicitCurrent) || negativeEnding || differential || historicalProcedure) return true;
+    return /^\s*:?\s*(?:tidak dilakukan|belum dilakukan|dibatalkan|disangkal|disingkirkan|ruled out|cancelled|not performed)\b/.test(suffix) || /\b(?:dibatalkan|disingkirkan|ruled out|cancelled|not performed)$/.test(q) || uncertain.test(prefix) || /^(?:tidak(?: ada| dilakukan)?|tanpa|belum|rencana|direncanakan|suspek|rule out|planned|cancelled|dibatalkan)\b/.test(q) ||
       (procedure && /(?:riwayat|history of|pernah)\s+(?:\w+\s+){0,3}$/.test(prefix));
   });
   return bad ? 'Kutipan berada dalam konteks negasi, dugaan, rencana atau riwayat; belum membuktikan diagnosis final/tindakan episode ini.' : null;
@@ -717,9 +735,11 @@ function auditClinicalCoding(parsed, clinicalText) {
       procedure.coding_adjustment = {original_code:'87.41',proposed_code:'87.44',rule:'documented_chest_xray_not_ct',status:'provisional_requires_review'};
       warnings.push({type:'WARNING',message:'87.41 dikoreksi menjadi usulan 87.44: dokumentasi menyebut foto thorax, bukan CT. Periksa kembali tindakan yang dilakukan.'});
     }
-    const issue = quoteIssue || (procedure.coding_adjustment ? 'Kode tindakan dikoreksi berdasarkan modalitas yang terdokumentasi; perlu tinjau.' : null) || (procedure.code === '90.59' && !/mikroskop|microscop/i.test(quote) ? '90.59 memerlukan verifikasi jenis pemeriksaan; bukan kode generik hasil lab.' : null);
+    const routeMismatch = /^74\./.test(procedure.code) && /\b(?:insulin|heparin|injeksi|suntikan)\b.{0,40}\bsc\b|\bsc\b.{0,40}\b(?:insulin|heparin)\b/i.test(quote)
+      ? 'SC dalam kutipan rute obat tidak membuktikan operasi sesar; diperlukan kutipan laporan tindakan tersendiri.' : null;
+    const issue = quoteIssue || routeMismatch || (procedure.coding_adjustment ? 'Kode tindakan dikoreksi berdasarkan modalitas yang terdokumentasi; perlu tinjau.' : null) || (procedure.code === '90.59' && !/mikroskop|microscop/i.test(quote) ? '90.59 memerlukan verifikasi jenis pemeriksaan; bukan kode generik hasil lab.' : null);
     procedure.clinical_validation = {status:issue ? 'review_required' : 'documentation_present',clinical_validity:'not_certified',issues:issue ? [issue] : []};
-    if (issue) warnings.push({type:'WARNING', message:`Prosedur ${procedure.code}: kutipan tindakan belum terbukti; jangan menyimpulkan tindakan dari hasil lab atau kelaziman.`});
+    if (issue) warnings.push({type:'WARNING', message:`Prosedur ${procedure.code}: ${issue} Jangan menyimpulkan tindakan dari hasil lab atau kelaziman.`});
     if (procedure.code === '90.59' && !/pemeriksaan darah|blood examination|mikroskop|microscop/i.test(quote)) warnings.push({type:'WARNING',message:'90.59 tidak dibuktikan oleh nilai GDS/HbA1c saja; periksa tindakan dan deskripsi tabular.'});
   }
   return warnings;
