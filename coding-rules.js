@@ -229,6 +229,42 @@ function buildIndonesianAbbreviationHints(clinicalText) {
     'Jangan mengganti TEKS KLINIS. documentation_quote dan secondary_relevance_quote harus tetap kutipan persis teks asli, termasuk singkatannya. Pertahankan negasi (-)/tidak/disangkal, suspek/dd, riwayat/bekas, keluarga, rencana/batal dan status pelaksanaan. Singkatan tidak membuktikan DU/DS, hubungan sebab-akibat, jenis, stadium atau tindakan telah dilakukan.\n' + lines.join('\n');
 }
 
+const PROMPT_Z_CONTEXT = `
+## KODE Z: TUJUAN KUNJUNGAN, STATUS DAN RIWAYAT
+Pertimbangkan kode Z WHO 2010 bila dokumentasi mendukung; jangan membatasi pencarian hanya penyakit aktif dan jangan menambahkan Z pada setiap pasien.
+Bedakan penyakit aktif, riwayat pribadi, riwayat keluarga, status saat ini, skrining, pemeriksaan setelah pengobatan selesai, serta perawatan/terapi yang sedang berlangsung.
+Z80–Z84 adalah kelompok riwayat keluarga; Z85–Z87 riwayat pribadi. RPK bukan penyakit aktif pasien, tetapi dapat menjadi bukti riwayat keluarga. RPD saja tidak membuktikan penyakit telah sembuh/tidak aktif: jangan mengubah DM yang masih aktif menjadi kode riwayat.
+Riwayat yang disangkal tidak membuktikan kode riwayat. Jangan mengganti semua kode penyakit yang ditolak dengan kode Z.
+Status alat/implan/stoma, ketergantungan atau alergi memerlukan status yang jelas dan relevan; pemasangan dahulu, resep, atau sekali tindakan tidak otomatis membuktikan status saat ini.
+Bedakan skrining dari pemeriksaan karena gejala; kontrol penyakit aktif dari follow-up setelah pengobatan selesai; aftercare dari pengobatan komplikasi aktif. Kata 'kontrol' saja tidak menetapkan kode Z.
+Tujuan kunjungan dapat menjadi kandidat DU jika sesuai dokumentasi dan aturan episode; Z bukan selalu DS. Tetap periksa konvensi WHO dan profil ICS/iDRG; jangan menerapkan aturan luar negeri sebagai aturan klaim Indonesia.
+Z37 memerlukan hasil persalinan yang diketahui pada rekam ibu; G/P/A, gemelli atau IUFD saja tidak membuktikan hasil semua bayi.
+Untuk setiap Z usulan, jelaskan jenis konteks dan kutipan asli pada reasoning/documentation_quote. DS tetap membutuhkan bukti relevansi, kode rinci/urutan harus diverifikasi. Jika bukti belum cukup, beri pertanyaan klarifikasi di validations; jangan mengarang kode atau hasil persalinan.
+`;
+
+function zEvidenceKind(code) {
+  if (/^Z8[0-4](?:\.|$)/.test(String(code))) return 'family_history';
+  if (/^Z8[5-7](?:\.|$)/.test(String(code))) return 'personal_history';
+  return null;
+}
+
+function auditZContext(diagnosis, input) {
+  const code = String(diagnosis.code || '');
+  if (!/^Z\d{2}(?:\.|$)/.test(code)) return [];
+  const quote = String(diagnosis.documentation_quote || '');
+  const kind = zEvidenceKind(code);
+  const issues = [];
+  if (kind && documentationIssue(quote, input, false, kind)) issues.push('Kutipan belum membuktikan jenis riwayat keluarga/pribadi yang diusulkan.');
+  // This is documentary scope checking, not validation of the disease-specific subcode.
+  diagnosis.z_context = {kind:kind || 'encounter_or_status', clinical_validity:'not_certified', review_required:true};
+  if (kind === 'personal_history' && !/\b(?:sembuh|resolved|tidak aktif|tidak lagi (?:menderita|ada)|pengobatan (?:telah )?selesai|terapi (?:telah )?selesai)\b/i.test(quote))
+    issues.push('Riwayat pribadi: RPD/riwayat saja belum membuktikan kondisi telah selesai atau tidak aktif; klarifikasi status penyakit dan sekuela.');
+  if (!kind && !/\b(?:status|terpasang|stoma|implan|prostesis|ketergantungan|alergi|skrining|screening|imunisasi|vaksinasi|konseling|kunjungan|pemeriksaan|kontrol|follow.up|aftercare|perawatan|rehabilitasi|kemoterapi|radioterapi|dialisis|persalinan|melahirkan|lahir|donor|paparan|kontak)\b/i.test(quote))
+    issues.push('Kode Z memerlukan konteks tujuan pelayanan/status yang spesifik; kutipan ini belum cukup untuk pemeriksaan otomatis.');
+  diagnosis.z_context.evidence_status = issues.length ? 'clarification_required' : 'context_present_requires_tabular_review';
+  return issues;
+}
+
 // ── DETECT CASE TYPE & BUILD PROMPT ──
 function buildPrompt(clinicalText, langInstruction) {
   const t = clinicalText.toLowerCase();
@@ -243,7 +279,7 @@ function buildPrompt(clinicalText, langInstruction) {
   const isOnko      = /tumor|kanker|neoplasm|karsinoma|kemoterapi|radioterapi|metastasis|limfoma|leukemia|ect\b|electroconvulsive/.test(t);
 
   // BASE + IDRG_CORE selalu aktif
-  let rules = PROMPT_BASE + '\n' + PROMPT_IDRG_CORE + '\n' + PROMPT_PROSEDUR;
+  let rules = PROMPT_BASE + '\n' + PROMPT_Z_CONTEXT + '\n' + PROMPT_IDRG_CORE + '\n' + PROMPT_PROSEDUR;
 
   // MDC-specific ICS rules
   if (isSirkulasi) rules += '\n' + PROMPT_IDRG_SIRKULASI;
@@ -422,7 +458,7 @@ function getIMParentCodes(code) {
 function normalizeClinicalText(value) {
   return String(value || '').normalize('NFKC').toLowerCase().replace(/[‐‑‒–—−]/g, '-').replace(/\s+/g, ' ').trim();
 }
-function documentationIssue(quote, input, procedure = false) {
+function documentationIssue(quote, input, procedure = false, evidenceKind = null) {
   // Preserve line boundaries for section scope while keeping quote matching normalized.
   const normalize = value => normalizeClinicalText(String(value || '').replace(/\r?\n/g, ';'));
   const q = normalize(quote), text = normalize(input);
@@ -455,7 +491,11 @@ function documentationIssue(quote, input, procedure = false) {
     const historicalProcedure = procedure && (/\b(?:bekas|riwayat|history of|pernah)\s*(?:operasi\s+)?$/.test(prefix) || /^(?:bekas|riwayat|history of|pernah)\b/.test(q));
     // A same-line new diagnosis heading ends an earlier family/history section.
     const explicitCurrent = /\b(?:diagnosis|diagnosa|asesmen|assessment)(?: akhir| utama| pasien)?\s*:\s*[^;.!?]*$/.test(context);
-    if ((familyOrHistory && !explicitCurrent) || negativeEnding || differential || historicalProcedure) return true;
+    const familyContext = /^(?:rpk|riwayat (?:penyakit )?keluarga)$/.test(section) || /\b(?:rpk|riwayat (?:penyakit )?keluarga)\s*:/.test(context) || /\b(?:pada|diderita oleh)\s+(?:ibu(?!\s+(?:hamil|bersalin|nifas|pasien))|ayah|orang tua|saudara|kakak|adik)\b/.test(local);
+    const personalContext = /^(?:rpd|riwayat penyakit dahulu)$/.test(section) || /\b(?:rpd|riwayat|pernah|personal history)\b/.test(context);
+    const allowedHistory = !procedure && ((evidenceKind === 'family_history' && familyContext) || (evidenceKind === 'personal_history' && personalContext && !familyContext));
+    if (evidenceKind && !allowedHistory) return true;
+    if ((familyOrHistory && !explicitCurrent && !allowedHistory) || negativeEnding || differential || historicalProcedure) return true;
     return /^\s*:?\s*(?:tidak dilakukan|belum dilakukan|dibatalkan|disangkal|disingkirkan|ruled out|cancelled|not performed)\b/.test(suffix) || /\b(?:dibatalkan|disingkirkan|ruled out|cancelled|not performed)$/.test(q) || uncertain.test(prefix) || /^(?:tidak(?: ada| dilakukan)?|tanpa|belum|rencana|direncanakan|suspek|rule out|planned|cancelled|dibatalkan)\b/.test(q) ||
       (procedure && /(?:riwayat|history of|pernah)\s+(?:\w+\s+){0,3}$/.test(prefix));
   });
@@ -657,11 +697,11 @@ function auditClinicalCoding(parsed, clinicalText) {
   const warnings = [...repairDocumentedRetinopathy(parsed, input),...auditMaternalTTTS(parsed,input)];
   for (const diagnosis of parsed.diagnoses || []) {
     const quote = String(diagnosis.documentation_quote || '');
-    const evidenceIssue = documentationIssue(quote,input);
+    const evidenceIssue = documentationIssue(quote,input,false,zEvidenceKind(diagnosis.code));
     const supportedQuote = !evidenceIssue;
     const patternEvidence = input.split(/[;\n.!?]+/).filter(clause => /pneumonia/i.test(clause) && !documentationIssue(clause,input) && !/(?:tidak ada|tanpa|no evidence of|suspek|rule out)[^;]{0,40}(?:lobar|lobaris|bronkopneumonia|bronchopneumonia)/i.test(clause)).join('; ');
     const morphologyEvidence = input.split(/[;\n.!?]+/).filter(clause => /femur/i.test(clause) && /shaft|diafis|batang|1\s*\/\s*3 tengah/i.test(clause) && !documentationIssue(clause,input)).join('; ');
-    const issues = [];
+    const issues = auditZContext(diagnosis,input);
     if (diagnosis.code_system === 'WHO_ICD10_2010' && ['S72.30','S72.31'].includes(diagnosis.code) && supportedQuote && /femur/i.test(quote) && /shaft|diafis|batang|1\s*\/\s*3 tengah/i.test(quote)) {
       const originalCode=diagnosis.code;
       diagnosis.code='S72.3';diagnosis.description='Fracture of shaft of femur';diagnosis.description_id=null;diagnosis.lead_term='Fracture';
