@@ -1170,6 +1170,22 @@ function renderResultCard(item, options) {
     renderVol1Notes(item.volume1_notes) + renderWHOGuidance(item.who_guidance) +
     renderValidations(warnings) + '</div></details></article>';
 }
+function renderMBReview(review) {
+  if (!review || review.status === 'not_triggered') return '';
+  const en = currentLang === 'en';
+  const labels = {clarification_quote:'Klarifikasi DPJP',mb_minor_quote:'Kondisi minor/insidental',mb_care_quote:'Pelayanan/pengobatan',mb_combination_quote:'Konvensi kode bersama',mb_relation_quote:'Hubungan gejala–penyakit',mb_specificity_quote:'Rincian kondisi',documented_du_quote:'DU tercatat',mb_trigger_quote:'Dasar usulan'};
+  const proposed = review.proposed_primary;
+  const questions = Array.isArray(review.questions) ? review.questions : [];
+  const evidence = Array.isArray(review.evidence) ? review.evidence : [];
+  return '<section class="item-alert"><strong>' + (en ? 'Primary diagnosis reselection review' : 'Tinjauan reseleksi diagnosis utama') + '</strong>' +
+    '<p>' + (en ? 'Recorded primary: ' : 'DU tercatat: ') + escapeHTML(review.recorded_primary || 'Belum terdokumentasi') + '</p>' +
+    '<p>' + (en ? 'Proposed primary: ' : 'Usulan DU: ') + escapeHTML(proposed ? [proposed.code,proposed.quote].filter(Boolean).join(' — ') : 'Belum ditetapkan') + '</p>' +
+    '<p>' + (en ? 'Proposed rule: ' : 'Aturan usulan: ') + escapeHTML(review.rule || 'Belum dipilih') + ' · ' + (en ? 'Coder review required; not clinically certified.' : 'Perlu tinjauan coder; belum disahkan secara klinis.') + '</p>' +
+    (questions.length ? '<ul>'+questions.map(q=>'<li>'+escapeHTML(q)+'</li>').join('')+'</ul>' : '<p>'+ (en ? 'Documentary support found; verify clinical relationships and sequencing.' : 'Dukungan dokumenter ditemukan; hubungan klinis dan urutan tetap perlu diverifikasi.')+'</p>') +
+    (evidence.length ? '<details class="result-details"><summary>'+(en ? 'Evidence for review' : 'Bukti untuk ditinjau')+'</summary><div class="details-body">'+evidence.map(e=>'<p><strong>'+escapeHTML(labels[e.field] || e.field)+'</strong>: '+escapeHTML(e.quote || 'Belum tersedia')+' — '+escapeHTML(e.status==='documented' ? 'Kutipan cocok; bukan pengesahan klinis' : 'Belum terbukti')+'</p>').join('')+'</div></details>' : '') +
+    '<p>'+escapeHTML(review.source)+'</p></section>';
+}
+
 function renderResults(result) {
   const en = currentLang !== 'id';
   document.getElementById('emptyState').style.display = 'none';
@@ -1193,7 +1209,7 @@ function renderResults(result) {
   const group = (title,items,isPrimary) => items.length ? '<h3 class="result-group-title">' + title + '</h3>' + items.map(item=>renderResultCard(item,{procedure:false,primary:isPrimary,warnings:forItem(item),duReason:result.du_reasoning})).join('') : '';
   const decision=result.primary_decision;
   const decisionBox=decision?.status==='clarification_required' ? '<div class="item-alert">⚠ <strong>' + (en ? 'Primary diagnosis is provisional' : 'DU masih usulan') + '</strong><p>' + escapeHTML(decision.clarification || decision.reason) + '</p></div>' : '';
-  document.getElementById('diagList').innerHTML = decisionBox +
+  document.getElementById('diagList').innerHTML = renderMBReview(result.ics_policy?.mb_review) + decisionBox +
     (primary.length ? group(en ? 'Primary diagnosis' : 'Diagnosis utama',primary,true) : '<div class="empty-result">' + (en ? 'Primary diagnosis has not been established.' : 'Diagnosis utama belum ditetapkan.') + '</div>') +
     group(en ? 'Secondary diagnoses' : 'Diagnosis sekunder',secondary,false) +
     group(en ? 'Role needs review' : 'Peran diagnosis perlu ditinjau',other,false) +
@@ -1215,6 +1231,7 @@ function renderResults(result) {
 </script>
 </body>
 </html>
+
 
 
 

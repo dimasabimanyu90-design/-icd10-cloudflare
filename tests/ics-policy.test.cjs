@@ -4,7 +4,7 @@ const ctx=vm.createContext({Response,URL,AbortSignal,console});
 require('./load-coding.cjs')(ctx, root);
 const audit=(parsed,text)=>ctx.auditICSContext(parsed,text);
 let out=audit({diagnoses:[{role:'DU',code:'C53.0',documentation_quote:'Karsinoma endoserviks'}],ics_context:{documented_du_quote:'Diagnosis utama: sinusitis akut',mb_rule:'MB1',mb_trigger_quote:'Histerektomi dilakukan'}},'Diagnosis utama: sinusitis akut. Karsinoma endoserviks. Histerektomi dilakukan.');
-assert.ok(out.checks.every(c=>c.status==='evidence_present'));assert.equal(out.clinical_review_required,true);assert.ok(out.warnings.some(w=>w.message.includes('Rule MB1')));
+assert.equal(out.mb_review.status,'clarification_required');assert.ok(out.checks.some(c=>c.id==='mb_documentary_review'&&c.status==='review_required'));assert.equal(out.clinical_review_required,true);assert.ok(out.warnings.some(w=>w.message.includes('Rule MB1')));
 for(const mb of ['MB2','MB3','MB4']) {
  out=audit({diagnoses:[{role:'DU',code:'I61.9',documentation_quote:'Perdarahan otak'}],ics_context:{documented_du_quote:'Diagnosis utama CVA',mb_rule:mb,mb_trigger_quote:'Perdarahan otak'}},'Diagnosis utama CVA. Perdarahan otak.');
  assert.ok(out.warnings.some(w=>w.message.includes('Rule '+mb)));assert.equal(out.clinical_review_required,true);
@@ -22,4 +22,5 @@ out=audit({diagnoses:[{role:'DU',code:'Z51.1'}],procedures:[]},'Pasien rawat jal
 const prompt=ctx.buildPrompt('Contoh rawat jalan kemoterapi oral dan sakit kepala','');
 assert.ok(prompt.includes('MB5'));assert.ok(prompt.includes('first_alternative_code'));assert.ok(prompt.includes('documentation_quote'));assert.ok(prompt.includes('RAWAT JALAN saja'));
 console.log('PASS: MB1–MB5 evidence checks, both MB5 branches, multiple DU, fabricated quotes, setting/route boundaries and sourced prompt');
+
 

@@ -394,7 +394,7 @@ function normalizeModelResult(value) {
     });
   }
   result.ics_context = {};
-  for (const key of ['documented_du_quote','mb_rule','mb_trigger_quote','mb5_mode','first_alternative_code']) {
+  for (const key of ['documented_du_quote','mb_rule','mb_trigger_quote','mb5_mode','first_alternative_code','clarification_quote','mb_minor_quote','mb_care_quote','mb_combination_quote','mb_relation_quote','mb_specificity_quote']) {
     result.ics_context[key] = typeof value.ics_context?.[key] === 'string' ? value.ics_context[key].slice(0,4000) : null;
   }
   result.validations = (Array.isArray(value.validations) ? value.validations : []).slice(0,50)
@@ -682,6 +682,7 @@ export async function onRequestOptions() {
     headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Allow-Methods": "POST, OPTIONS" }
   });
 }
+
 
 
 
