@@ -35,6 +35,8 @@ validations: hanya WARNING/INFO tentang ketidakpastian; jangan mengirim status W
 const PROMPT_IDRG_CORE = `
 ## PROFIL REFERENSI ICS DRAFT V1 (25-07-2025) — BUKAN PENGESAHAN KLAIM
 Gunakan diagnosis final DPJP dan dokumentasi; semua penerapan/konflik perlu tinjau koder.
+Sesuai ICS §2.2 PDF34: ketidaksesuaian DU diklarifikasi ke DPJP dahulu; reseleksi MB dipertimbangkan bila klarifikasi tidak berhasil. Jangan mengarang hasil klarifikasi.
+Untuk MB yang diusulkan isi kutipan asli ics_context: clarification_quote (hasil klarifikasi DPJP), mb_minor_quote (MB1), mb_care_quote (MB1/2/3), mb_combination_quote (MB2), mb_relation_quote (MB3), mb_specificity_quote (MB4). Kutipan harus menunjukkan kondisi terkait; kosongkan jika tidak ada. Penilaian klinis atau aturan yang kamu simpulkan sendiri bukan kutipan input. Jangan memaksakan MB pada setiap kasus.
 DU (ICS §2.1.1, hal cetak 23–24/PDF 24–25): satu diagnosis final, alasan utama perawatan; jangan pilih kondisi baru selama perawatan sebagai DU. Bila beberapa penyakit menjadi fokus, pertimbangkan keparahan dahulu lalu sumber daya bila tingkat keparahan sama. Jangan menebak diagnosis dari biaya, resep atau angka lab saja.
 MB1 (hal 33/PDF34): kondisi minor/lama/insidental dicatat sebagai DU tetapi kondisi sekunder lebih bermakna dan relevan pengobatan/prosedur/spesialisasi → ajukan reseleksi dengan bukti.
 MB2 (hal34/PDF35): beberapa kondisi dicatat sebagai DU yang tidak dapat dikode bersamaan → pilih alasan utama pelayanan; jika tidak dapat ditentukan, pertimbangkan spesialisasi. Jangan menjadikan spesialisasi satu-satunya bukti.
@@ -163,7 +165,7 @@ REFERENSI INDEKS: ikuti see (wajib), see also (bila informasi terkait belum terc
 Jangan mengarang rujukan atau menandai jalur terverifikasi. condition_term hanya diisi dengan nama kondisi yang ada dalam teks klinis.
 Untuk kondisi multi-modifier, setiap modifier harus diperiksa di indeks dan kode akhir di tabular. Sistem akan memberi tanda unverified bila sumber tidak membuktikan jalur.
 Return ONLY valid JSON:
-{"summary","du_reasoning","ics_context":{"documented_du_quote","mb_rule","mb_trigger_quote","mb5_mode","first_alternative_code"},"validations":[{"type","message"}],"diagnoses":[{"role","code","code_system","dagger_asterisk","description","description_id","category","confidence","lead_term","condition_term","lead_term_path","volume1_notes":[{"type","text"}],"paired_with","documentation_quote","secondary_relevance_quote","reasoning"}],"procedures":[{"code","code_system","description","description_id","category","confidence","lead_term_path","volume1_notes","documentation_quote","reasoning"}]}`;
+{"summary","du_reasoning","ics_context":{"documented_du_quote","mb_rule","mb_trigger_quote","mb5_mode","first_alternative_code","clarification_quote","mb_minor_quote","mb_care_quote","mb_combination_quote","mb_relation_quote","mb_specificity_quote"},"validations":[{"type","message"}],"diagnoses":[{"role","code","code_system","dagger_asterisk","description","description_id","category","confidence","lead_term","condition_term","lead_term_path","volume1_notes":[{"type","text"}],"paired_with","documentation_quote","secondary_relevance_quote","reasoning"}],"procedures":[{"code","code_system","description","description_id","category","confidence","lead_term_path","volume1_notes","documentation_quote","reasoning"}]}`;
 
 // Indonesian clinical shorthand: interpretation hints, never coding evidence.
 // Scope and references: data/INDONESIAN_ABBREVIATIONS.md.
@@ -777,6 +779,95 @@ const ICS_REFERENCE_PROFILE = {
   ]
 };
 
+// Documentary MB review only: no code mapping, automatic reselection or clinical approval.
+function auditMBReselection(parsed, clinicalText) {
+  const input = String(clinicalText || '');
+  const norm = value => normalizeClinicalText(value);
+  const context = parsed.ics_context || {};
+  const diagnoses = Array.isArray(parsed.diagnoses) ? parsed.diagnoses : [];
+  const primary = diagnoses.filter(d => d.role === 'DU');
+  const proposed = primary.length === 1 ? primary[0] : null;
+  const rule = String(context.mb_rule || '').trim().toUpperCase();
+  // Source-labelled DU only, not the model's own statement of what was recorded.
+  const sourceMatch = input.match(/(?:^|[\n.!;])\s*(?:diagnosis utama|diagnosa utama|DU)\s*:\s*([^.!;]+?)(?=\n\s*(?:diagnos(?:is|a) sekunder|DS|prosedur|tindakan|terapi|spesialisasi|catatan)\s*:|[.!;]|$)/i);
+  const recorded = sourceMatch ? sourceMatch[1].trim() : '';
+  const secondaryMatch = input.match(/(?:^|[\n.!;])\s*(?:diagnosis sekunder|diagnosa sekunder|DS)\s*:\s*([^.!;]+?)(?=\n\s*(?:diagnos(?:is|a) utama|DU|prosedur|tindakan|terapi|spesialisasi|catatan)\s*:|[.!;]|$)/i);
+  const recordedSecondary = secondaryMatch ? secondaryMatch[1].trim() : '';
+  const hints = [];
+  if (recorded && /\b(?:atau|versus|or)\b/i.test(recorded)) hints.push('MB5');
+  if (recorded && !hints.length && /[,\n+]/.test(recorded)) hints.push('MB2');
+  if (recorded && /\b(?:gejala|sakit kepala|nyeri|hematuria|koma|kejang|demam)\b/i.test(recorded) && /\b(?:disebabkan oleh|merupakan gejala dari|akibat)\b/i.test(input)) hints.push('MB3');
+  if (recorded && /\b(?:lebih spesifik|rincian dari|bentuk spesifik|diperinci menjadi)\b/i.test(input)) hints.push('MB4');
+  if (recorded && /\b(?:minor|insidental)\b/i.test(recorded) && /\b(?:fokus perawatan|alasan utama perawatan)\b/i.test(input)) hints.push('MB1');
+  const checks = [], questions = [], evidence = [];
+  const add = (id, passed, question) => {
+    checks.push({id,status:passed ? 'documented' : 'clarification_required'});
+    if (!passed) questions.push(question);
+  };
+  const quoteCheck = (field, question, predicate = () => true, allowUncertain = false) => {
+    const q = String(context[field] || '').trim();
+    const found = q.length >= 8 && norm(input).includes(norm(q));
+    const okay = found && !/\b(?:bukan|tidak berkaitan|tidak disebabkan|tidak merupakan)\b/i.test(q) && (allowUncertain || !documentationIssue(q,input)) && predicate(q);
+    add(field, okay, question);
+    evidence.push({field,quote:q,status:okay ? 'documented' : 'unverified'});
+    return okay;
+  };
+  const changedWithoutRule = !rule && Boolean(recorded && proposed?.documentation_quote && !norm(recorded).includes(norm(proposed.documentation_quote)));
+  const active = Boolean(rule || hints.length || changedWithoutRule);
+  if (active) {
+    add('recorded_primary',Boolean(recorded),'Apa DU yang benar-benar dicatat DPJP? Tuliskan bagian Diagnosis utama secara eksplisit.');
+    add('one_proposed_primary',Boolean(proposed),'Mana satu DU yang diusulkan untuk ditinjau?');
+  }
+  if (rule) {
+    add('rule_identity',/^MB[1-5]$/.test(rule),'Aturan yang digunakan harus MB1 sampai MB5.');
+    quoteCheck('documented_du_quote','Kutipan DU awal belum cocok dengan bagian DU tercatat.',q=>Boolean(recorded) && norm(q).includes(norm(recorded)),true);
+    quoteCheck('mb_trigger_quote','Apa kutipan asli yang menunjukkan alasan reseleksi?',()=>true,true);
+    quoteCheck('clarification_quote','Apakah sudah diklarifikasi kepada DPJP dan belum berhasil? Catat hasil klarifikasinya; jangan mengasumsikan gagal.',q=>/\bDPJP\b|dokter penanggung jawab/i.test(q) && /klarifikasi/i.test(q) && /belum (?:berhasil|mendapat(?:kan)? (?:jawaban|respons))|tidak berhasil|tanpa (?:jawaban|respons)/i.test(q) && !/belum dilakukan|tidak dilakukan|rencana/i.test(q),true);
+    if (/^MB[1-4]$/.test(rule)) {
+      add('proposed_quote',Boolean(proposed && !documentationIssue(proposed.documentation_quote,input)),'Diagnosis yang diusulkan belum didukung kutipan afirmatif dari kasus.');
+    }
+    if (['MB1','MB3'].includes(rule)) add('source_secondary_condition',Boolean(proposed?.documentation_quote && norm(recordedSecondary).includes(norm(proposed.documentation_quote))),'Apakah kondisi usulan benar-benar tercatat sebagai diagnosis sekunder oleh DPJP?');
+    if (rule === 'MB2') add('choice_in_recorded_primary',Boolean(proposed?.documentation_quote && norm(recorded).includes(norm(proposed.documentation_quote))),'Kondisi yang dipilih harus berasal dari daftar DU yang dicatat, bukan kondisi lain.');
+    if (rule === 'MB1') {
+      quoteCheck('mb_minor_quote','Apa bukti DU awal merupakan kondisi minor/lama/insidental?',q=>/minor|insidental|berlangsung lama/i.test(q) && Boolean(recorded) && norm(q).includes(norm(recorded)));
+      quoteCheck('mb_care_quote','Apa bukti kondisi usulan lebih relevan dengan pengobatan/prosedur/spesialisasi?',q=>/pengobatan|prosedur|operasi|terapi|perawatan|spesialisasi/i.test(q) && Boolean(proposed?.documentation_quote) && norm(q).includes(norm(proposed.documentation_quote)));
+    }
+    if (rule === 'MB2') {
+      add('multiple_recorded_primary',Boolean(recorded && /[,\n+]/.test(recorded) && !/\b(?:atau|or|versus)\b/i.test(recorded)),'Apakah beberapa kondisi memang dicatat sebagai DU, bukan sekadar daftar DS atau diagnosis alternatif?');
+      quoteCheck('mb_combination_quote','Apakah kondisi-kondisi DU tidak dapat dikode bersamaan? Perlu penjelasan dan verifikasi konvensi.',q=>/tidak (?:dapat|bisa) dikode (?:bersama|bersamaan)/i.test(q));
+      quoteCheck('mb_care_quote','Apa bukti alasan utama pelayanan atau spesialisasi yang mendukung pilihan?',q=>/alasan utama|fokus perawatan|spesialisasi/i.test(q) && Boolean(proposed?.documentation_quote) && norm(q).includes(norm(proposed.documentation_quote)));
+    }
+    if (rule === 'MB3') {
+      quoteCheck('mb_relation_quote','Apa bukti DU awal adalah gejala/tanda/masalah dari kondisi usulan, bukan penyakit yang tidak berkaitan?',q=>/gejala|tanda|masalah|disebabkan|akibat/i.test(q) && Boolean(recorded && proposed?.documentation_quote) && norm(q).includes(norm(recorded)) && norm(q).includes(norm(proposed.documentation_quote)));
+      quoteCheck('mb_care_quote','Apa bukti kondisi penyebab sudah didiagnosis dan diobati pada episode ini?',q=>/diobati|dirawat|diberikan|dilakukan|ditatalaksana/i.test(q) && Boolean(proposed?.documentation_quote) && norm(q).includes(norm(proposed.documentation_quote)));
+    }
+    if (rule === 'MB4') quoteCheck('mb_specificity_quote','Apa bukti kondisi usulan merupakan rincian anatomi/penyebab dari DU yang sama?',q=>/lebih spesifik|rincian|bentuk spesifik|diperinci|penyebab/i.test(q) && Boolean(recorded && proposed?.documentation_quote) && norm(q).includes(norm(recorded)) && norm(q).includes(norm(proposed.documentation_quote)));
+    if (rule === 'MB5') {
+      const alternative = context.mb5_mode === 'alternative_diagnoses';
+      const symptom = context.mb5_mode === 'symptom_with_possible_causes';
+      add('mb5_branch',alternative || symptom,'Apakah ini gejala dengan dugaan penyebab atau dua diagnosis alternatif?');
+      add('mb5_source_alternatives',Boolean(recorded && /\b(?:atau|or|versus)\b/i.test(recorded)),'Mana alternatif yang benar-benar tertulis pada bagian DU? Tanda + saja tidak menunjukkan alternatif.');
+      if (alternative) {
+        const first = recorded.split(/\b(?:atau|or|versus)\b/i)[0];
+        const q = norm(proposed?.documentation_quote);
+        add('mb5_first_source_choice',Boolean(q && q.length>=3 && norm(first).includes(q) && context.first_alternative_code === proposed?.code),'Usulan harus cocok dengan alternatif pertama dalam teks DPJP; kesamaan kode buatan AI saja tidak cukup.');
+        add('mb5_not_symptom_branch',! /\b(?:mungkin karena|kemungkinan akibat)\b/i.test(recorded),'DU berbentuk gejala dengan dugaan penyebab perlu cabang gejala MB5.');
+      }
+      if (symptom) {
+        const symptomText = recorded.split(/\b(?:mungkin karena|kemungkinan akibat|diduga akibat)\b/i)[0];
+        const q = norm(proposed?.documentation_quote);
+        add('mb5_symptom_retained',Boolean(q && q.length>=3 && norm(symptomText).includes(q) && /\b(?:mungkin karena|kemungkinan akibat|diduga akibat)\b/i.test(recorded)),'Pertahankan gejala yang tercatat; jangan memilih salah satu penyebab yang masih dugaan.');
+      }
+    }
+  } else if (hints.length) questions.push('Ada petunjuk yang perlu ditinjau untuk '+[...new Set(hints)].join('/')+'. Apakah reseleksi diperlukan setelah klarifikasi DPJP? Petunjuk ini bukan penetapan aturan.');
+  if (changedWithoutRule) questions.push('DU usulan berbeda dari DU tercatat tetapi aturan reseleksi tidak disebutkan; klarifikasi alasan perubahan kepada DPJP.');
+  const status = !active ? 'not_triggered' : !rule ? 'possible_omission' : questions.length ? 'clarification_required' : 'documentary_support_only';
+  return {status,rule:rule || null,possible_rules:[...new Set(hints)],recorded_primary:recorded || null,
+    proposed_primary:proposed ? {code:proposed.code,quote:proposed.documentation_quote || null} : null,
+    checks,evidence,questions,clinical_validity:'not_certified',requires_coder_review:active,
+    source:'ICS DRAFT V1 25-07-2025 §2.2; PDF34–38'};
+}
+
 function auditICSContext(parsed, clinicalText) {
   const normalize = value => String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
   const original = normalize(clinicalText);
@@ -819,7 +910,10 @@ function auditICSContext(parsed, clinicalText) {
     check('outpatient_chemo_primary', primary.some(d => d.code === 'Z51.1'), 'Kunjungan kemoterapi rawat jalan: periksa DU Z51.1 sesuai tujuan kunjungan.', 'Pedoman iDRG April2025, hal46');
     check('documented_chemo_injection', procedures.some(p => p.code === '99.25' && hasQuote(p.documentation_quote)), 'Injeksi kemoterapi rawat jalan tercantum: periksa tindakan 99.25 beserta bukti pelaksanaannya.', 'Pedoman iDRG April2025, hal46');
   }
-  return { profile: ICS_REFERENCE_PROFILE, status: !checks.length ? 'not_applicable' : checks.some(c => c.status === 'review_required') ? 'review_required' : 'documentation_checks_passed',
+  const mbReview = auditMBReselection(parsed, clinicalText);
+  for (const question of mbReview.questions) warnings.push({type:'WARNING',message:'Tinjauan reseleksi DU: '+question});
+  if (mbReview.requires_coder_review) checks.push({id:'mb_documentary_review',status:'review_required',source:mbReview.source});
+  return { mb_review:mbReview, profile: ICS_REFERENCE_PROFILE, status: !checks.length ? 'not_applicable' : checks.some(c => c.status === 'review_required') ? 'review_required' : 'documentation_checks_passed',
     clinical_review_required: true, checks, warnings };
 }
 
@@ -1012,5 +1106,6 @@ function isIMCode(item) {
 }
 
 export { buildIndonesianAbbreviationHints, documentationIssue, hasFractureCodeCollision, getIMParentCodes, applyFractureDefaults, auditClinicalCoding, buildPrompt, extractLeadTerm, normalizeIndexLabel, parseIndexReference, formatIndexTrace, indexTermMatches, buildWHOIndexPath, resolveWHOIndexReferences, referenceWarnings, validateCodingStructure, ICS_REFERENCE_PROFILE, auditICSContext, validateProcedures, validateDiagnosisCode, validateDiagnoses, isIMCode };
+
 
 
