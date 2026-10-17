@@ -266,6 +266,7 @@ window.isIMCode = isIMCode;
     <div class="logo-designer">Design by Dimas Abimanyu</div>
   </div>
   <div class="header-right">
+    <a href="/penelitian.html" style="color:#fff;font-size:12px">Kuesioner penelitian</a>
     <span class="htag htag-red">ICD-10 2010 IM</span>
     <span class="htag htag-outline">ICD-9-CM IM</span>
     <span class="htag htag-purple">iDRG/JKN</span>
@@ -670,6 +671,7 @@ async function analyze() {
     result.procedures = result.procedures.map(p => ({...p,confidence:null}));
 
     if (document.getElementById('clinicalInput').value.trim() === input) renderResults(result);
+    window.dispatchEvent(new CustomEvent('coding-analysis-complete', {detail:{input,result,model:data.model_used || data.quota?.model || null}}));
   } catch(err) {
     showError(T[currentLang].errorPrefix + err.message);
   } finally {
@@ -1229,6 +1231,7 @@ function renderResults(result) {
 }
 
 </script>
+<script src="coding-history.js"></script>
 </body>
 </html>
 
