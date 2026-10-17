@@ -10,7 +10,12 @@ export async function onRequest({request,env}) {
     const tokenHash=await hashToken(body.invite); const id=crypto.randomUUID(); const now=new Date().toISOString();
     // A single conditional statement plus UNIQUE(invite_hash) prevents replay races.
     const result=await env.RESEARCH_DB.prepare('INSERT OR IGNORE INTO research_responses (id,invite_hash,participant,payload,created_at) SELECT ?,token_hash,participant,?,? FROM research_invites WHERE token_hash=? AND expires_at>?').bind(id,JSON.stringify(record),now,tokenHash,now).run();
-    if (!result.meta?.changes) return json({error:'Undangan tidak valid, kedaluwarsa, atau sudah digunakan. Jika sebelumnya sudah mengirim, jangan isi ulang; hubungi peneliti.'},409);
+    if (!result.meta?.changes) {
+      const previous=await env.RESEARCH_DB.prepare('SELECT id,payload,deleted_at FROM research_responses WHERE invite_hash=?').bind(tokenHash).first();
+      // A retry after a lost response acknowledges the original identical submission.
+      if (previous && !previous.deleted_at && previous.payload===JSON.stringify(record)) return json({ok:true,receipt:previous.id,replayed:true});
+      return json({error:'Undangan tidak valid, kedaluwarsa, atau sudah digunakan. Jawaban lama tidak diubah; hubungi peneliti bila diperlukan.'},409);
+    }
     return json({ok:true,receipt:id},201);
   } catch {return json({error:'Jawaban belum dapat disimpan. Coba lagi; jawaban pada form tetap tersedia.'},503);}
 }

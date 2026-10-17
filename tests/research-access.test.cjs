@@ -13,7 +13,7 @@ test('server recomputes score, ignores forged identity and limits responses',()=
  const c=load();const input={...body(),score:0,participant:'forged',admin:true};const output=c.validateSurvey(input);assert.equal(output.score,100);assert.equal(output.participant,undefined);assert.equal(output.admin,undefined);assert.throws(()=>c.validateSurvey({...input,answers:[1]}));assert.throws(()=>c.validateSurvey({...input,consent:false}));assert.throws(()=>c.validateSurvey({...input,feedback:'x'.repeat(1501)}));
 });
 test('public endpoint is write-only, same-origin and replay-safe',async()=>{
- let count=0;let sql='';const db={prepare(s){sql=s;return{bind(){return{run:async()=>({meta:{changes:count++===0?1:0}})}}}}};const c=load('functions/api/research.js');const request=(method='POST',origin='https://example.com')=>new Request('https://example.com/api/research',{method,headers:{Origin:origin,'Content-Type':'application/json'},...(method==='POST'?{body:JSON.stringify(body())}:{})});
+ let count=0;let sql='';const db={prepare(s){if(s.startsWith('INSERT'))sql=s;return{bind(){return{run:async()=>({meta:{changes:count++===0?1:0}}),first:async()=>null}}}}};const c=load('functions/api/research.js');const request=(method='POST',origin='https://example.com')=>new Request('https://example.com/api/research',{method,headers:{Origin:origin,'Content-Type':'application/json'},...(method==='POST'?{body:JSON.stringify(body())}:{})});
  assert.equal((await c.onRequest({request:request('GET'),env:{RESEARCH_DB:db}})).status,405);
  assert.equal((await c.onRequest({request:request('POST','https://evil.com'),env:{RESEARCH_DB:db}})).status,403);
  assert.equal((await c.onRequest({request:request(),env:{RESEARCH_DB:db}})).status,201);
