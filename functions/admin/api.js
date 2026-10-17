@@ -12,9 +12,12 @@ export async function onRequest({request,env,data}) {
     if (request.method==='GET') {
       const after=url.searchParams.get('after') || '';
       if (after.length>40) return json({error:'Cursor tidak valid.'},400);
-      const result=await db.prepare(`SELECT * FROM ${table} WHERE deleted_at IS NULL AND id>? ORDER BY id LIMIT 101`).bind(after).all();
+      const boundary=url.searchParams.get('through');
+      if (boundary!==null && !/^\d{1,15}$/.test(boundary)) return json({error:'Batas ekspor tidak valid.'},400);
+      const through=boundary===null?(await db.prepare(`SELECT COALESCE(MAX(rowid),0) AS boundary FROM ${table}`).first()).boundary:Number(boundary);
+      const result=await db.prepare(`SELECT * FROM ${table} WHERE deleted_at IS NULL AND id>? AND rowid<=? ORDER BY id LIMIT 101`).bind(after,through).all();
       const rows=(result.results || []).slice(0,100);
-      return json({rows:rows.map(row=>({id:row.id,participant:row.participant,caseId:row.case_id,version:row.version,timestamp:row.created_at,...JSON.parse(row.payload)})),next:(result.results || []).length>100?rows.at(-1).id:null});
+      return json({rows:rows.map(row=>({id:row.id,participant:row.participant,caseId:row.case_id,version:row.version,timestamp:row.created_at,...JSON.parse(row.payload)})),next:(result.results || []).length>100?rows.at(-1).id:null,through});
     }
     if (!['POST','DELETE'].includes(request.method)) return json({error:'Method not allowed'},405);
     if (!sameOrigin(request)) return json({error:'Origin tidak valid.'},403);

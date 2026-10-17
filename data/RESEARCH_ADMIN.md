@@ -40,7 +40,30 @@ No research responses are bundled with the static site. Previously entered local
 draft responses are not uploaded or silently migrated to the central database.
 Local coding history remains separate and is not uploaded with survey responses.
 
-## Verification
+## Multiple respondents and descriptive statistics
+
+Each participant receives a distinct invitation. Research collection has no
+30-record history limit or 100-record participant limit; capacity follows the
+Cloudflare account's D1 quotas. The 100-record API page size bounds each response,
+and CSV export iterates all pages. A database row boundary excludes new submissions
+that arrive after export begins. Avoid archival while exporting: archival can
+remove records from later pages. This is not a transactional frozen export.
+
+Identical submission retries return the original receipt without inserting a new
+row. Changed or archived submissions cannot overwrite a used invitation.
+
+The owner-only `/admin/statistics` endpoint aggregates every active response in a
+single D1 batch: respondent count, mean/sample SD/min/max SUS, raw response
+distributions (including NA separately), demographics and DU exact-match rates
+grouped by system/model/protocol version. These are descriptive statistics, not
+inferential testing or clinical validation. Raw item answers and instrument
+versions remain available in CSV for Excel/SPSS/R. Archived data are excluded.
+
+Integration tests use Node.js 22's built-in SQLite: 150 concurrent participant
+submissions, duplicate retries, and 1,001 active responses spanning 11 export
+pages. These are local database integration tests, not a production load benchmark.
+
+## Test command
 
 `node --test tests/*.test.cjs` includes research access tests for valid/invalid
 signed JWTs, mismatched owner email, issuer/audience/expiry, absent configuration,
