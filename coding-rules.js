@@ -145,7 +145,7 @@ Lokasi lobus/infiltrat saja tidak memastikan pola lobar. Jangan mengubah kode ha
 J18.9 kandidat pneumonia tanpa pola/organisme yang lebih spesifik. Kuman tidak diketahui tidak otomatis berarti bakteri.
 Hasil kultur harus dikonfirmasi dalam diagnosis klinis sebelum kode organisme tertentu. Hubungan pneumonia-influenza/aspirasi tidak boleh disimpulkan dari kata yang muncul terpisah.
 DM: tipe dan komplikasi harus didokumentasikan; riwayat DM tidak otomatis E11.9. Insulin tidak menentukan tipe. Manifestasi mata tidak selalu retinopati diabetik; jangan otomatis menambah H36.0 untuk semua komplikasi mata.
-DM tipe 2 dengan retinopati diabetik yang tertulis: E11.3† dengan H36.0* sesuai WHO 2010. Jangan memakai subkode ICD-10-CM seperti E11.32, atau mengarang digit proliferatif/bilateral. Pertahankan rincian klinis pada kutipan. Etiologi dan manifestasi harus dipasangkan; DU tetap mengikuti episode pelayanan.
+DM tipe 2 dengan ulkus yang didokumentasikan sebagai komplikasi diabetes: gunakan E11.5 (WHO ICD-10 2010, diabetes mellitus with peripheral circulatory complications), karena kategori WHO mencakup diabetic ulcer, gangrene, dan peripheral angiopathy. Jangan gunakan E11.621 atau subkode CM/laterality. Terapkan hanya bila tipe 2 dan ulkus serta hubungannya dengan diabetes tertulis; jangan menyimpulkan hubungan dari ulkus dan DM yang hanya koeksis. DM tipe 2 dengan retinopati diabetik yang tertulis: E11.3† dengan H36.0* sesuai WHO 2010. Jangan memakai subkode ICD-10-CM seperti E11.32, atau mengarang digit proliferatif/bilateral. Pertahankan rincian klinis pada kutipan. Etiologi dan manifestasi harus dipasangkan; DU tetap mengikuti episode pelayanan.
 Gunakan digit anatomi hanya bila subkategori tabular memang menyediakan digit tersebut; jangan menambah digit muskuloskeletal secara universal.
 `;
 
@@ -679,6 +679,26 @@ function auditClinicalCoding(parsed, clinicalText) {
       issues.push('Kategori dasar S72.3 digunakan untuk shaft femur yang tertulis; closed/open diperiksa terpisah sebagai metadata, bukan morfologi IM.');
     }
     if (diagnosis.code_system === 'WHO_ICD10_2010' && !/^[A-Z]\d{2}(?:\.\d{1,2})?$/.test(String(diagnosis.code || ''))) issues.push('Format kode tidak cocok dengan skema WHO ICD-10 2010 yang didukung; jangan mengarang digit IM/laterality atau mengambil ICD-10-CM.');
+    // WHO ICD-10 E11.5 explicitly includes diabetic ulcer (WHO ICD-10, 2005/2010).
+    // Convert an ICD-10-CM suggestion only when type 2 DM, ulcer, and their relationship
+    // are documented together; coexistence alone is not sufficient evidence.
+    const dmType2Documented = /\\b(?:diabetes\\s+mellitus|diabetes\\s+melitus|dm)\\s*(?:tipe|type)\\s*2\\b/i.test(input);
+    const diabeticUlcerDocumented = /\\b(?:ulkus|ulcer|ulceration)\\b/i.test(input) &&
+      /(?:\\b(?:dm|diabetes\\s+melitus|diabetes\\s+mellitus)\\b[^.;\\n]{0,100}\\b(?:dengan|with|komplikasi)\\b[^.;\\n]{0,100}\\b(?:ulkus|ulcer|ulceration)\\b|\\b(?:ulkus|ulcer|ulceration)\\b[^.;\\n]{0,100}\\b(?:diabet(?:es|ik)|dm)\\b)/i.test(input);
+    const ulcerEvidenceNegated = /(?:tidak ada|tanpa|disangkal|no evidence of|ruled out|bukan)[^.;\\n]{0,50}\\b(?:ulkus|ulcer|ulceration)\\b/i.test(input);
+    if (supportedQuote && diagnosis.code_system === 'WHO_ICD10_2010' &&
+        (diagnosis.code === 'E11.621' || diagnosis.code === 'E11.5') &&
+        dmType2Documented && diabeticUlcerDocumented && !ulcerEvidenceNegated) {
+      const originalCode = diagnosis.code;
+      diagnosis.code = 'E11.5';
+      diagnosis.description = 'Non-insulin-dependent diabetes mellitus with peripheral circulatory complications';
+      diagnosis.description_id = 'Diabetes melitus tipe 2 dengan komplikasi sirkulasi perifer';
+      diagnosis.lead_term = 'Diabetes';
+      diagnosis.coding_adjustment = {original_code:originalCode,proposed_code:'E11.5',
+        rule:'who_e11_5_includes_diabetic_ulcer',status:'provisional_requires_review'};
+      diagnosis.reasoning = 'Dokumentasi menyebut DM tipe 2 dengan ulkus sebagai komplikasi diabetes. WHO ICD-10 E11.5 mencakup diabetic ulcer; E11.621 merupakan subkode ICD-10-CM dan tidak digunakan pada keluaran WHO.';
+      issues.push('Usulan diarahkan ke E11.5 berdasarkan cakupan WHO untuk diabetic ulcer; pastikan hubungan ulkus dengan diabetes telah ditegaskan DPJP.');
+    }
     if (diagnosis.code === 'H25.0' && supportedQuote && /katarak|cataract/i.test(quote) && /senilis|senile/i.test(quote) && /nuklear|nuclear/i.test(quote)) {
       diagnosis.code = 'H25.1'; diagnosis.description = 'Senile nuclear cataract'; diagnosis.description_id = null;
       diagnosis.coding_adjustment = {original_code:'H25.0',proposed_code:'H25.1',rule:'explicit_senile_nuclear_cataract',status:'provisional_requires_review'};
