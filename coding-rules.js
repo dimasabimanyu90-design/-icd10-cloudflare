@@ -702,10 +702,10 @@ function auditClinicalCoding(parsed, clinicalText) {
     // WHO ICD-10 2010 Volume 3 Index: senile cataract defaults to H25.9.
     // "Mature" alone is not "hypermature/Morgagnian" (H25.2); eye laterality
     // is not encoded in the WHO 2010 H25 categories.
-    const senileMature = /(?:katarak|cataract)[^.;\\n]{0,80}(?:senilis|senile)[^.;\\n]{0,50}\\bmatur(?:e)?\\b/i.test(quote) ||
-      /(?:senilis|senile)[^.;\\n]{0,50}\\bmatur(?:e)?\\b[^.;\\n]{0,50}(?:katarak|cataract)/i.test(quote);
-    const explicitlyHypermature = /\\b(?:hipermatur|hypermature|morgagnian)\\b/i.test(quote);
-    const hasSpecificSenileMorphology = /\\b(?:nuklear|nuclear|kortikal|cortical|kombinasi|combined|subkapsular|subcapsular|koroner|coronary|punktata|punctate)\\b/i.test(quote);
+    const senileMature = /(?:katarak|cataract)[^.;\n]{0,80}(?:senilis|senile)[^.;\n]{0,50}\bmatur(?:e)?\b/i.test(quote) ||
+      /(?:senilis|senile)[^.;\n]{0,50}\bmatur(?:e)?\b[^.;\n]{0,50}(?:katarak|cataract)/i.test(quote);
+    const explicitlyHypermature = /\b(?:hipermatur|hypermature|morgagnian)\b/i.test(quote);
+    const hasSpecificSenileMorphology = /\b(?:nuklear|nuclear|kortikal|cortical|kombinasi|combined|subkapsular|subcapsular|koroner|coronary|punktata|punctate)\b/i.test(quote);
     if (supportedQuote && diagnosis.code_system !== 'ICD10_IM' &&
         ['H25.4','H25.2'].includes(diagnosis.code) && senileMature &&
         !explicitlyHypermature && !hasSpecificSenileMorphology) {
@@ -1072,7 +1072,7 @@ function validateProcedures(procedures, inputText) {
 
     const found = keywords.some(kw => {
       const escaped = kw.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const matches = [...lowerInput.matchAll(new RegExp('\\b' + escaped + '\\b','g'))];
+      const matches = [...lowerInput.matchAll(new RegExp('\b' + escaped + '\b','g'))];
       return matches.some(m => !documentationIssue(m[0], inputText, true));
     });
     if (!found) {
