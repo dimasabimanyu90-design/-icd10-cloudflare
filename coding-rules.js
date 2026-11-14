@@ -718,7 +718,7 @@ function auditClinicalCoding(parsed, clinicalText) {
         rule:'who2010_senile_mature_not_hypermature',status:'provisional_requires_review'};
       diagnosis.reasoning = 'Indeks WHO ICD-10 2010 mengarahkan katarak senilis yang tidak dirinci ke H25.9. Istilah matur saja tidak membuktikan hipermatur/Morgagnian (H25.2). Laterality mata tidak ditambahkan ke kode WHO.';
       issues.push('Kode dikoreksi sementara ke H25.9: istilah matur tidak sama dengan hipermatur; tinjau indeks dan diagnosis final DPJP.');
-      warnings.push({type:'WARNING',message:\`Usulan \${originalCode} dikoreksi sementara menjadi H25.9 berdasarkan indeks WHO untuk katarak senilis tanpa subtipe; "matur" tidak otomatis berarti hipermatur/Morgagnian. Laterality mata tidak ditambahkan pada kode WHO.\`});
+      warnings.push({type:'WARNING',message:'Usulan ' + originalCode + ' dikoreksi sementara menjadi H25.9 berdasarkan indeks WHO untuk katarak senilis tanpa subtipe; "matur" tidak otomatis berarti hipermatur/Morgagnian. Laterality mata tidak ditambahkan pada kode WHO.'});
     }
     if (diagnosis.code === 'H25.0' && supportedQuote && /katarak|cataract/i.test(quote) && /senilis|senile/i.test(quote) && /nuklear|nuclear/i.test(quote)) {
       diagnosis.code = 'H25.1'; diagnosis.description = 'Senile nuclear cataract'; diagnosis.description_id = null;
