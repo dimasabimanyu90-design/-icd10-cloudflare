@@ -137,7 +137,7 @@ OMIT CODE: perlu catatan indeks dan bukti bahwa tindakan merupakan akses, bukan 
 
 const PROMPT_SPESIALIS = `
 ## SPESIFISITAS
-Katarak senilis nuklear yang didiagnosis eksplisit → H25.1 (Senile nuclear cataract, WHO 2010); jangan menyamakannya dengan H25.0 incipient.
+Katarak senilis: ikuti WHO ICD-10 2010 Volume 3 Index, bukan ICD-10-CM. Istilah "katarak senilis" tanpa jenis spesifik → H25.9. Katarak senilis matur (mature) tanpa keterangan hipermatur/Morgagnian dan tanpa subtipe morfologi lain → H25.9; kata "matur" tidak sama dengan "hipermatur". H25.2 hanya untuk Morgagnian/hypermature cataract yang dinyatakan eksplisit. H25.1 untuk senile nuclear cataract; H25.0 untuk senile incipient/cortical/punctate sesuai indeks; H25.8 untuk combined/other specified senile cataract. Jangan membuat H25.4 (tidak ada di WHO 2010) atau menambahkan laterality mata kanan/kiri ke kode WHO.
 J96.x memerlukan diagnosis gagal napas; SpO2 sendiri bukan bukti.
 J18.0 = bronchopneumonia, unspecified; harus ada dokumentasi bronkopneumonia.
 J18.1 = lobar pneumonia, unspecified; dokumentasi pneumonia lobar/lobaris dapat berasal dari laporan radiolog yang mendukung diagnosis pneumonia DPJP (ICS §2.5.2–2.5.3, PDF62–63).
@@ -698,6 +698,27 @@ function auditClinicalCoding(parsed, clinicalText) {
         rule:'who_e11_5_includes_diabetic_ulcer',status:'provisional_requires_review'};
       diagnosis.reasoning = 'Dokumentasi menyebut DM tipe 2 dengan ulkus sebagai komplikasi diabetes. WHO ICD-10 E11.5 mencakup diabetic ulcer; E11.621 merupakan subkode ICD-10-CM dan tidak digunakan pada keluaran WHO.';
       issues.push('Usulan diarahkan ke E11.5 berdasarkan cakupan WHO untuk diabetic ulcer; pastikan hubungan ulkus dengan diabetes telah ditegaskan DPJP.');
+    }
+    // WHO ICD-10 2010 Volume 3 Index: senile cataract defaults to H25.9.
+    // "Mature" alone is not "hypermature/Morgagnian" (H25.2); eye laterality
+    // is not encoded in the WHO 2010 H25 categories.
+    const senileMature = /(?:katarak|cataract)[^.;\n]{0,80}(?:senilis|senile)[^.;\n]{0,50}\bmatur(?:e)?\b/i.test(quote) ||
+      /(?:senilis|senile)[^.;\n]{0,50}\bmatur(?:e)?\b[^.;\n]{0,50}(?:katarak|cataract)/i.test(quote);
+    const explicitlyHypermature = /\b(?:hipermatur|hypermature|morgagnian)\b/i.test(quote);
+    const hasSpecificSenileMorphology = /\b(?:nuklear|nuclear|kortikal|cortical|kombinasi|combined|subkapsular|subcapsular|koroner|coronary|punktata|punctate)\b/i.test(quote);
+    if (supportedQuote && diagnosis.code_system !== 'ICD10_IM' &&
+        ['H25.4','H25.2'].includes(diagnosis.code) && senileMature &&
+        !explicitlyHypermature && !hasSpecificSenileMorphology) {
+      const originalCode = diagnosis.code;
+      diagnosis.code = 'H25.9';
+      diagnosis.description = 'Senile cataract, unspecified';
+      diagnosis.description_id = 'Katarak senilis, tidak spesifik';
+      diagnosis.lead_term = 'Cataract';
+      diagnosis.coding_adjustment = {original_code:originalCode,proposed_code:'H25.9',
+        rule:'who2010_senile_mature_not_hypermature',status:'provisional_requires_review'};
+      diagnosis.reasoning = 'Indeks WHO ICD-10 2010 mengarahkan katarak senilis yang tidak dirinci ke H25.9. Istilah matur saja tidak membuktikan hipermatur/Morgagnian (H25.2). Laterality mata tidak ditambahkan ke kode WHO.';
+      issues.push('Kode dikoreksi sementara ke H25.9: istilah matur tidak sama dengan hipermatur; tinjau indeks dan diagnosis final DPJP.');
+      warnings.push({type:'WARNING',message:'Usulan ' + originalCode + ' dikoreksi sementara menjadi H25.9 berdasarkan indeks WHO untuk katarak senilis tanpa subtipe; "matur" tidak otomatis berarti hipermatur/Morgagnian. Laterality mata tidak ditambahkan pada kode WHO.'});
     }
     if (diagnosis.code === 'H25.0' && supportedQuote && /katarak|cataract/i.test(quote) && /senilis|senile/i.test(quote) && /nuklear|nuclear/i.test(quote)) {
       diagnosis.code = 'H25.1'; diagnosis.description = 'Senile nuclear cataract'; diagnosis.description_id = null;
