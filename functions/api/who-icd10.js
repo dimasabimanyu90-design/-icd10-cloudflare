@@ -93,10 +93,10 @@ function extractWHOText(value) {
 function codeFromIdentity(value) {
   const raw = extractWHOText(value);
   if (!raw) return null;
-  const candidate = raw.split(/[\\/#]/).filter(Boolean).pop() || raw;
+  const candidate = raw.slice(raw.lastIndexOf("/") + 1).split("#")[0] || raw;
   let decoded = candidate;
   try { decoded = decodeURIComponent(candidate); } catch {}
-  const match = decoded.toUpperCase().match(/[A-Z][0-9]{2}(?:\\.[0-9A-Z]{1,2})?$/);
+  const match = decoded.toUpperCase().match(/[A-Z][0-9]{2}(?:[.][0-9A-Z]{1,2})?$/);
   return match ? match[0] : null;
 }
 
