@@ -17,6 +17,7 @@ const db={prepare:sql=>({all:async()=>({results:[{file_name:'ICD10_2010.pdf',sha
 }})})};
 const ctx=vm.createContext({Request,Response,URL,AbortSignal,console,btoa,fetch:async()=>{throw Error('Network must not run when local sources exist')}});
 vm.runInContext(fs.readFileSync(path.join(root,'functions/lib/who2010-pdf.js'),'utf8').replace(/export /g,''),ctx);
+vm.runInContext(fs.readFileSync(path.join(root,'functions/lib/who-index-path.js'),'utf8').replace(/export /g,''),ctx);
 vm.runInContext(fs.readFileSync(path.join(root,'functions/api/who-index.js'),'utf8').replace(/^import [^;]+;\n/gm,'').replace(/export /g,''),ctx);
 const indexEndpoint=ctx.onRequestGet;
 require('./load-coding.cjs')(ctx,root);
