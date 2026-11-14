@@ -169,6 +169,7 @@ Tidak ada diagnosis final/bukti urutan/setting perawatan → minta klarifikasi, 
 
 const PROMPT_JSON = `
 REFERENSI INDEKS: ikuti see (wajib), see also (bila informasi terkait belum tercakup), dan see condition (cari nama kondisi yang terdokumentasi).
+DU_REASONING DAN SUMMARY: tulis singkat, lengkap, dan langsung ke inti (maksimal 2 kalimat untuk alasan DU). Akhiri setiap kalimat secara utuh dengan tanda baca. DILARANG mengakhiri jawaban dengan elipsis (.../…) atau frasa menggantung seperti 'adalah', 'yaitu', 'karena', 'berdasarkan', atau 'sehingga'. Jika bukti belum cukup, nyatakan keterbatasannya secara lengkap; jangan membuat klaim kode sudah benar/terverifikasi.
 Jangan mengarang rujukan atau menandai jalur terverifikasi. condition_term hanya diisi dengan nama kondisi yang ada dalam teks klinis.
 Untuk kondisi multi-modifier, setiap modifier harus diperiksa di indeks dan kode akhir di tabular. Sistem akan memberi tanda unverified bila sumber tidak membuktikan jalur.
 Return ONLY valid JSON:
