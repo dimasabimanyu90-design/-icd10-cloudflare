@@ -3,7 +3,7 @@
 // Reject extracted rows where the supposed lead term is itself an ICD code.
 // These are code-column/table rows, not Volume 3 Alphabetical Index entries.
 function isCodeOnlyLeadTerm(value) {
-  return /^[A-Z]\\d{2}(?:\\.\\d{1,3})?[†*]?\\s*[–—-]?$/.test(String(value || '').trim());
+  return /^[A-Z]\d{2}(?:\.\d{1,3})?[†*]?\s*[–—-]?$/.test(String(value || '').trim());
 }
 export async function lookupPDFReference(db, code, term = '', limit = 8) {
   if (!db) return null;
