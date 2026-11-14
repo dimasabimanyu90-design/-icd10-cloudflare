@@ -42,7 +42,7 @@ export function convertPDFIndexPathToWHO(candidate = {}) {
       part.level > (index === 0 ? 0 : segments[index].level)
     );
   const formatted = structurallyValid
-    ? segments.map((part, index) => index === 0 ? part.text : ' '.replace(' ', '') + ' '.repeat(0) + '-'.repeat(part.level) + ' ' + part.text).join('')
+    ? segments.map((part, index) => index === 0 ? part.text : '-'.repeat(part.level) + ' ' + part.text).join(' ')
     : null;
 
   return {
