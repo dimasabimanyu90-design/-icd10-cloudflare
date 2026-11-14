@@ -1,4 +1,5 @@
 import { lookupPDFReference } from '../lib/who2010-pdf.js';
+import { convertPDFIndexPathToWHO } from '../lib/who-index-path.js';
 /**
  * WHO ICD-10 2010 Vol. 3 / Alphabetical Index search
  *
@@ -237,7 +238,11 @@ export async function onRequestGet(context) {
       try {
         const local=await lookupPDFReference(context.env.ICD10_WHO_DB,requestedCode,term,limit);
         if (local && (local.index_candidates.length || local.reference_steps.length)) {
-          const paths=local.index_candidates.map(row=>({code:row.code,lead_term:row.lead_term,modifiers:JSON.parse(row.modifiers_json),modifier_levels:JSON.parse(row.modifiers_json).map((_,i)=>i+1),pdf_page:row.pdf_page,source_file:local.file_name}));
+          const paths=local.index_candidates.map(row=>{
+            const modifiers=JSON.parse(row.modifiers_json);
+            const candidate={code:row.code,lead_term:row.lead_term,modifiers,modifier_levels:modifiers.map((_,i)=>i+1),path_text:row.path_text,pdf_page:row.pdf_page,source_file:local.file_name};
+            return {...candidate,...convertPDFIndexPathToWHO(candidate)};
+          });
           return json({valid:true,source:local.source,version:'2010',review_required:true,
             pdf_index_paths:paths,reference_steps:local.reference_steps.map(row=>({...row,source_file:local.file_name})),
             results:[{code:requestedCode,index_terms:local.index_candidates.map(row=>row.path_text.replace(/\n/g,' ')),source:local.source}],
