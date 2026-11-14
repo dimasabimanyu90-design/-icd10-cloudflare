@@ -240,7 +240,7 @@ export async function onRequestGet(context) {
         if (local && (local.index_candidates.length || local.reference_steps.length)) {
           const paths=local.index_candidates.map(row=>{
             const modifiers=JSON.parse(row.modifiers_json);
-            const candidate={code:row.code,lead_term:row.lead_term,modifiers,modifier_levels:modifiers.map((_,i)=>i+1),path_text:row.path_text,pdf_page:row.pdf_page,source_file:local.file_name};
+            const candidate={code:row.code,lead_term:row.lead_term,modifiers,modifier_levels:modifiers.map((_,i)=>i+1),path_text:row.path_text,pdf_page:row.pdf_page,source_file:local.file_name,extraction_warning:row.extraction_warning || null,review_status:row.review_status || 'extracted_requires_review'};
             return {...candidate,...convertPDFIndexPathToWHO(candidate)};
           });
           return json({valid:true,source:local.source,version:'2010',review_required:true,

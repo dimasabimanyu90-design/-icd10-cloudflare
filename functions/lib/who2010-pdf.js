@@ -10,9 +10,12 @@ export async function lookupPDFReference(db, code, term = '', limit = 8) {
   const bounded = Math.min(20,Math.max(1,Number(limit)||8));
   const tabular = code ? await db.prepare('SELECT code,title,symbol,raw_text,pdf_page,review_status FROM tabular_entries WHERE code = ? ORDER BY pdf_page LIMIT 4').bind(code).all() : {results:[]};
   const params=code ? [code,bounded] : [term.replace(/[\\%_]/g,'\\$&')+'%',bounded];
+  // context_issue is an extraction warning, not proof that the printed PDF path
+  // is unusable. Keep those source candidates visible for human review. Exclude
+  // code-only lead terms at SQL level so they cannot consume the result limit.
   const index=await db.prepare(code
-    ? "SELECT * FROM index_entries WHERE code = ? AND section = 'diagnosis' AND version = '2010' AND context_issue = '' ORDER BY pdf_page LIMIT ?"
-    : "SELECT * FROM index_entries WHERE lead_term LIKE ? ESCAPE '\\' AND section = 'diagnosis' AND version = '2010' AND context_issue = '' ORDER BY lead_term,pdf_page LIMIT ?").bind(...params).all();
+    ? "SELECT * FROM index_entries WHERE code = ? AND section = 'diagnosis' AND version = '2010' AND lead_term NOT GLOB '[A-Z][0-9][0-9]*' ORDER BY CASE WHEN context_issue = '' THEN 0 ELSE 1 END, pdf_page LIMIT ?"
+    : "SELECT * FROM index_entries WHERE lead_term LIKE ? ESCAPE '\\' AND section = 'diagnosis' AND version = '2010' AND lead_term NOT GLOB '[A-Z][0-9][0-9]*' ORDER BY CASE WHEN context_issue = '' THEN 0 ELSE 1 END, lead_term,pdf_page LIMIT ?").bind(...params).all();
   const steps=[];
   let shared=[];
   // Explicit shared subdivision tables are shown as source instructions,
@@ -23,7 +26,13 @@ export async function lookupPDFReference(db, code, term = '', limit = 8) {
     for(const row of family) steps.push({...row,type:'diabetes_type_reference'});
     for(const row of shared) steps.push({path_text:row.group_start+'–'+row.group_end+' → .'+row.suffix+' '+row.title,raw_text:row.raw_text,pdf_page:row.pdf_page,type:'shared_tabular_subdivision'});
   }
-  const rows=(index.results || []).filter(row => !isCodeOnlyLeadTerm(row.lead_term));
+  const rows=(index.results || []).filter(row => !isCodeOnlyLeadTerm(row.lead_term)).map(row => ({
+    ...row,
+    // Preserve parser warnings instead of silently dropping otherwise readable
+    // printed paths. These remain unverified PDF candidates, never certified.
+    extraction_warning: row.context_issue || null,
+    review_status: 'extracted_requires_review'
+  }));
   const source=(await db.prepare('SELECT file_name,sha256,source_id FROM reference_sources LIMIT 1').all()).results?.[0];
   if(!source) return null;
   return {source:'UPLOADED_WHO2010_PDF',file_name:source.file_name,sha256:source.sha256,code,
