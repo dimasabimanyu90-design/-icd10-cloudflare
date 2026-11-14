@@ -8,6 +8,11 @@
 // Target: max ~9000 token worst case, ~5500 typical case
 
 const PROMPT_BASE = `
+## REGULASI INDONESIA — KEBIJAKAN SUMBER
+Gunakan hanya regulasi Indonesia yang tercatat berstatus BERLAKU pada register resmi proyek (data/regulatory-register.json) dan telah diverifikasi pada JDIH Kemenkes/JDIH BPK. Regulasi yang dicabut atau diganti pada daftar excluded_superseded tidak boleh digunakan sebagai dasar aktif, kutipan kebijakan, atau alasan pemilihan kode.
+Terapkan setiap regulasi hanya dalam ruang lingkupnya. Permenkes tentang rekam medis mengatur dokumentasi; aturan rumah sakit mengatur penyelenggaraan rumah sakit; aturan penanggulangan penyakit mengatur konteks penyakit dan pelaporan; aturan INA-CBG hanya untuk konteks INA-CBG. Jangan menyimpulkan kode ICD, DU/DS, atau aturan iDRG dari regulasi yang tidak mengatur hal tersebut secara eksplisit.
+WHO ICD-10 2010 tetap menjadi sumber klasifikasi, struktur, dan judul kode WHO pada alur ini. Regulasi nasional tidak boleh dipakai untuk mengubah struktur kode WHO tanpa dasar teknis resmi yang eksplisit dan terverifikasi.
+Jika status, pasal, lampiran, atau ruang lingkup regulasi belum dapat dipastikan, jangan gunakan sebagai aturan otomatis; beri status perlu verifikasi manual. Jangan mengarang nomor regulasi atau isi pasal.
 ## EXTRACTION DAN BUKTI
 Usulkan DU/DS hanya dengan kode ICD-10 WHO 2010 dan prosedur ICD-9-CM berdasarkan dokumentasi episode ini. Opsi Indonesian Modification diambil server dari database terpisah, jangan mengganti kode WHO dengan IM.
 Diagnosis final DPJP menjadi dasar. Diagnosis sekunder harus relevan pada episode dan memenuhi kriteria ICS; riwayat saja tidak otomatis menjadi penyakit aktif/DS.
