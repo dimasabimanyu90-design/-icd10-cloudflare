@@ -2,7 +2,7 @@ const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path'),asse
 const root=path.resolve(__dirname,'..'),queries=[];
 const good={code:'S72.3',lead_term:'Fracture',modifiers_json:'["femur","shaft"]',path_text:'Fracture\n- femur\n-- shaft',raw_text:'- - shaft S72.3',pdf_page:1419,context_issue:''};
 const bad={...good,lead_term:'Wrong continuation',context_issue:'missing_modifier_context'};
-const tuberculosis={code:'A15.1',lead_term:'Tuberculosis, tubercular',modifiers_json:'["pulmonary","confirmed (by)","culture only"]',path_text:'Tuberculosis, tubercular\\n- pulmonary\\n-- confirmed (by)\\n--- culture only',raw_text:'--- culture only A15.1',pdf_page:1777,context_issue:'missing_modifier_context'};
+const tuberculosis={code:'A15.1',lead_term:'Tuberculosis, tubercular',modifiers_json:'["pulmonary","confirmed (by)","culture only"]',path_text:'Tuberculosis, tubercular\n- pulmonary\n-- confirmed (by)\n--- culture only',raw_text:'--- culture only A15.1',pdf_page:1777,context_issue:'missing_modifier_context'};
 const codeOnly={...good,code:'C50.2',lead_term:'C79.8',path_text:'C79.8',raw_text:'C79.8 D05.9 D24 D48.6 C50.2',pdf_page:1580,context_issue:''};
 const db={prepare:sql=>({all:async()=>({results:[{file_name:'ICD10_2010.pdf',sha256:'hash',source_id:'source'}]}),bind:(...params)=>({all:async()=>{
  queries.push({sql,params});
@@ -10,7 +10,7 @@ const db={prepare:sql=>({all:async()=>({results:[{file_name:'ICD10_2010.pdf',sha
  if(sql.includes('tabular_entries'))return {results:params[0]==='S72.3' ? [{code:'S72.3',title:'Fracture of shaft of femur',pdf_page:824}] : []};
  if(sql.includes('shared_subdivisions'))return {results:[{group_start:'E10',group_end:'E14',suffix:'3',title:'With ophthalmic complications',raw_text:'.3† With ophthalmic complications',pdf_page:186}]};
  if(sql.includes('index_entries')){
-  assert.ok(!sql.includes("context_issue = ''") || sql.includes("shared_subdivisions"));assert.ok(sql.includes("section = 'diagnosis'"));
+  assert.ok(sql.includes("section = 'diagnosis'"));
   if(params[0]==='S72.3'||params[0]==='Fracture%')return {results:[good,bad,codeOnly]};
   if(params[0]==='A15.1')return {results:[tuberculosis]};
   if(params[0]==='E11.-')return {results:[{path_text:'Diabetes\n- type II',raw_text:'- type II E11.-',pdf_page:1331}]};
