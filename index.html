@@ -1215,9 +1215,12 @@ async function verifySelectedWHOIndexPath(button) {
   button.disabled = true;
   button.textContent = 'Memeriksa WHO…';
   try {
-    // WHO search receives the converted lead term; the full converted path is
-    // retained for hierarchy-by-hierarchy comparison against official terms.
-    const params = new URLSearchParams({term: candidate.who_index_query, code, limit: '12', skipLocal: '1'});
+    // Search WHO with the complete converted Volume 3 path, not only the
+    // lead term. A lead-only query can return the parent code (for example
+    // A90) and omit the child index entry (A91 hemorrhagic), creating a
+    // false-negative even when the PDF path is correct. Verification below
+    // still requires the exact code AND every hierarchy segment to match.
+    const params = new URLSearchParams({term: candidate.who_formatted_path, code, limit: '20', skipLocal: '1'});
     const response = await fetch('/api/who-index?' + params.toString(), {headers:{Accept:'application/json'}});
     const data = await response.json().catch(() => ({}));
     const matchingEntity = (data.results || []).find(item => String(item.code || '').trim().toUpperCase() === code);
