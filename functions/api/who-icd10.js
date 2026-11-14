@@ -69,24 +69,44 @@ function firstValue(value) {
   return value ?? null;
 }
 
-function compactEntity(data, requestedCode) {
+// WHO API v2 may expose labels as JSON-LD language objects rather than
+// plain strings. Normalize those shapes before passing titles to the app.
+function extractWHOText(value) {
+  if (value == null) return null;
+  if (typeof value === "string") return value.trim() || null;
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = extractWHOText(item);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (typeof value === "object") {
+    return extractWHOText(
+      value["@value"] ?? value.value ?? value.label ??
+      value.term ?? value.title ?? null
+    );
+  }
+  return null;
+}
+
+function codeFromIdentity(value) {
+  const raw = extractWHOText(value);
+  if (!raw) return null;
+  const candidate = raw.split(/[\\/#]/).filter(Boolean).pop() || raw;
+  let decoded = candidate;
+  try { decoded = decodeURIComponent(candidate); } catch {}
+  const match = decoded.toUpperCase().match(/[A-Z][0-9]{2}(?:\\.[0-9A-Z]{1,2})?$/);
+  return match ? match[0] : null;
+}
+
+function compactEntity(data) {
   if (!data || typeof data !== "object") return null;
-
-  const code = firstValue(data.code) ?? requestedCode;
-  const title =
-    firstValue(data.title) ??
-    firstValue(data.prefLabel) ??
-    firstValue(data.label) ??
-    null;
-
-  const parent = firstValue(data.parent) ?? null;
-  const child = Array.isArray(data.child) ? data.child : [];
-
   return {
-    code,
-    title,
-    parent,
-    child,
+    code: codeFromIdentity(data.code) || codeFromIdentity(data["@id"]) || codeFromIdentity(data.id),
+    title: extractWHOText(data.title) || extractWHOText(data.prefLabel) || extractWHOText(data.label),
+    parent: firstValue(data.parent) ?? null,
+    child: Array.isArray(data.child) ? data.child : [],
     note: data.note ?? null,
     codingHint: data.codingHint ?? null,
     inclusion: data.inclusion ?? null,
@@ -195,9 +215,19 @@ export async function onRequestPost(context) {
       }, 502);
     }
 
-    const entity = compactEntity(data, code);
-    const sourceCode = firstValue(data.code);
-    if (!sourceCode || String(sourceCode).toUpperCase() !== code || !entity.title) return json({valid:false,source:'WHO',code,error:'WHO entity identity/title did not match requested code'},502);
+    const entity = compactEntity(data);
+    // Never infer identity from the requested URL alone: the WHO response
+    // itself must identify the same code through code, @id, or id.
+    if (!entity?.code || entity.code !== code || !entity.title) {
+      return json({
+        valid: false,
+        source: "WHO",
+        code,
+        error: "WHO entity identity/title did not match requested code",
+        identity_code: entity?.code || null,
+        title_available: Boolean(entity?.title)
+      }, 502);
+    }
 
     return json({
       valid: true,
