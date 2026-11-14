@@ -682,10 +682,10 @@ function auditClinicalCoding(parsed, clinicalText) {
     // WHO ICD-10 E11.5 explicitly includes diabetic ulcer (WHO ICD-10, 2005/2010).
     // Convert an ICD-10-CM suggestion only when type 2 DM, ulcer, and their relationship
     // are documented together; coexistence alone is not sufficient evidence.
-    const dmType2Documented = /\\b(?:diabetes\\s+mellitus|diabetes\\s+melitus|dm)\\s*(?:tipe|type)\\s*2\\b/i.test(input);
-    const diabeticUlcerDocumented = /\\b(?:ulkus|ulcer|ulceration)\\b/i.test(input) &&
-      /(?:\\b(?:dm|diabetes\\s+melitus|diabetes\\s+mellitus)\\b[^.;\\n]{0,100}\\b(?:dengan|with|komplikasi)\\b[^.;\\n]{0,100}\\b(?:ulkus|ulcer|ulceration)\\b|\\b(?:ulkus|ulcer|ulceration)\\b[^.;\\n]{0,100}\\b(?:diabet(?:es|ik)|dm)\\b)/i.test(input);
-    const ulcerEvidenceNegated = /(?:tidak ada|tanpa|disangkal|no evidence of|ruled out|bukan)[^.;\\n]{0,50}\\b(?:ulkus|ulcer|ulceration)\\b/i.test(input);
+    const dmType2Documented = /\b(?:diabetes\s+mellitus|diabetes\s+melitus|dm)\s*(?:tipe|type)\s*2\b/i.test(input);
+    const diabeticUlcerDocumented = /\b(?:ulkus|ulcer|ulceration)\b/i.test(input) &&
+      /(?:\b(?:dm|diabetes\s+melitus|diabetes\s+mellitus)\b[^.;\n]{0,100}\b(?:dengan|with|komplikasi)\b[^.;\n]{0,100}\b(?:ulkus|ulcer|ulceration)\b|\b(?:ulkus|ulcer|ulceration)\b[^.;\n]{0,100}\b(?:diabet(?:es|ik)|dm)\b)/i.test(input);
+    const ulcerEvidenceNegated = /(?:tidak ada|tanpa|disangkal|no evidence of|ruled out|bukan)[^.;\n]{0,50}\b(?:ulkus|ulcer|ulceration)\b/i.test(input);
     if (supportedQuote && diagnosis.code_system === 'WHO_ICD10_2010' &&
         (diagnosis.code === 'E11.621' || diagnosis.code === 'E11.5') &&
         dmType2Documented && diabeticUlcerDocumented && !ulcerEvidenceNegated) {
