@@ -56,7 +56,7 @@ def extract(pdf):
    root=label;stack=[];context=''
    # Code-only rows in this PDF region are cross-reference/table columns, not
    # Alphabetical Index lead terms. Never publish them as a clinical path.
-   if re.fullmatch(r'[A-Z]\\d{2}(?:\\.\\d{1,3})?[†*]?',root.strip(),re.I):
+   if re.fullmatch(r'[A-Z]\d{2}(?:\.\d{1,3})?[†*]?',root.strip(),re.I):
     context='code_only_lead_term'
   elif not root:context='missing_lead_term'
   if depth:
