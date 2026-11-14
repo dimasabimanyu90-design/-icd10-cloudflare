@@ -100,7 +100,9 @@ HIV tidak otomatis B20-B24 DU untuk semua episode. Periksa hubungan kondisi dan 
 // ── ICS MDC ONKOLOGI (MDC 34) ──
 const PROMPT_IDRG_ONKO = `
 ## NEOPLASMA
-DU tergantung tujuan episode: pengobatan tumor primer, metastasis, komplikasi, atau terapi terjadwal. Jangan mengubah semua rawat inap kanker menjadi Z51.1/Z51.0.
+DU tergantung tujuan episode: pengobatan tumor primer, metastasis, komplikasi, terapi terjadwal, aftercare, atau pemeriksaan tindak lanjut. Jangan mengubah semua rawat inap kanker menjadi Z51.1/Z51.0.
+PEMERIKSAAN TINDAK LANJUT SETELAH OPERASI NEOPLASMA GANAS: bila tujuan episode secara eksplisit surveillance/pemeriksaan follow-up setelah pengobatan bedah selesai, pertimbangkan Z08.0 (Follow-up examination after surgery for malignant neoplasm; WHO ICD-10 2010). Z08.0 bukan kode untuk perawatan luka/pemulihan pascaoperasi yang masih berlangsung, pengobatan kanker aktif, atau kekambuhan. Bila keganasan masih aktif/tersisa atau ditemukan residif/metastasis yang sedang ditangani, kodekan kondisi neoplasma aktif sesuai lokasi dan dokumentasi, bukan Z08.0. Bila konteksnya aftercare/pemulihan pascaoperasi, telusuri indeks dan tabular WHO untuk aftercare yang sesuai; jangan menyamakannya dengan follow-up surveillance.
+Jangan mengusulkan C80.1: kode tersebut bukan kode WHO ICD-10 2010. Jangan menggantinya secara otomatis dengan kode keganasan tidak spesifik; tentukan kode berdasarkan tujuan kunjungan dan bukti klinis.
 Bedakan kemoterapi oral/injeksi dan tindakan yang direncanakan/dilakukan.
 `;
 
