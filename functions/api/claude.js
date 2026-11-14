@@ -440,6 +440,8 @@ export async function onRequestPost(context) {
     context.env.GROQ_API_KEY,
     context.env.GROQ_API_KEY_2,
     context.env.GROQ_API_KEY_3,
+    context.env.GROQ_API_KEY_4,
+    context.env.GROQ_API_KEY_5,
   ].filter(Boolean);
 
   if (API_KEYS.length === 0) {
