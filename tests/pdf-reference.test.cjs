@@ -34,6 +34,6 @@ require('./load-coding.cjs')(ctx,root);
  vm.runInContext(fs.readFileSync(path.join(root,'functions/api/icd10-reference.js'),'utf8').replace(/^import [^;]+;\n/gm,'').replace(/export /g,''),ctx);
  r=await ctx.onRequestGet({request:new Request('https://test/api/icd10-reference?code=BAD'),env:{ICD10_WHO_DB:db}});assert.equal(r.status,400);
  r=await ctx.onRequestGet({request:new Request('https://test/api/icd10-reference?code=S72.3'),env:{}});assert.equal(r.status,503);
- r=await ctx.onRequestGet({request:new Request('https://test/api/icd10-reference?code=S72.3'),env:{ICD10_WHO_DB:db}});d=await r.json();assert.equal(d.certified,false);assert.equal(d.index_candidates.length,1);assert.equal(d.tabular_candidates[0].pdf_page,824);
- console.log('PASS: local PDF candidates, no network dependency, provenance, bad-context exclusion, shared DM steps without invented path, pre-model retrieval, malformed/missing bindings and no false verification');
+ r=await ctx.onRequestGet({request:new Request('https://test/api/icd10-reference?code=S72.3'),env:{ICD10_WHO_DB:db}});d=await r.json();assert.equal(d.certified,false);assert.equal(d.index_candidates.length,2);assert.ok(d.index_candidates.some(x=>x.extraction_warning==='missing_modifier_context'));assert.ok(d.index_candidates.every(x=>x.lead_term!=='C79.8'));assert.equal(d.tabular_candidates[0].pdf_page,824);
+ console.log('PASS: local PDF candidates, no network dependency, provenance, warning-preserving paths, code-only row exclusion, shared DM steps without invented path, pre-model retrieval, malformed/missing bindings and no false verification');
 })().catch(e=>{console.error(e);process.exitCode=1});
