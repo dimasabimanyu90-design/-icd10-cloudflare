@@ -1,0 +1,163 @@
+{
+  "schema_version": 1,
+  "title": "AutoCoding.id — Indonesian Health Regulation Register",
+  "checked_on": "2026-11-14",
+  "status_policy": "Only entries verified as in_force on the checked_on date may be used as active regulatory references. Re-check official JDIH before each release. Superseded instruments are retained only as exclusion metadata and must never be used as active authority.",
+  "authoritative_sources": [
+    "https://jdih.kemkes.go.id/",
+    "https://peraturan.bpk.go.id/"
+  ],
+  "regulations": [
+    {
+      "id": "UU-17-2023",
+      "type": "Undang-Undang",
+      "number": "17",
+      "year": 2023,
+      "title": "Kesehatan",
+      "status": "in_force",
+      "status_checked_on": "2026-11-14",
+      "official_source": "https://jdih.kemkes.go.id/documents/undang-undang-nomor-17-tahun-2023",
+      "relevance": [
+        "kerangka hukum umum kesehatan"
+      ],
+      "coding_authority": false,
+      "implementation_note": "Landasan umum; bukan sumber struktur kode ICD atau aturan pemilihan DU/DS."
+    },
+    {
+      "id": "PP-28-2024",
+      "type": "Peraturan Pemerintah",
+      "number": "28",
+      "year": 2024,
+      "title": "Peraturan Pelaksanaan Undang-Undang Nomor 17 Tahun 2023 tentang Kesehatan",
+      "status": "in_force",
+      "status_checked_on": "2026-11-14",
+      "official_source": "https://jdih.kemkes.go.id/documents/peraturan-pemerintah-nomor-28-tahun-2024",
+      "relevance": [
+        "kerangka pelaksanaan UU Kesehatan"
+      ],
+      "coding_authority": false,
+      "implementation_note": "Gunakan hanya untuk konteks ketentuan kesehatan yang relevan; bukan pengganti ICD-10 WHO."
+    },
+    {
+      "id": "PMK-24-2022",
+      "type": "Peraturan Menteri Kesehatan",
+      "number": "24",
+      "year": 2022,
+      "title": "Rekam Medis",
+      "status": "in_force",
+      "status_checked_on": "2026-11-14",
+      "official_source": "https://jdih.kemkes.go.id/documents/peraturan-menteri-kesehatan-nomor-24-tahun-2022",
+      "relevance": [
+        "rekam medis",
+        "rekam medis elektronik",
+        "dokumentasi klinis"
+      ],
+      "coding_authority": false,
+      "supersedes": [
+        "PMK-269-2008"
+      ],
+      "implementation_note": "Mengatur penyelenggaraan rekam medis. Tidak menetapkan daftar kode ICD atau otomatis menentukan DU/DS."
+    },
+    {
+      "id": "PMK-26-2021",
+      "type": "Peraturan Menteri Kesehatan",
+      "number": "26",
+      "year": 2021,
+      "title": "Pedoman Indonesian Case Base Groups (INA-CBG) dalam Pelaksanaan Jaminan Kesehatan",
+      "status": "in_force",
+      "status_checked_on": "2026-11-14",
+      "official_source": "https://jdih.kemkes.go.id/documents/peraturan-menteri-kesehatan-nomor-26-tahun-2021",
+      "relevance": [
+        "klaim Jaminan Kesehatan",
+        "INA-CBG"
+      ],
+      "coding_authority": "limited_to_ina_cbg_context",
+      "supersedes": [
+        "PMK-76-2016"
+      ],
+      "implementation_note": "Status JDIH terverifikasi berlaku. Ruang lingkupnya INA-CBG; jangan menyamakan dengan pedoman iDRG atau menganggapnya satu-satunya sumber aturan DU/DS."
+    },
+    {
+      "id": "PMK-3-2026",
+      "type": "Peraturan Menteri Kesehatan",
+      "number": "3",
+      "year": 2026,
+      "title": "Penanggulangan Penyakit",
+      "status": "in_force",
+      "effective_date": "2026-03-11",
+      "status_checked_on": "2026-11-14",
+      "official_source": "https://jdih.kemkes.go.id/documents/peraturan-menteri-kesehatan-nomor-3-tahun-2026",
+      "relevance": [
+        "penanggulangan penyakit menular",
+        "penanggulangan penyakit tidak menular",
+        "pencatatan dan pelaporan penyakit"
+      ],
+      "coding_authority": false,
+      "implementation_note": "Rujukan konteks penyakit dan pelaporan. Tidak menggantikan klasifikasi ICD-10 WHO."
+    },
+    {
+      "id": "PMK-6-2026",
+      "type": "Peraturan Menteri Kesehatan",
+      "number": "6",
+      "year": 2026,
+      "title": "Rumah Sakit",
+      "status": "in_force",
+      "effective_date": "2026-06-12",
+      "status_checked_on": "2026-11-14",
+      "official_source": "https://jdih.kemkes.go.id/documents/peraturan-menteri-kesehatan-nomor-6-tahun-2026",
+      "relevance": [
+        "penyelenggaraan rumah sakit",
+        "tata kelola rumah sakit",
+        "pencatatan dan pelaporan rumah sakit"
+      ],
+      "coding_authority": false,
+      "supersedes": [
+        "PMK-3-2020"
+      ],
+      "implementation_note": "Konteks tata kelola rumah sakit; bukan sumber penetapan kode diagnosis."
+    }
+  ],
+  "excluded_superseded": [
+    {
+      "id": "PMK-269-2008",
+      "title": "Rekam Medis",
+      "status": "repealed",
+      "replaced_by": "PMK-24-2022",
+      "official_source": "https://jdih.kemkes.go.id/documents/peraturan-menteri-kesehatan-nomor-24-tahun-2022",
+      "reason": "Dicabut oleh Permenkes 24 Tahun 2022."
+    },
+    {
+      "id": "PMK-27-2014",
+      "title": "Petunjuk Teknis Sistem Indonesian Case Base Groups (INA-CBGs)",
+      "status": "repealed",
+      "replaced_by": "PMK-76-2016",
+      "official_source": "https://peraturan.bpk.go.id/Details/117564/permenkes-no-27-tahun-2014",
+      "reason": "Tidak berlaku; dicabut oleh Permenkes 76 Tahun 2016. Jangan gunakan sebagai dasar aktif."
+    },
+    {
+      "id": "PMK-76-2016",
+      "title": "Pedoman Indonesian Case Base Groups (INA-CBG) dalam Pelaksanaan Jaminan Kesehatan Nasional",
+      "status": "repealed",
+      "replaced_by": "PMK-26-2021",
+      "official_source": "https://peraturan.bpk.go.id/Details/114633/permenkes-no-76-tahun-2016",
+      "reason": "Tidak berlaku; dicabut oleh Permenkes 26 Tahun 2021. Jangan gunakan sebagai dasar aktif."
+    },
+    {
+      "id": "PMK-3-2020",
+      "title": "Klasifikasi dan Perizinan Rumah Sakit",
+      "status": "repealed",
+      "replaced_by": "PMK-6-2026",
+      "official_source": "https://peraturan.bpk.go.id/Details/350851/permenkes-no-6-tahun-2026",
+      "reason": "Dicabut oleh Permenkes 6 Tahun 2026."
+    }
+  ],
+  "operational_rules": [
+    "Never use excluded_superseded entries as active legal or coding authority.",
+    "A regulation may be used only within its verified subject-matter scope.",
+    "Do not infer that a regulation about medical records, hospitals, disease control, or payment methodology defines ICD code selection.",
+    "WHO ICD-10 remains the classification source for WHO ICD-10 code titles and structure in this application.",
+    "Do not label INA-CBG provisions as iDRG provisions.",
+    "If a regulation's current status or replacement chain cannot be verified from an official source, mark it status_unverified and exclude it from active decision support.",
+    "Store the official source URL and last verification date for every regulation."
+  ]
+}
