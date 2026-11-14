@@ -958,7 +958,9 @@ function renderWHOIndexPath(index) {
       reference = paths.map((ip, n) => {
         const modifiers = Array.isArray(ip.modifiers) ? ip.modifiers : [];
         const lines = [ip.lead_term, ...modifiers.map((text,i) => '-'.repeat(Math.min(8, Math.max(1, Number(ip.modifier_levels?.[i]) || 1))) + ' ' + text), ip.code];
-        return '<div class="lead-term-box"><div class="lead-label">' + (paths.length > 1 ? 'Kandidat jalur ' + (n+1) : 'Jalur sumber') + ' — belum terverifikasi</div><div class="lead-path">' +
+        const candidatePayload = encodeURIComponent(JSON.stringify(ip));
+        return '<div class="lead-term-box"><div class="lead-label"><span>' + (paths.length > 1 ? 'Kandidat jalur ' + (n+1) : 'Jalur sumber') + ' — belum terverifikasi</span>' +
+          '<button type="button" class="copy-btn verify-index-path" data-code="' + escape(index.code) + '" data-path="' + candidatePayload + '">Pilih Jalur</button></div><div class="lead-path">' +
           lines.map(line => '<div class="lp-line">' + escape(line) + '</div>').join('') + (ip.pdf_page ? '<small>' + escape(ip.source_file) + ' · PDF ' + escape(ip.pdf_page) + '</small>' : '') + '</div></div>';
       }).join('');
     } else if (known?.path) {
@@ -1188,6 +1190,59 @@ function renderMBReview(review) {
     '<p>'+escapeHTML(review.source)+'</p></section>';
 }
 
+async function verifySelectedWHOIndexPath(button) {
+  const card = button.closest('.lead-term-box');
+  const statusLabel = card?.querySelector('.lead-label span');
+  const originalText = button.textContent;
+  let candidate;
+  try { candidate = JSON.parse(decodeURIComponent(button.dataset.path || '')); }
+  catch { button.textContent = 'Kandidat tidak valid'; button.disabled = true; return; }
+  const code = String(button.dataset.code || '').trim().toUpperCase();
+  if (!code || String(candidate.code || '').trim().toUpperCase() !== code || !candidate.lead_term) {
+    button.textContent = 'Kandidat tidak valid'; button.disabled = true; return;
+  }
+  button.disabled = true;
+  button.textContent = 'Memeriksa WHO…';
+  try {
+    const params = new URLSearchParams({term: candidate.lead_term, code, limit: '12', skipLocal: '1'});
+    const response = await fetch('/api/who-index?' + params.toString(), {headers:{Accept:'application/json'}});
+    const data = await response.json().catch(() => ({}));
+    const normalizePath = value => String(value || '').normalize('NFKC')
+      .replace(/[‐‑‒–—−]/g, '-').replace(/\\s*(-{1,3})\\s*/g, ' $1 ')
+      .replace(/[^a-z0-9-]+/gi, ' ').replace(/\\s+/g, ' ').trim().toLowerCase();
+    const selectedPath = [candidate.lead_term, ...(candidate.modifiers || []).map((part,i) =>
+      '-'.repeat(Math.min(3, Math.max(1, Number(candidate.modifier_levels?.[i]) || 1))) + ' ' + part
+    )].join(' ');
+    const matchingEntity = (data.results || []).find(item => String(item.code || '').trim().toUpperCase() === code);
+    const officialTerms = matchingEntity?.index_terms || [];
+    const exactMatch = officialTerms.find(term => normalizePath(term) === normalizePath(selectedPath));
+    if (!response.ok || data.valid !== true || !exactMatch) {
+      const reason = !response.ok ? (data.error || 'WHO tidak dapat diakses.') :
+        !matchingEntity ? 'Kode tidak ditemukan pada hasil WHO Index.' :
+        'Susunan jalur kandidat tidak sama persis dengan jalur WHO.';
+      if (statusLabel) statusLabel.textContent = 'Belum terverifikasi — ' + reason;
+      button.textContent = 'Belum cocok';
+      button.disabled = false;
+      return;
+    }
+    if (statusLabel) statusLabel.textContent = 'WHO Vol. 3 ✓ Terverifikasi';
+    button.textContent = 'Terverifikasi';
+    button.disabled = true;
+    button.setAttribute('aria-label', 'Jalur cocok dengan WHO Vol. 3');
+    const siblingButtons = card.parentElement?.querySelectorAll('.verify-index-path') || [];
+    siblingButtons.forEach(other => {
+      if (other !== button) { other.disabled = true; other.textContent = 'Jalur lain'; }
+    });
+    const note = document.createElement('small');
+    note.textContent = 'Cocok dengan istilah indeks WHO untuk kode ' + code + '. Kesesuaian klinis tetap perlu ditinjau.';
+    card.appendChild(note);
+  } catch (error) {
+    if (statusLabel) statusLabel.textContent = 'Belum terverifikasi — pemeriksaan WHO gagal.';
+    button.textContent = originalText;
+    button.disabled = false;
+  }
+}
+
 function renderResults(result) {
   const en = currentLang !== 'id';
   document.getElementById('emptyState').style.display = 'none';
@@ -1216,6 +1271,11 @@ function renderResults(result) {
     group(en ? 'Secondary diagnoses' : 'Diagnosis sekunder',secondary,false) +
     group(en ? 'Role needs review' : 'Peran diagnosis perlu ditinjau',other,false) +
     ((result.blocked_diagnoses || []).length ? '<details class="result-details"><summary>' + (en ? 'Held proposals — excluded from DU/DS' : 'Usulan ditahan — tidak masuk DU/DS') + ' · ' + result.blocked_diagnoses.length + '</summary><div class="details-body">' + result.blocked_diagnoses.map(item=>'<p><strong>' + escapeHTML(item.code) + '</strong> — ' + escapeHTML(item.hold_reason) + '</p>').join('') + '</div></details>' : '');
+  const diagList = document.getElementById('diagList');
+  diagList.onclick = event => {
+    const button = event.target.closest('.verify-index-path');
+    if (button && !button.disabled) verifySelectedWHOIndexPath(button);
+  };
   document.getElementById('procList').innerHTML = procedures.length ? procedures.map(item=>renderResultCard(item,{procedure:true,primary:false,warnings:forItem(item)})).join('') : '<div class="empty-result">' + (en ? 'No procedures proposed.' : 'Tidak ada prosedur yang diusulkan.') + '</div>';
   document.getElementById('diagCount').textContent = primary.length + ' DU · ' + secondary.length + ' DS' + (other.length ? ' · ' + other.length + ' ?' : '');
   document.getElementById('procCount').textContent = procedures.length + (en ? ' codes' : ' kode');
