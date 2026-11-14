@@ -393,6 +393,13 @@ function normalizeModelResult(value) {
       return out;
     });
   }
+  // Do not display a model rationale that visibly ends mid-thought.
+  if (/[.…]{1,3}$/.test(result.du_reasoning.trim())) {
+    const du = result.diagnoses.find(item => item.role === 'DU') || result.diagnoses[0];
+    result.du_reasoning = du
+      ? `Diagnosis utama masih berupa usulan berdasarkan dokumentasi yang diberikan. Kode ${du.code || 'yang diusulkan'} belum dapat dianggap final; periksa kecocokan klinis dan hasil validasi WHO sebelum penetapan.`
+      : 'Alasan penetapan diagnosis utama belum lengkap. Tinjau diagnosis final DPJP dan fokus episode perawatan; jangan menetapkan kode sebelum bukti klinis dan validasi tersedia.';
+  }
   result.ics_context = {};
   for (const key of ['documented_du_quote','mb_rule','mb_trigger_quote','mb5_mode','first_alternative_code','clarification_quote','mb_minor_quote','mb_care_quote','mb_combination_quote','mb_relation_quote','mb_specificity_quote']) {
     result.ics_context[key] = typeof value.ics_context?.[key] === 'string' ? value.ics_context[key].slice(0,4000) : null;
@@ -501,6 +508,10 @@ export async function onRequestPost(context) {
 
       if (!data.choices || data.choices.length === 0) {
         return new Response(JSON.stringify({ error: "Tidak ada respons dari Groq. Coba lagi." }), { status: 500, headers: corsHeaders });
+      }
+
+      if (data.choices[0].finish_reason === 'length') {
+        return new Response(JSON.stringify({ error: 'Respons AI terhenti karena mencapai batas token. Silakan ulangi analisis; hasil parsial tidak ditampilkan sebagai jawaban lengkap.' }), { status: 502, headers: corsHeaders });
       }
 
       const text = (data.choices[0].message.content || "")
