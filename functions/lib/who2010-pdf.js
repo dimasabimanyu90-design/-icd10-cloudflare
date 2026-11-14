@@ -1,4 +1,10 @@
 // User-uploaded PDF extraction. Source candidates are not certified coding.
+
+// Reject extracted rows where the supposed lead term is itself an ICD code.
+// These are code-column/table rows, not Volume 3 Alphabetical Index entries.
+function isCodeOnlyLeadTerm(value) {
+  return /^[A-Z]\\d{2}(?:\\.\\d{1,3})?[†*]?\\s*[–—-]?$/.test(String(value || '').trim());
+}
 export async function lookupPDFReference(db, code, term = '', limit = 8) {
   if (!db) return null;
   const bounded = Math.min(20,Math.max(1,Number(limit)||8));
@@ -17,7 +23,7 @@ export async function lookupPDFReference(db, code, term = '', limit = 8) {
     for(const row of family) steps.push({...row,type:'diabetes_type_reference'});
     for(const row of shared) steps.push({path_text:row.group_start+'–'+row.group_end+' → .'+row.suffix+' '+row.title,raw_text:row.raw_text,pdf_page:row.pdf_page,type:'shared_tabular_subdivision'});
   }
-  const rows=index.results || [];
+  const rows=(index.results || []).filter(row => !isCodeOnlyLeadTerm(row.lead_term));
   const source=(await db.prepare('SELECT file_name,sha256,source_id FROM reference_sources LIMIT 1').all()).results?.[0];
   if(!source) return null;
   return {source:'UPLOADED_WHO2010_PDF',file_name:source.file_name,sha256:source.sha256,code,
