@@ -1198,28 +1198,42 @@ async function verifySelectedWHOIndexPath(button) {
   try { candidate = JSON.parse(decodeURIComponent(button.dataset.path || '')); }
   catch { button.textContent = 'Kandidat tidak valid'; button.disabled = true; return; }
   const code = String(button.dataset.code || '').trim().toUpperCase();
-  if (!code || String(candidate.code || '').trim().toUpperCase() !== code || !candidate.lead_term) {
-    button.textContent = 'Kandidat tidak valid'; button.disabled = true; return;
+  if (!code || String(candidate.code || '').trim().toUpperCase() !== code ||
+      !candidate.who_index_query || !candidate.conversion_valid || !candidate.who_path_segments?.length) {
+    if (statusLabel) statusLabel.textContent = 'Belum terverifikasi — struktur jalur PDF tidak dapat dikonversi dengan aman.';
+    button.textContent = 'Perlu ditinjau';
+    button.disabled = false;
+    return;
   }
   button.disabled = true;
   button.textContent = 'Memeriksa WHO…';
   try {
-    const params = new URLSearchParams({term: candidate.lead_term, code, limit: '12', skipLocal: '1'});
+    // WHO search receives the converted lead term; the full converted path is
+    // retained for hierarchy-by-hierarchy comparison against official terms.
+    const params = new URLSearchParams({term: candidate.who_index_query, code, limit: '12', skipLocal: '1'});
     const response = await fetch('/api/who-index?' + params.toString(), {headers:{Accept:'application/json'}});
     const data = await response.json().catch(() => ({}));
-    const normalizePath = value => String(value || '').normalize('NFKC')
-      .replace(/[‐‑‒–—−]/g, '-').replace(/\s*(-{1,3})\s*/g, ' $1 ')
-      .replace(/[^a-z0-9-]+/gi, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
-    const selectedPath = [candidate.lead_term, ...(candidate.modifiers || []).map((part,i) =>
-      '-'.repeat(Math.min(3, Math.max(1, Number(candidate.modifier_levels?.[i]) || 1))) + ' ' + part
-    )].join(' ');
     const matchingEntity = (data.results || []).find(item => String(item.code || '').trim().toUpperCase() === code);
     const officialTerms = matchingEntity?.index_terms || [];
-    const exactMatch = officialTerms.find(term => normalizePath(term) === normalizePath(selectedPath));
+    const exactMatch = officialTerms.find(term => {
+      const official = String(term || '').replace(/[‐‑‒–—−]/g, '-').trim();
+      const parts = official.split(/\s+(-{1,3})\s+/).map(part => part.trim()).filter(Boolean);
+      if (!parts.length) return false;
+      const officialSegments = parts.length === 1 ? [{level:0,text:parts[0]}] :
+        [{level:0,text:parts[0]}, ...parts.slice(1).reduce((acc, part, i, arr) => {
+          if (i % 2 === 0 && arr[i + 1]) acc.push({level:part.length,text:arr[i + 1]});
+          return acc;
+        }, [])];
+      const clean = value => String(value || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+      return officialSegments.length === candidate.who_path_segments.length &&
+        officialSegments.every((part, i) => Number(part.level) === Number(candidate.who_path_segments[i].level) &&
+          clean(part.text) === clean(candidate.who_path_segments[i].text));
+    });
     if (!response.ok || data.valid !== true || !exactMatch) {
       const reason = !response.ok ? (data.error || 'WHO tidak dapat diakses.') :
         !matchingEntity ? 'Kode tidak ditemukan pada hasil WHO Index.' :
-        'Susunan jalur kandidat tidak sama persis dengan jalur WHO.';
+        'Jalur hasil konversi belum cocok dengan hierarki WHO.';
       if (statusLabel) statusLabel.textContent = 'Belum terverifikasi — ' + reason;
       button.textContent = 'Belum cocok';
       button.disabled = false;
@@ -1234,7 +1248,9 @@ async function verifySelectedWHOIndexPath(button) {
       if (other !== button) { other.disabled = true; other.textContent = 'Jalur lain'; }
     });
     const note = document.createElement('small');
-    note.textContent = 'Cocok dengan istilah indeks WHO untuk kode ' + code + '. Kesesuaian klinis tetap perlu ditinjau.';
+    note.textContent = 'Format PDF dikonversi menjadi "' + candidate.who_formatted_path +
+      '" dan cocok dengan istilah indeks WHO untuk kode ' + code +
+      '. Kesesuaian klinis tetap perlu ditinjau.';
     card.appendChild(note);
   } catch (error) {
     if (statusLabel) statusLabel.textContent = 'Belum terverifikasi — pemeriksaan WHO gagal.';
