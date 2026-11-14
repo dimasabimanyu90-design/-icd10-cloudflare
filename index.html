@@ -961,13 +961,14 @@ function renderWHOIndexPath(index) {
         const candidatePayload = encodeURIComponent(JSON.stringify(ip));
         const chooseLabel = ip.conversion_valid ? 'Pilih Jalur' : 'Struktur perlu ditinjau';
         const convertedPreview = ip.who_formatted_path
-          ? '<small class="who-converted-path">Format pencarian WHO: ' + escape(ip.who_formatted_path) + '</small>'
-          : '<small class="who-converted-path">Format WHO belum dapat dibentuk dari struktur PDF.</small>';
+          ? '<div class="who-converted-path"><strong>Format pencarian WHO:</strong> ' + escape(ip.who_formatted_path) + '</div>'
+          : '<div class="who-converted-path">Format WHO belum dapat dibentuk dari struktur PDF.</div>';
+        const sourceMeta = '<div class="who-source-meta"><small>Sumber: ' + escape(ip.source_file || 'PDF WHO 2010') +
+          (ip.pdf_page ? ' · halaman ' + escape(ip.pdf_page) : '') + '</small></div>';
         return '<div class="lead-term-box"><div class="lead-label"><span>' + (paths.length > 1 ? 'Kandidat jalur ' + (n+1) : 'Jalur sumber') + ' — belum terverifikasi</span>' +
           '<button type="button" class="copy-btn verify-index-path" data-code="' + escape(index.code) + '" data-path="' + candidatePayload + '"' +
           (ip.conversion_valid ? '' : ' disabled') + '>' + chooseLabel + '</button></div><div class="lead-path">' +
-          lines.map(line => '<div class="lp-line">' + escape(line) + '</div>').join('') + convertedPreview +
-          (ip.pdf_page ? '<small>' + escape(ip.source_file) + ' · PDF ' + escape(ip.pdf_page) + '</small>' : '') + '</div></div>';
+          lines.map(line => '<div class="lp-line">' + escape(line) + '</div>').join('') + convertedPreview + sourceMeta + '</div></div>';
       }).join('');
     } else if (known?.path) {
       reference = '<div class="lead-term-box"><div class="lead-label">Jalur referensi tersimpan — belum diverifikasi WHO</div><div class="lead-path">' +
