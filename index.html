@@ -1169,7 +1169,7 @@ function renderResultCard(item, options) {
     '<div class="diag-code-row"><span class="diag-code">' + escapeHTML(item.code) + escapeHTML(symbol) + '</span></div>' +
     '<div class="diag-desc">' + escapeHTML(item.description || (en ? 'Description unavailable' : 'Deskripsi belum tersedia')) + '</div>' +
     '<div class="result-meta"><span class="source-chip">' + source + '</span>' + (indexUnverified ? '<span class="review-chip">' + indexNote + '</span>' : '') + '</div>' +
-    (primary && duReason ? '<p class="primary-reason">' + escapeHTML(conciseResultText(duReason)) + '</p>' : '') + '</div></div>' +
+    (primary && duReason ? '<p class="primary-reason">' + escapeHTML(duReason) + '</p>' : '') + '</div></div>' +
     (notice ? '<div class="item-alert">⚠ ' + escapeHTML(notice) + '</div>' : '') +
     (!procedure ? renderDiagnosisIMOptions(item) : '') +
     (path ? '<details class="result-details index-reference" open><summary>' + (en ? 'Index path & status' : 'Jalur indeks & status') + '</summary><div class="details-body" tabindex="0" role="region" aria-label="' + (en ? 'Index references' : 'Referensi indeks') + '">' + path + '</div></details>' : '') +
