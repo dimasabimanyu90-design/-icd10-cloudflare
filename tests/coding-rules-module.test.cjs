@@ -23,6 +23,8 @@ const root=path.resolve(__dirname,'..');
  assert.ok(oncologyFollowUp.includes('Z08.0'),'completed malignant-neoplasm surgery follow-up must consider WHO Z08.0');
  assert.ok(oncologyFollowUp.includes('Jangan mengusulkan C80.1'),'non-WHO C80.1 must not be proposed');
  assert.ok(oncologyFollowUp.includes('kekambuhan'),'active/recurrent malignancy must be distinguished from follow-up surveillance');
+ assert.ok(prompt.includes('DILARANG mengakhiri jawaban dengan elipsis'),'DU rationale must not end with ellipsis');
+ assert.ok(prompt.includes('maksimal 2 kalimat untuk alasan DU'),'DU rationale must remain concise and complete');
  assert.ok(!prompt.includes('90.59 jika lab numerik'));assert.ok(!prompt.includes('Primary PCI → WAJIB:'));
  console.log('PASS: native ES-module import, shared browser/server policy, source-backed badges, no clinical approval from cache, corrected legacy shortcuts');
 })().catch(e=>{console.error(e);process.exitCode=1});
