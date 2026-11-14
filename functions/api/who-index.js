@@ -232,7 +232,8 @@ export async function onRequestGet(context) {
     const requestedLimit = Number(url.searchParams.get("limit") || 10);
     const limit = Number.isFinite(requestedLimit) ? Math.min(Math.max(Math.trunc(requestedLimit),1),20) : 10;
     if (term.length > 200 || (requestedCode && !/^[A-Z]\d{2}(?:\.\d{1,3})?$/.test(requestedCode))) return json({valid:false,error:"Invalid search parameters"},400);
-    if (context.env.ICD10_WHO_DB && requestedCode && term.length >= 2) {
+    const skipLocal = url.searchParams.get("skipLocal") === "1";
+    if (!skipLocal && context.env.ICD10_WHO_DB && requestedCode && term.length >= 2) {
       try {
         const local=await lookupPDFReference(context.env.ICD10_WHO_DB,requestedCode,term,limit);
         if (local && (local.index_candidates.length || local.reference_steps.length)) {
