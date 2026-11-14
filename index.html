@@ -245,6 +245,16 @@ button:focus-visible { outline:2px solid #2563eb; outline-offset:3px; }
 @media(max-width:760px) { header { padding:0 16px; } .logo-designer,.logo-sep2,.htag { display:none; } .logo-wrap { gap:10px; } .ics-banner { padding:9px 16px; } .ics-source { display:none; } }
 @media(max-width:600px) { main { padding:24px 12px 36px; } header { gap:12px; } .logo-main { font-size:18px; } .logo-sub,.logo-sep { display:none; } .input-card-header,.coding-table-header,.proc-header { padding:14px 16px; } .input-card-body { padding:16px; } .input-card-title { font-size:12px; } .result-card { margin:8px 10px 12px; } .result-card .diag-main { padding:16px 12px; gap:10px; } .result-card.primary .diag-code { font-size:26px; } .result-card.primary .diag-desc { font-size:16px; } .item-alert { margin:0 12px 10px; } .details-body { padding:10px 12px 12px; } .action-row { flex-wrap:wrap; } .btn-analyze { flex:1; justify-content:center; } .result-group-title { padding:16px 16px 6px; } }
 
+
+/* Explicitly allow the primary diagnosis rationale to wrap and grow without clipping. */
+.result-card .diag-main > div:last-child { min-width:0; width:100%; }
+.result-card .primary-reason {
+  display:block !important;
+  width:100%; max-width:100%; height:auto !important; max-height:none !important;
+  overflow:visible !important; white-space:normal !important;
+  text-overflow:clip !important; overflow-wrap:anywhere; word-break:normal;
+  -webkit-line-clamp:unset !important; -webkit-box-orient:initial !important;
+}
 </style>
 <script src="known-paths.js"></script>
 <script type="module">
