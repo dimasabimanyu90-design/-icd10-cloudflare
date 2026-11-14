@@ -4,7 +4,7 @@ import argparse, hashlib, json, re, sqlite3
 from collections import Counter
 from pathlib import Path
 import fitz
-CODE=re.compile(r'(?<![A-Za-z0-9])([A-Z]\d{2}(?:\.[0-9-]{1,2})?)([†*]?)')
+CODE=re.compile(r'(?<![A-Za-z0-9])([A-Z]\d{2}(?:\.[0-9-]{1,2})?)([†*]?)(?![0-9/])')
 HEADER=re.compile(r'^([A-Z]\d{2}(?:\.\d{1,2})?)([†*]?)(?:\s+(.*))?$')
 def norm(s): return re.sub(r'\s+',' ',s).strip()
 def lines(page):
@@ -54,6 +54,10 @@ def extract(pdf):
   label=norm(re.sub(r'(?:\s+[A-Z]\d{2}(?:\.[0-9-]{1,2})?[†*]?)+\s*$','',text));label=re.sub(r'^(?:-\s*)+','',label).strip()
   if depth==0:
    root=label;stack=[];context=''
+   # Code-only rows in this PDF region are cross-reference/table columns, not
+   # Alphabetical Index lead terms. Never publish them as a clinical path.
+   if re.fullmatch(r'[A-Z]\d{2}(?:\.\d{1,3})?[†*]?',root.strip(),re.I):
+    context='code_only_lead_term'
   elif not root:context='missing_lead_term'
   if depth:
    if len(stack)<depth-1:context='missing_modifier_context'
